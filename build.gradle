@@ -1,0 +1,62 @@
+buildscript {
+    repositories {
+        jcenter()
+        maven { url = "http://files.minecraftforge.net/maven" }
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
+    }
+}
+apply plugin: 'net.minecraftforge.gradle.forge'
+
+version = "2.0.0"
+group = "com.matoon.eternity"
+archivesBaseName = "Eternity-1.12.2"
+
+sourceCompatibility = targetCompatibility = '1.8'
+compileJava {
+    sourceCompatibility = targetCompatibility = '1.8'
+    options.encoding = 'UTF-8'
+}
+
+minecraft {
+    version = "1.12.2-14.23.5.2847"
+    runDir = "run"
+    mappings = "snapshot_20180814"
+
+    // Dev-only fix for a ForgeGradle remapping bug that breaks respawning outside the
+    // overworld; see src/main/java/com/matoon/eternity/dev/RespawnFieldFix.java.
+    clientJvmArgs += "-Dfml.coreMods.load=com.matoon.eternity.dev.DevFixesPlugin"
+    serverJvmArgs += "-Dfml.coreMods.load=com.matoon.eternity.dev.DevFixesPlugin"
+}
+
+dependencies {
+    // Deobfuscated dev jars, shared with Beyonder.
+    compile files('libs/LucraftCore-deobf.jar')
+    compile files('libs/HeroesExpansion-deobf.jar')
+    compile files('libs/InfinityCraft-deobf.jar')
+    compile files('libs/TickrateChanger-1.0.14-deobf.jar')
+    // Galacticraft Legacy is accessed reflectively (see compat/Galacticraft), so it
+    // is not needed on the compile classpath. Drop the release jar into run/mods to
+    // test with it in the dev client.
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
+
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+        expand 'version': project.version, 'mcversion': project.minecraft.version
+    }
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
+
+tasks.withType(JavaExec) {
+    if (name == "runClient") {
+        ignoreExitValue = true
+    }
+}

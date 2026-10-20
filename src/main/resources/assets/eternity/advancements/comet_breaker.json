@@ -1,0 +1,14 @@
+{
+  "parent": "eternity:root",
+  "display": {
+    "icon": { "item": "eternity:astral_regulator" },
+    "title": { "translate": "advancements.eternity.comet.title" },
+    "description": { "translate": "advancements.eternity.comet.description" },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": { "broken": { "trigger": "minecraft:impossible" } },
+  "rewards": { "experience": 1000 }
+}

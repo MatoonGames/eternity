@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GGG",
+    "GCG",
+    "GEG"
+  ],
+  "key": {
+    "G": { "item": "minecraft:gold_ingot" },
+    "C": { "item": "minecraft:compass" },
+    "E": { "item": "minecraft:ender_eye" }
+  },
+  "result": { "item": "eternity:stone_finder" }
+}

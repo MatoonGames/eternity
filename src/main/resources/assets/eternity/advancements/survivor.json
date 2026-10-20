@@ -1,0 +1,13 @@
+{
+  "parent": "eternity:witness",
+  "display": {
+    "icon": { "item": "minecraft:totem_of_undying" },
+    "title": { "translate": "advancements.eternity.survivor.title" },
+    "description": { "translate": "advancements.eternity.survivor.description" },
+    "frame": "goal",
+    "show_toast": false,
+    "announce_to_chat": false,
+    "hidden": true
+  },
+  "criteria": { "survived": { "trigger": "minecraft:impossible" } }
+}

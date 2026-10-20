@@ -1,0 +1,14 @@
+{
+  "parent": "eternity:the_slayer_of_eternity",
+  "display": {
+    "icon": { "item": "eternity:astral_regulator", "nbt": "{Charged:1b}" },
+    "title": { "translate": "advancements.eternity.keeper.title" },
+    "description": { "translate": "advancements.eternity.keeper.description" },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": { "kept": { "trigger": "minecraft:impossible" } },
+  "rewards": { "experience": 2000 }
+}

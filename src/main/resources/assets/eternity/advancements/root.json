@@ -1,0 +1,13 @@
+{
+  "display": {
+    "icon": { "item": "minecraft:ender_eye" },
+    "title": { "translate": "advancements.eternity.root.title" },
+    "description": { "translate": "advancements.eternity.root.description" },
+    "background": "minecraft:textures/blocks/obsidian.png",
+    "frame": "task",
+    "show_toast": false,
+    "announce_to_chat": false,
+    "hidden": true
+  },
+  "criteria": { "noticed": { "trigger": "minecraft:impossible" } }
+}

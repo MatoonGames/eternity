@@ -1,0 +1,13 @@
+{
+  "parent": "eternity:root",
+  "display": {
+    "icon": { "item": "minecraft:end_portal_frame" },
+    "title": { "translate": "advancements.eternity.witness.title" },
+    "description": { "translate": "advancements.eternity.witness.description" },
+    "frame": "task",
+    "show_toast": false,
+    "announce_to_chat": false,
+    "hidden": true
+  },
+  "criteria": { "witnessed": { "trigger": "minecraft:impossible" } }
+}

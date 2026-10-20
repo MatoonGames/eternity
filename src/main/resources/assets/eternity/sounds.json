@@ -1,0 +1,32 @@
+{
+  "ambient.drone":     { "sounds": [ { "name": "eternity:ambient/drone", "stream": true } ] },
+  "ambient.wind":      { "sounds": [ { "name": "eternity:ambient/wind", "stream": true } ] },
+  "ambient.abyss":     { "sounds": [ { "name": "eternity:ambient/abyss", "stream": true } ] },
+  "ambient.encounter": { "sounds": [ { "name": "eternity:ambient/encounter", "stream": true } ] },
+  "ambient.rumble":    { "sounds": [ { "name": "eternity:ambient/rumble", "stream": true } ] },
+
+  "far.chains":  { "sounds": [ "eternity:far/chains1", "eternity:far/chains2", "eternity:far/chains3" ] },
+  "far.groan":   { "sounds": [ "eternity:far/groan1", "eternity:far/groan2", "eternity:far/groan3" ] },
+  "far.horn":    { "sounds": [ "eternity:far/horn1", "eternity:far/horn2", "eternity:far/horn3" ] },
+  "far.reverse": { "sounds": [ "eternity:far/reverse1", "eternity:far/reverse2", "eternity:far/reverse3" ] },
+  "far.noise":   { "sounds": [ "eternity:far/noise1", "eternity:far/noise2", "eternity:far/noise3", "eternity:far/noise4" ] },
+  "far.rift":    { "sounds": [ "eternity:far/rift" ] },
+
+  "omen.shimmer": { "sounds": [ "eternity:omen/shimmer" ] },
+  "omen.stare":   { "sounds": [ "eternity:omen/stare" ] },
+
+  "rift.open":   { "sounds": [ "eternity:rift/open" ] },
+  "rift.loop":   { "sounds": [ "eternity:rift/loop" ] },
+  "rift.close":  { "sounds": [ "eternity:rift/close" ] },
+  "rift.impact": { "sounds": [ "eternity:rift/impact" ] },
+
+  "entity.voice":  { "sounds": [ "eternity:entity/voice1", "eternity:entity/voice2" ] },
+  "entity.glitch": { "sounds": [ "eternity:entity/glitch1", "eternity:entity/glitch2", "eternity:entity/glitch3" ] },
+
+  "finale.drums":     { "sounds": [ { "name": "eternity:finale/drums", "stream": true } ] },
+  "finale.aftermath": { "sounds": [ { "name": "eternity:finale/aftermath", "stream": true } ] },
+
+  "comet.flyby":  { "sounds": [ { "name": "eternity:comet/flyby", "stream": true } ] },
+  "comet.impact": { "sounds": [ "eternity:comet/impact" ] },
+  "comet.blast":  { "sounds": [ "eternity:comet/blast" ] }
+}

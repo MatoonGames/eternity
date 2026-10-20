@@ -1,0 +1,16 @@
+[
+  {
+    "modid": "eternity",
+    "name": "Eternity",
+    "description": "Something vast moves between the worlds. Gather the stones, and it will come for you.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": ["233Neon"],
+    "credits": "Sounds from Freesound: thatjeffcarter, zimbot, couchhero, lilmati, twistedlemon, takkyi, ilmari_freesound, suonho, johnnie_holiday, klankbeeld, robinhood76, newlocknew.",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": ["lucraftcore", "infinity", "heroesexpansion", "galacticraftcore", "tickratechanger"]
+  }
+]
