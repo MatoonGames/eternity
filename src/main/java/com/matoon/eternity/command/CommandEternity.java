@@ -3,13 +3,19 @@ package com.matoon.eternity.command;
 import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.compat.Galacticraft;
 import com.matoon.eternity.compat.InfinityStones;
+import com.matoon.eternity.compat.Relics;
 import com.matoon.eternity.entity.EntityEternity;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.network.MsgOmen;
 import com.matoon.eternity.world.CometData;
 import com.matoon.eternity.world.CometDirector;
 import com.matoon.eternity.world.Director;
+import com.matoon.eternity.world.InBetweenerData;
+import com.matoon.eternity.world.InBetweenerDirector;
+import com.matoon.eternity.world.Nexus;
+import com.matoon.eternity.world.RelicLedger;
 import com.matoon.eternity.world.EternityData;
+import com.matoon.eternity.world.NexusDirector;
 import com.matoon.eternity.world.TribunalData;
 import com.matoon.eternity.world.TribunalDirector;
 import lucraft.mods.lucraftcore.infinity.EnumInfinityStone;
@@ -21,18 +27,20 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextFormatting;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /** Operator tools for testing and running servers. Eternity himself never speaks in chat. */
 public class CommandEternity extends CommandBase {
 
-    private static final String[] SUBCOMMANDS = {"status", "summon", "travel", "hunt", "release", "omen", "stones", "wound", "slay", "doom", "restore", "reset", "comet", "tribunal"};
+    private static final String[] SUBCOMMANDS = {"status", "summon", "travel", "hunt", "release", "omen", "stones", "relics", "wound", "slay", "doom", "restore", "reset", "comet", "tribunal", "nexus", "inbetweener"};
 
     @Override
     public String getName() {
@@ -41,7 +49,7 @@ public class CommandEternity extends CommandBase {
 
     @Override
     public String getUsage(ICommandSender sender) {
-        return "/eternity <status|summon|travel <dim>|hunt [player]|release|omen <1-6> [player]|stones [player]|wound <percent>|slay|doom [0-1]|restore|reset|comet ...|tribunal ...>";
+        return "/eternity <status|summon|travel <dim>|hunt [player]|release|omen <1-6> [player]|stones [player]|relics [release <kind>]|wound <percent>|slay|doom [0-1]|restore|reset|comet ...|tribunal ...|nexus [player]|inbetweener ...>";
     }
 
     @Override
@@ -129,6 +137,9 @@ public class CommandEternity extends CommandBase {
                 reply(sender, line.toString());
                 break;
             }
+            case "relics":
+                relics(server, sender, args);
+                break;
             case "wound": {
                 if (args.length < 2) {
                     throw new WrongUsageException("/eternity wound <percent>");
@@ -169,6 +180,15 @@ public class CommandEternity extends CommandBase {
             case "tribunal":
                 tribunal(server, sender, args);
                 break;
+            case "inbetweener":
+                inBetweener(server, sender, args);
+                break;
+            case "nexus": {
+                EntityPlayerMP player = args.length > 1 ? getPlayer(server, sender, args[1]) : getCommandSenderAsPlayer(sender);
+                NexusDirector.INSTANCE.enter(player);
+                reply(sender, player.getName() + " falls into the Nexus of All Realities.");
+                break;
+            }
             case "reset": {
                 if (data.phase == EternityData.Phase.UNMAKING || data.phase == EternityData.Phase.VOID) {
                     director.restoreReality(server);
@@ -275,6 +295,96 @@ public class CommandEternity extends CommandBase {
         }
     }
 
+    private static void inBetweener(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+        InBetweenerDirector director = InBetweenerDirector.INSTANCE;
+        InBetweenerData data = director.data();
+        String action = args.length > 1 ? args[1] : "status";
+        switch (action) {
+            case "status": {
+                String visitor = director.visitorName(server);
+                Vec3d drift = director.driftPoint();
+                reply(sender, "The In-Betweener is " + (data.inBetweenerAbsorbed ? "inside an Astral Regulator"
+                        : drift != null ? String.format("drifting empty through the Nexus near %d %d %d", (int) drift.x, (int) drift.y, (int) drift.z)
+                        : data.broken ? "lying outside his broken glass" : "in his glass")
+                        + (visitor != null ? ", with " + visitor : "")
+                        + String.format(", at %d %d %d in dimension %d", (int) Math.floor(Nexus.JUNCTION_X), (int) Math.floor(Nexus.JUNCTION_Y),
+                        (int) Math.floor(Nexus.JUNCTION_Z), Nexus.dimension()));
+                reply(sender, "Soul Gem: " + (director.wearsGem() ? "on his brow"
+                        : data.gemTaken ? "taken by " + data.gemHolder : "not his (one exists elsewhere, or holdsSoulStone is off)"));
+                if (data.wrathAt >= 0) {
+                    reply(sender, "Order and Chaos arrive in " + Math.max(0, (data.wrathAt - data.clock) / 20) + "s");
+                }
+                if (data.inBetweenerAbsorbed || data.orderAbsorbed || data.chaosAbsorbed) {
+                    reply(sender, "Inside Astral Regulators:" + (data.inBetweenerAbsorbed ? " the In-Betweener" : "")
+                            + (data.orderAbsorbed ? " Master Order" : "") + (data.chaosAbsorbed ? " Lord Chaos" : ""));
+                }
+                reply(sender, "He remembers " + data.memories.size() + " visitors and refuses " + data.castOut.size());
+                break;
+            }
+            case "visit": {
+                EntityPlayerMP player = args.length > 2 ? getPlayer(server, sender, args[2]) : getCommandSenderAsPlayer(sender);
+                InBetweenerDirector.visit(player);
+                reply(sender, player.getName() + " stands at the edge of the grey.");
+                break;
+            }
+            case "wrath": {
+                if (!data.broken) {
+                    throw new CommandException("His glass is whole; Order and Chaos have no reason to come.");
+                }
+                director.hastenWrath();
+                reply(sender, "Order and Chaos arrive.");
+                break;
+            }
+            case "masters": {
+                EntityPlayerMP player = args.length > 2 ? getPlayer(server, sender, args[2]) : getCommandSenderAsPlayer(sender);
+                if (player.dimension != Nexus.dimension()) {
+                    throw new CommandException("They only come to the Nexus. Use /eternity inbetweener visit first.");
+                }
+                director.summonMasters(player);
+                reply(sender, "Master Order and Lord Chaos turn their attention to " + player.getName() + ".");
+                break;
+            }
+            case "revive": {
+                director.revive();
+                reply(sender, "He is back in his glass, colour and all. He still remembers everyone.");
+                break;
+            }
+            case "reset": {
+                director.restore();
+                reply(sender, "His glass is whole, he and his masters are back if they were absorbed, the gem is on his brow unless a Soul Stone exists elsewhere, and he remembers nobody.");
+                break;
+            }
+            default:
+                throw new WrongUsageException("/eternity inbetweener <status|visit [player]|wrath|masters [player]|revive|reset>");
+        }
+    }
+
+    /** Who claimed each relic and when, where it is now, and a way to forget a claim. */
+    private void relics(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+        RelicLedger ledger = RelicLedger.get();
+        if (args.length > 1 && "release".equals(args[1])) {
+            Relics.Kind kind = args.length > 2 ? Relics.Kind.byName(args[2]) : null;
+            if (kind == null) {
+                throw new WrongUsageException("/eternity relics release <tesseract|soul_stone>");
+            }
+            Relics.release(kind);
+            reply(sender, "Nobody holds " + kind.title + " any more. The next copy someone takes becomes the true one.");
+            return;
+        }
+        long now = server.getWorld(0).getTotalWorldTime();
+        for (Relics.Kind kind : Relics.Kind.values()) {
+            RelicLedger.Claim claim = ledger.claim(kind);
+            reply(sender, claim == null ? kind.title + ": unclaimed"
+                    : kind.title + ": claimed by " + claim.claimantName + ", " + (now - claim.at) / 24000L + " days ago"
+                    + (claim.opened ? " (broken open: it is the Space Stone now)" : ""));
+        }
+        for (Map.Entry<String, RelicLedger.Sighting> entry : ledger.lastSeen.entrySet()) {
+            RelicLedger.Sighting s = entry.getValue();
+            reply(sender, String.format(" - %s: %s in dimension %d at %.0f %.0f %.0f", entry.getKey(),
+                    s.holder.isEmpty() ? "last seen" : "carried by " + s.holder, s.dimension, s.x, s.y, s.z));
+        }
+    }
+
     private static void ensureAlive(EternityData data) throws CommandException {
         if (data.phase != EternityData.Phase.ROAMING && data.phase != EternityData.Phase.HUNTING) {
             throw new CommandException("Eternity is gone (" + data.phase + "). Use /eternity restore, then /eternity reset, to bring him back.");
@@ -308,10 +418,22 @@ public class CommandEternity extends CommandBase {
         if (args.length == 3 && "tribunal".equals(args[0]) && "summon".equals(args[1])) {
             return getListOfStringsMatchingLastWord(args, server.getOnlinePlayerNames());
         }
+        if (args.length == 2 && "inbetweener".equals(args[0])) {
+            return getListOfStringsMatchingLastWord(args, "status", "visit", "wrath", "masters", "revive", "reset");
+        }
+        if (args.length == 3 && "inbetweener".equals(args[0]) && "visit".equals(args[1])) {
+            return getListOfStringsMatchingLastWord(args, server.getOnlinePlayerNames());
+        }
+        if (args.length == 2 && "relics".equals(args[0])) {
+            return getListOfStringsMatchingLastWord(args, "release");
+        }
+        if (args.length == 3 && "relics".equals(args[0])) {
+            return getListOfStringsMatchingLastWord(args, "tesseract", "soul_stone");
+        }
         if (args.length == 2 && "comet".equals(args[0])) {
             return getListOfStringsMatchingLastWord(args, "status", "summon", "wound", "depart", "restore");
         }
-        if (args.length == 2 && ("hunt".equals(args[0]) || "stones".equals(args[0]))) {
+        if (args.length == 2 && ("hunt".equals(args[0]) || "stones".equals(args[0]) || "nexus".equals(args[0]))) {
             return getListOfStringsMatchingLastWord(args, server.getOnlinePlayerNames());
         }
         return Collections.emptyList();

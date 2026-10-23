@@ -48,6 +48,23 @@ public final class EternitySounds {
     public static final SoundEvent COMET_IMPACT = create("comet.impact");
     public static final SoundEvent COMET_BLAST = create("comet.blast");
 
+    // The Tesseract's hum, a seamless mono loop played on whoever holds it (see tools/tesseract_hum.sh).
+    public static final SoundEvent TESSERACT_HUM = create("tesseract.hum");
+
+    // The Nexus of All Realities: its music, streamed; and the screaming in the abyss beneath it, a stereo loop.
+    public static final SoundEvent MUSIC_NEXUS = create("music.nexus");
+    public static final SoundEvent NEXUS_ABYSS = create("nexus.abyss");
+
+    // The fights, streamed: Eternity hunting you, then wounded; the Tribunal's trial, his fight, and his later
+    // ascensions; Master Order and Lord Chaos; and the void left when the world has ended.
+    public static final SoundEvent MUSIC_ETERNITY = create("music.eternity");
+    public static final SoundEvent MUSIC_ETERNITY_WOUNDED = create("music.eternity_wounded");
+    public static final SoundEvent MUSIC_TRIBUNAL_TRIAL = create("music.tribunal_trial");
+    public static final SoundEvent MUSIC_TRIBUNAL = create("music.tribunal");
+    public static final SoundEvent MUSIC_TRIBUNAL_ASCENDED = create("music.tribunal_ascended");
+    public static final SoundEvent MUSIC_MASTERS = create("music.masters");
+    public static final SoundEvent MUSIC_VOID = create("music.void");
+
     private EternitySounds() {
     }
 

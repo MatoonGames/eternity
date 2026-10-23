@@ -3,6 +3,7 @@ package com.matoon.eternity.world;
 import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.EternitySounds;
 import com.matoon.eternity.compat.InfinityStones;
+import com.matoon.eternity.compat.Relics;
 import com.matoon.eternity.entity.EntityEternity;
 import com.matoon.eternity.entity.EternityDamage;
 import com.matoon.eternity.network.EternityNetwork;
@@ -115,7 +116,8 @@ public final class Singularity {
                         float fraction = InfinityStones.scan(living) == InfinityStones.ALL ? 0.08F : 0.35F;
                         living.attackEntityFrom(damage, living.getMaxHealth() * fraction);
                     }
-                } else if (d < r * 0.6D) {
+                } else if (d < r * 0.6D && !Relics.protects(entity)) {
+                    // It swallows whatever is not alive, but never a stone or a Regulator.
                     entity.setDead();
                 }
             }

@@ -11,7 +11,8 @@ import net.minecraft.item.ItemStack;
 /**
  * Reads which Infinity Stones an entity carries. Every stone from InfinityCraft and
  * HeroesExpansion (including the Tesseract) extends Lucraft's {@link ItemInfinityStone},
- * and stones socketed into a gauntlet live in its {@link InventoryInfinityGauntlet}.
+ * and stones socketed into a gauntlet live in its {@link InventoryInfinityGauntlet}. Once a
+ * relic has been claimed, only its true copy counts; see {@link Relics}.
  */
 public final class InfinityStones {
 
@@ -34,28 +35,32 @@ public final class InfinityStones {
             return 0;
         }
         EntityPlayer player = (EntityPlayer) entity;
+        boolean remote = player.world.isRemote;
         int mask = 0;
         for (ItemStack stack : player.inventory.mainInventory) {
-            mask |= of(stack);
+            mask |= of(stack, remote);
         }
         for (ItemStack stack : player.inventory.armorInventory) {
-            mask |= of(stack);
+            mask |= of(stack, remote);
         }
         for (ItemStack stack : player.inventory.offHandInventory) {
-            mask |= of(stack);
+            mask |= of(stack, remote);
         }
-        return mask | of(player.inventory.getItemStack());
+        return mask | of(player.inventory.getItemStack(), remote);
     }
 
     public static int countHeld(Entity entity) {
         return count(scan(entity));
     }
 
-    private static int of(ItemStack stack) {
+    private static int of(ItemStack stack, boolean remote) {
         if (stack.isEmpty()) {
             return 0;
         }
         if (stack.getItem() instanceof ItemInfinityStone) {
+            if (!Relics.recognized(stack, remote)) {
+                return 0;
+            }
             EnumInfinityStone type = ((ItemInfinityStone) stack.getItem()).getType();
             return type == null ? 0 : bit(type);
         }
@@ -64,7 +69,7 @@ public final class InfinityStones {
             int mask = 0;
             for (int i = 0; i < gauntlet.getSizeInventory(); i++) {
                 ItemStack socket = gauntlet.getStackInSlot(i);
-                if (!socket.isEmpty() && socket.getItem() instanceof ItemInfinityStone) {
+                if (!socket.isEmpty() && socket.getItem() instanceof ItemInfinityStone && Relics.recognized(socket, remote)) {
                     EnumInfinityStone type = ((ItemInfinityStone) socket.getItem()).getType();
                     mask |= type == null ? 0 : bit(type);
                 }

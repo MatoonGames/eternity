@@ -10,9 +10,11 @@ import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import net.minecraftforge.fml.relauncher.Side;
 
 /**
- * Packets flow server to client, with three exceptions: {@link MsgTearRift}, where a
- * player asks for a Rift Gate, {@link MsgStrikeComet}, a swing at the comet, and
- * {@link MsgTribunalAnswer}, an answer to the Living Tribunal. The server re-checks
+ * Packets flow server to client, with a few exceptions: {@link MsgTearRift}, where a
+ * player asks for a Rift Gate, {@link MsgStrikeComet} and {@link MsgStrikeTribunal},
+ * swings at things too big for vanilla's reach, {@link MsgTribunalAnswer}, an answer to
+ * the Living Tribunal, and {@link MsgInBetweenerAct}, whatever a visitor says or does in
+ * front of the In-Betweener. The server re-checks
  * every part of those requests, so a modified client cannot forge its way to
  * anything it could not do legitimately.
  */
@@ -31,7 +33,7 @@ public final class EternityNetwork {
         CHANNEL.registerMessage(handler, MsgOmen.class, id++, Side.CLIENT);
         CHANNEL.registerMessage(handler, MsgCue.class, id++, Side.CLIENT);
         CHANNEL.registerMessage(handler, MsgFinale.class, id++, Side.CLIENT);
-        CHANNEL.registerMessage(handler, MsgStoneTarget.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(handler, MsgRelicTarget.class, id++, Side.CLIENT);
         CHANNEL.registerMessage(handler, MsgOpenRiftGate.class, id++, Side.CLIENT);
         CHANNEL.registerMessage(new MsgTearRift.Handler(), MsgTearRift.class, id++, Side.SERVER);
         CHANNEL.registerMessage(handler, MsgComet.class, id++, Side.CLIENT);
@@ -40,6 +42,8 @@ public final class EternityNetwork {
         CHANNEL.registerMessage(new MsgTribunalAnswer.Handler(), MsgTribunalAnswer.class, id++, Side.SERVER);
         CHANNEL.registerMessage(handler, MsgTribunalFx.class, id++, Side.CLIENT);
         CHANNEL.registerMessage(new MsgStrikeTribunal.Handler(), MsgStrikeTribunal.class, id++, Side.SERVER);
+        CHANNEL.registerMessage(handler, MsgInBetweener.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(new MsgInBetweenerAct.Handler(), MsgInBetweenerAct.class, id++, Side.SERVER);
     }
 
     public static void sendToServer(IMessage message) {

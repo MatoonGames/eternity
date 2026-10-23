@@ -60,9 +60,32 @@ public final class EternityDamage {
         return new DamageSource("eternity.comet_blast").setDamageBypassesArmor().setExplosion();
     }
 
-    /** The Living Tribunal's judgement, delivered by hand. Armour means nothing to him. */
+    /** The Living Tribunal's judgement, delivered by hand. Armour means nothing to him, and neither does creative mode. */
     public static DamageSource tribunal(Entity tribunal) {
-        return new EntityDamageSource("eternity.tribunal", tribunal).setDamageBypassesArmor().setDamageIsAbsolute().setMagicDamage();
+        return new EntityDamageSource("eternity.tribunal", tribunal).setDamageBypassesArmor().setDamageIsAbsolute().setMagicDamage()
+                .setDamageAllowedInCreativeMode();
+    }
+
+    /**
+     * The In-Betweener, inside his bubble, where he is everything. Nothing reaches him
+     * there, and nothing stops him: not armour, not creative mode, not a totem.
+     */
+    public static DamageSource inBetweener(@Nullable Entity inBetweener) {
+        return absolute("eternity.inbetweener", inBetweener);
+    }
+
+    /**
+     * Master Order and Lord Chaos. Armour is a little order and a little chaos, and both are
+     * theirs; it means nothing to them, and so does creative mode.
+     */
+    public static DamageSource orderAndChaos(Entity master) {
+        return new EntityDamageSource("eternity.order_and_chaos", master).setDamageBypassesArmor().setDamageIsAbsolute().setMagicDamage()
+                .setDamageAllowedInCreativeMode();
+    }
+
+    /** The hands in the abyss beneath the Nexus. Nothing they take comes back. */
+    public static DamageSource abyss() {
+        return absolute("eternity.abyss", null);
     }
 
     private static DamageSource absolute(String type, @Nullable Entity eternity) {

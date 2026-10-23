@@ -787,9 +787,9 @@ public class EntityLivingTribunal extends EntityLiving {
         }
     }
 
-    /** Takes a share of their max health, more for each ascension. Creative and spectating players are beneath it. */
+    /** Takes a share of their max health, more for each ascension. Spectators are beneath it; creative mode is not. */
     private void judge(EntityPlayer player, float fraction) {
-        if (player.isCreative() || player.isSpectator() || fraction <= 0F) {
+        if (player.isSpectator() || fraction <= 0F) {
             return;
         }
         player.hurtResistantTime = 0;

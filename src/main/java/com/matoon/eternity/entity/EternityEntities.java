@@ -40,5 +40,17 @@ public final class EternityEntities {
                 .name(Eternity.MODID + ".living_tribunal")
                 .tracker(256, 1, true)
                 .build());
+        event.getRegistry().register(EntityEntryBuilder.create()
+                .entity(EntityInBetweener.class)
+                .id(new ResourceLocation(Eternity.MODID, "inbetweener"), 4)
+                .name(Eternity.MODID + ".inbetweener")
+                .tracker(160, 1, true)
+                .build());
+        event.getRegistry().register(EntityEntryBuilder.create()
+                .entity(EntityOrderChaos.class)
+                .id(new ResourceLocation(Eternity.MODID, "order_and_chaos"), 5)
+                .name(Eternity.MODID + ".order_and_chaos")
+                .tracker(256, 1, true)
+                .build());
     }
 }

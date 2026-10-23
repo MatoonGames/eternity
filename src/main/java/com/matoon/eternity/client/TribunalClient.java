@@ -3,6 +3,7 @@ package com.matoon.eternity.client;
 import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.EternitySounds;
 import com.matoon.eternity.client.render.FxRenderer;
+import com.matoon.eternity.client.render.InBetweenerFx;
 import com.matoon.eternity.client.render.TribunalFx;
 import com.matoon.eternity.client.render.TribunalRenderer;
 import com.matoon.eternity.client.sound.LoopSound;
@@ -38,6 +39,7 @@ import net.minecraftforge.fml.common.network.FMLNetworkEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -209,6 +211,54 @@ public final class TribunalClient {
                 effects.add(new TribunalFx.Gravity(at, m.a, m.time));
                 shake = Math.max(shake, 1F);
                 break;
+            case MsgTribunalFx.CHAOS_BURST:
+                effects.add(new InBetweenerFx.ChaosBurst(at, m.a, m.time));
+                break;
+            case MsgTribunalFx.CHAOS_MAW:
+                effects.add(new InBetweenerFx.ChaosMaw(at, to, tick * 31L + m.id, m.time));
+                break;
+            case MsgTribunalFx.CHAOS_SCATTER:
+                effects.add(new InBetweenerFx.ChaosFlash(at, to, m.time));
+                shake = Math.max(shake, 1F * closeness(dist, 30D));
+                break;
+            case MsgTribunalFx.ORDER_EDICT:
+                effects.add(new InBetweenerFx.EdictRing(mc.player, m.time));
+                InBetweenerClient.INSTANCE.edict(m.id, m.time);
+                shake = Math.max(shake, 1.5F);
+                break;
+            case MsgTribunalFx.ORDER_BOLT:
+                effects.add(new InBetweenerFx.OrderBolt(at, m.time));
+                flash = Math.max(flash, 0.3F * closeness(dist, 12D));
+                break;
+            case MsgTribunalFx.ORDER_TILES:
+                effects.add(new InBetweenerFx.Tiles(at, m.a, m.id, m.time, false));
+                break;
+            case MsgTribunalFx.ORDER_ERUPT:
+                effects.add(new InBetweenerFx.Tiles(at, m.a, m.id, m.time, true));
+                shake = Math.max(shake, 1.2F * closeness(dist, 30D));
+                break;
+            case MsgTribunalFx.ORDER_LINE:
+                effects.add(new InBetweenerFx.AlignLine(at, to, m.time, false));
+                break;
+            case MsgTribunalFx.ORDER_BEAM:
+                effects.add(new InBetweenerFx.AlignLine(at, to, m.time, true));
+                shake = Math.max(shake, 1.5F);
+                break;
+            case MsgTribunalFx.CHAOS_DICE:
+                effects.add(new InBetweenerFx.Dice(at, m.id, m.time));
+                break;
+            case MsgTribunalFx.CHAOS_STAR:
+                effects.add(new InBetweenerFx.ChaosStar(at, to, m.time));
+                break;
+            case MsgTribunalFx.CHAOS_WANDER:
+                effects.add(new InBetweenerFx.Wanderer(at, m.a, m.time));
+                break;
+            case MsgTribunalFx.CHAOS_BEAM:
+                effects.add(new InBetweenerFx.ChaosBeam(at, to, m.time));
+                break;
+            case MsgTribunalFx.PARADOX:
+                effects.add(new InBetweenerFx.ParadoxRings(at, m.a, m.time));
+                break;
             default:
                 break;
         }
@@ -323,8 +373,24 @@ public final class TribunalClient {
         }
     }
 
-    private boolean inChamber() {
+    /** His face, high on his throne, for {@link DialogueCamera}; null once he has left it. */
+    @Nullable
+    public Vec3d speakerAt() {
+        if (!inChamber() || risen) {
+            return null;
+        }
+        // Seated, his face is some thirty-three model pixels above the foot of the throne.
+        return new Vec3d(StarChamber.THRONE_X, StarChamber.THRONE_Y + 33F * TribunalRenderer.THRONE_SCALE,
+                StarChamber.THRONE_Z + 3F * TribunalRenderer.THRONE_SCALE);
+    }
+
+    public boolean inChamber() {
         return mc.world != null && mc.world.provider instanceof WorldProviderStarChamber;
+    }
+
+    /** Whether this player stands in the Star Chamber being judged. */
+    public boolean onTrial() {
+        return onTrial && inChamber();
     }
 
     private float wormhole(float pt) {

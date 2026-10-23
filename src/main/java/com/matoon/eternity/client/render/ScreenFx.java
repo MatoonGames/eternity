@@ -19,6 +19,8 @@ public final class ScreenFx {
 
     private static final ResourceLocation VIGNETTE = new ResourceLocation("textures/misc/vignette.png");
     private static final Random CRACKS = new Random();
+    /** The colours a view goes as it breaks up: magenta, cyan, black, blood. */
+    private static final float[][] CORRUPT = {{0.9F, 0.1F, 0.7F}, {0.1F, 0.9F, 0.95F}, {0F, 0F, 0F}, {0.6F, 0F, 0.1F}};
 
     private ScreenFx() {
     }
@@ -107,6 +109,90 @@ public final class ScreenFx {
         GlStateManager.enableAlpha();
         GlStateManager.enableCull();
         GlStateManager.color(1F, 1F, 1F, 1F);
+    }
+
+    /**
+     * The view coming apart as the abyss takes you: gloom closing in from the edges, torn
+     * bands of colour sliding across it, static, and squares of it going out one by one,
+     * edges first, until nothing is left. With {@code gentle} (reduceFlashing) the pattern
+     * changes slowly instead of seething.
+     */
+    public static void renderCorruption(double width, double height, float amount, float time, boolean gentle) {
+        float a = MathHelper.clamp(amount, 0F, 1F);
+        render(width, height, a * 0.35F, a * 1.2F, 0F, 0F, 0F, 0F, 0F, time);
+
+        GlStateManager.disableDepth();
+        GlStateManager.depthMask(false);
+        GlStateManager.disableAlpha();
+        GlStateManager.disableCull();
+        GlStateManager.disableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+        int frame = (int) (time / (gentle ? 24F : 3F));
+        CRACKS.setSeed(frame * 341873128712L + 77L);
+        float calm = gentle ? 0.5F : 1F;
+        Tessellator tessellator = Tessellator.getInstance();
+        BufferBuilder buffer = tessellator.getBuffer();
+        buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR);
+
+        int bands = 2 + (int) (14F * a);
+        for (int i = 0; i < bands; i++) {
+            double y = CRACKS.nextDouble() * height;
+            double h = 1D + CRACKS.nextDouble() * (3D + 10D * a);
+            double x0 = CRACKS.nextBoolean() ? 0D : CRACKS.nextDouble() * width;
+            double x1 = x0 + width * (0.2D + CRACKS.nextDouble() * 0.8D);
+            float[] c = CORRUPT[CRACKS.nextInt(CORRUPT.length)];
+            quad(buffer, x0, y, x1, y + h, c[0], c[1], c[2], (0.15F + 0.45F * a) * calm);
+        }
+
+        int grains = (int) (400F * a * a);
+        for (int i = 0; i < grains; i++) {
+            double x = CRACKS.nextDouble() * width, y = CRACKS.nextDouble() * height;
+            double s = 0.5D + CRACKS.nextDouble() * 1.5D;
+            float g = CRACKS.nextFloat();
+            quad(buffer, x, y, x + s, y + s, g, g * 0.8F, g, (0.1F + 0.4F * a) * calm);
+        }
+
+        // Going out: every square has its moment, the edges' first, and it comes as the abyss closes over you.
+        int cols = 32, rows = Math.max(1, (int) Math.round(cols * height / width));
+        double cw = width / cols, ch = height / rows;
+        float gone = a * a * 1.15F - 0.1F;
+        for (int i = 0; i < cols; i++) {
+            for (int j = 0; j < rows; j++) {
+                int h = i * 73856093 ^ j * 19349663;
+                h ^= h >>> 13;
+                h *= 0x5bd1e995;
+                h ^= h >>> 15;
+                double dx = (i + 0.5D) / cols - 0.5D, dy = (j + 0.5D) / rows - 0.5D;
+                double centre = 1D - Math.min(1D, Math.sqrt(dx * dx + dy * dy) * 1.5D);
+                double k = 0.55D * ((h >>> 8) & 0xFFFF) / 65536D + 0.45D * centre;
+                if (k < gone) {
+                    quad(buffer, i * cw, j * ch, (i + 1) * cw, (j + 1) * ch, 0F, 0F, 0F, 1F);
+                } else if (k < gone + 0.06D) {
+                    float[] c = CORRUPT[Math.floorMod(h + frame, CORRUPT.length)];
+                    quad(buffer, i * cw, j * ch, (i + 1) * cw, (j + 1) * ch, c[0] * 0.6F, c[1] * 0.6F, c[2] * 0.6F, 0.75F);
+                }
+            }
+        }
+        tessellator.draw();
+
+        GlStateManager.enableTexture2D();
+        GlStateManager.depthMask(true);
+        GlStateManager.enableDepth();
+        GlStateManager.enableAlpha();
+        GlStateManager.enableCull();
+        GlStateManager.color(1F, 1F, 1F, 1F);
+        if (a > 0.85F) {
+            // Oblivion.
+            renderVoid(width, height, time, (a - 0.85F) / 0.15F);
+        }
+    }
+
+    private static void quad(BufferBuilder buffer, double x0, double y0, double x1, double y1, float r, float g, float b, float a) {
+        buffer.pos(x0, y1, -90).color(r, g, b, a).endVertex();
+        buffer.pos(x1, y1, -90).color(r, g, b, a).endVertex();
+        buffer.pos(x1, y0, -90).color(r, g, b, a).endVertex();
+        buffer.pos(x0, y0, -90).color(r, g, b, a).endVertex();
     }
 
     private static void rect(double width, double height, float r, float g, float b, float a) {

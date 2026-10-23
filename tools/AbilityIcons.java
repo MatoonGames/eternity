@@ -21,7 +21,12 @@ public class AbilityIcons {
 
     private static final Color VIOLET = new Color(170, 80, 255, 150);
     private static final Color GOLD = new Color(255, 190, 60, 160);
-    private static final String[] TRIBUNAL = {"gavel", "equitys_gaze", "necessitys_storm", "scales", "sentence", "convergence", "pillars", "cosmic_verdict"};
+    private static final String[] TRIBUNAL = {"gavel", "equitys_gaze", "necessitys_storm", "scales", "sentence", "convergence", "pillars", "cosmic_verdict",
+            "decree", "edict", "tessellation", "alignment"};
+    private static final String[] CHAOS = {"dice", "maw", "wanderers", "disarray"};
+    private static final String[] BETWEEN = {"inversion", "equilibrium", "paradox"};
+    private static final Color BLUE = new Color(120, 200, 255, 160);
+    private static final Color GREY = new Color(200, 200, 205, 150);
     private static Color GLOW = VIOLET;
     private static final Color CORE = new Color(245, 235, 255);
 
@@ -29,9 +34,11 @@ public class AbilityIcons {
         File out = new File(args[0]);
         out.mkdirs();
         String[] names = {"unmake", "void_lances", "starfall", "shatter", "singularity", "rift_step", "rift_gate",
-                "gavel", "equitys_gaze", "necessitys_storm", "scales", "sentence", "convergence", "pillars", "cosmic_verdict"};
+                "gavel", "equitys_gaze", "necessitys_storm", "scales", "sentence", "convergence", "pillars", "cosmic_verdict",
+                "decree", "edict", "tessellation", "alignment", "dice", "maw", "wanderers", "disarray", "inversion", "equilibrium", "paradox"};
         for (String name : names) {
-            GLOW = java.util.Arrays.asList(TRIBUNAL).contains(name) ? GOLD : VIOLET;
+            GLOW = java.util.Arrays.asList(TRIBUNAL).contains(name) ? GOLD : java.util.Arrays.asList(CHAOS).contains(name) ? BLUE
+                    : java.util.Arrays.asList(BETWEEN).contains(name) ? GREY : VIOLET;
             BufferedImage big = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
             Graphics2D g = big.createGraphics();
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -184,6 +191,112 @@ public class AbilityIcons {
                     double a = Math.PI * 2 * i / 8;
                     burn(g, line(32 + Math.cos(a) * 5, 32 + Math.sin(a) * 5, 32 + Math.cos(a) * 15, 32 + Math.sin(a) * 15), 2F);
                 }
+                break;
+            case "decree": {
+                // One eye, wide open, its single line of light running straight down.
+                Path2D eye = new Path2D.Double();
+                eye.moveTo(12, 24);
+                eye.quadTo(32, 8, 52, 24);
+                eye.quadTo(32, 40, 12, 24);
+                burn(g, eye, 2.5F);
+                g.setColor(CORE);
+                g.fill(new Ellipse2D.Double(27, 19, 10, 10));
+                burn(g, line(32, 32, 32, 54), 4F);
+                break;
+            }
+            case "edict":
+                // A tablet of law, its lines ruled exactly.
+                burn(g, new java.awt.geom.RoundRectangle2D.Double(16, 10, 32, 44, 10, 10), 2.5F);
+                for (int i = 0; i < 4; i++) {
+                    burn(g, line(22, 20 + i * 8, 42, 20 + i * 8), 1.8F);
+                }
+                break;
+            case "tessellation":
+                // A three-by-three grid, its corners and centre lit.
+                for (int i = 0; i <= 3; i++) {
+                    burn(g, line(14 + i * 12, 14, 14 + i * 12, 50), 1.6F);
+                    burn(g, line(14, 14 + i * 12, 50, 14 + i * 12), 1.6F);
+                }
+                g.setColor(CORE);
+                for (int[] c : new int[][]{{0, 0}, {2, 0}, {1, 1}, {0, 2}, {2, 2}}) {
+                    g.fill(new java.awt.geom.Rectangle2D.Double(16 + c[0] * 12, 16 + c[1] * 12, 8, 8));
+                }
+                break;
+            case "alignment":
+                // A line, and chevrons drawn in to it from either side.
+                burn(g, line(32, 10, 32, 54), 3.5F);
+                for (int i = 0; i < 3; i++) {
+                    double y = 18 + i * 14;
+                    burn(g, line(12, y - 5, 20, y, 12, y + 5), 2F);
+                    burn(g, line(52, y - 5, 44, y, 52, y + 5), 2F);
+                }
+                break;
+            case "dice":
+                // Two dice, tumbling.
+                burn(g, new java.awt.geom.RoundRectangle2D.Double(10, 24, 22, 22, 6, 6), 2.5F);
+                burn(g, new java.awt.geom.RoundRectangle2D.Double(32, 12, 22, 22, 6, 6), 2.5F);
+                g.setColor(CORE);
+                g.fill(new Ellipse2D.Double(18, 32, 6, 6));
+                g.fill(new Ellipse2D.Double(36, 16, 5, 5));
+                g.fill(new Ellipse2D.Double(45, 25, 5, 5));
+                break;
+            case "maw": {
+                // A mouth, open, breathing in.
+                Path2D mouth = new Path2D.Double();
+                mouth.moveTo(12, 26);
+                mouth.quadTo(32, 12, 52, 26);
+                mouth.quadTo(32, 56, 12, 26);
+                g.setColor(Color.BLACK);
+                g.fill(mouth);
+                burn(g, mouth, 2.5F);
+                burn(g, line(18, 27, 22, 33, 26, 28, 30, 34, 34, 28, 38, 34, 42, 28, 46, 33), 1.5F);
+                break;
+            }
+            case "wanderers":
+                // Little rifts, scattered, each trailing where it has wandered.
+                for (int[] w : new int[][]{{18, 20}, {44, 18}, {30, 40}, {48, 46}}) {
+                    g.setColor(Color.BLACK);
+                    g.fill(new Ellipse2D.Double(w[0] - 5, w[1] - 5, 10, 10));
+                    burn(g, new Ellipse2D.Double(w[0] - 5, w[1] - 5, 10, 10), 2F);
+                    burn(g, line(w[0] - 6, w[1] + 6, w[0] - 10, w[1] + 4, w[0] - 12, w[1] + 9), 1.4F);
+                }
+                break;
+            case "disarray":
+                // Arrows turned against one another.
+                burn(g, line(12, 16, 48, 48), 2.5F);
+                burn(g, line(48, 48, 40, 48, 48, 40, 48, 48), 2F);
+                burn(g, line(52, 16, 16, 48), 2.5F);
+                burn(g, line(16, 48, 24, 48, 16, 40, 16, 48), 2F);
+                break;
+            case "inversion":
+                // Two halves, white and black, swapping places.
+                g.setColor(Color.WHITE);
+                g.fill(new java.awt.geom.Arc2D.Double(14, 14, 36, 36, 90, 180, java.awt.geom.Arc2D.PIE));
+                g.setColor(Color.BLACK);
+                g.fill(new java.awt.geom.Arc2D.Double(14, 14, 36, 36, 270, 180, java.awt.geom.Arc2D.PIE));
+                burn(g, new Ellipse2D.Double(14, 14, 36, 36), 2F);
+                burn(g, line(10, 10, 18, 10, 10, 18), 2F);
+                burn(g, line(54, 54, 46, 54, 54, 46), 2F);
+                break;
+            case "equilibrium":
+                // A scale level on its pivot, one pan white and one black.
+                burn(g, line(32, 14, 32, 48), 2.5F);
+                burn(g, line(12, 24, 52, 24), 2.5F);
+                g.setColor(Color.WHITE);
+                g.fill(new java.awt.geom.Arc2D.Double(6, 26, 14, 10, 180, 180, java.awt.geom.Arc2D.CHORD));
+                g.setColor(Color.BLACK);
+                g.fill(new java.awt.geom.Arc2D.Double(44, 26, 14, 10, 180, 180, java.awt.geom.Arc2D.CHORD));
+                burn(g, line(24, 50, 40, 50), 2.5F);
+                break;
+            case "paradox":
+                // An arrow pointing up and down at once.
+                burn(g, line(32, 10, 32, 54), 3F);
+                burn(g, line(24, 18, 32, 10, 40, 18), 2.5F);
+                burn(g, line(24, 46, 32, 54, 40, 46), 2.5F);
+                g.setColor(Color.WHITE);
+                g.fill(new Ellipse2D.Double(18, 28, 8, 8));
+                g.setColor(Color.BLACK);
+                g.fill(new Ellipse2D.Double(38, 28, 8, 8));
                 break;
             case "rift_gate":
                 // A doorway torn in the dark, a crack running through it.

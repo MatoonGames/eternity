@@ -2,10 +2,15 @@ package com.matoon.eternity.item;
 
 import com.matoon.eternity.Eternity;
 import com.matoon.eternity.ability.EternityAbilities;
+import com.matoon.eternity.ability.MastersAbilities;
 import com.matoon.eternity.ability.TribunalAbilities;
 import com.matoon.eternity.entity.EntityEternity;
+import com.matoon.eternity.entity.EntityInBetweener;
 import com.matoon.eternity.entity.EntityLivingTribunal;
+import com.matoon.eternity.entity.EntityOrderChaos;
 import com.matoon.eternity.world.Director;
+import com.matoon.eternity.world.InBetweenerDirector;
+import com.matoon.eternity.world.OrderAndChaos;
 import com.matoon.eternity.world.TribunalDirector;
 import lucraft.mods.lucraftcore.infinity.items.ItemIndestructible;
 import lucraft.mods.lucraftcore.superpowers.abilities.Ability;
@@ -49,6 +54,9 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
 
     public static final String ETERNITY = Eternity.MODID + ":eternity";
     public static final String TRIBUNAL = Eternity.MODID + ":living_tribunal";
+    public static final String ORDER = Eternity.MODID + ":master_order";
+    public static final String CHAOS = Eternity.MODID + ":lord_chaos";
+    public static final String INBETWEENER = Eternity.MODID + ":inbetweener";
 
     private static final String CHARGED = "Charged";
     private static final String ABSORBED = "Absorbed";
@@ -148,6 +156,18 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
         if (stack.getItem() == this && isCharged(stack) && absorbed(stack).contains(TRIBUNAL)) {
             TribunalAbilities.grant(entity, abilities);
         }
+        if (stack.getItem() == this && isCharged(stack)) {
+            List<String> held = absorbed(stack);
+            if (held.contains(ORDER)) {
+                MastersAbilities.grantOrder(entity, abilities);
+            }
+            if (held.contains(CHAOS)) {
+                MastersAbilities.grantChaos(entity, abilities);
+            }
+            if (held.contains(INBETWEENER)) {
+                MastersAbilities.grantInBetweener(entity, abilities);
+            }
+        }
         return abilities;
     }
 
@@ -161,21 +181,31 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
 
     @Override
     public boolean itemInteractionForEntity(ItemStack stack, EntityPlayer player, EntityLivingBase target, EnumHand hand) {
-        return (target instanceof EntityEternity || target instanceof EntityLivingTribunal)
+        return (target instanceof EntityEternity || target instanceof EntityLivingTribunal || target instanceof EntityOrderChaos
+                || target instanceof EntityInBetweener)
                 && release(player.world, player, stack, hand) == EnumActionResult.SUCCESS;
     }
 
     private static EnumActionResult release(World world, EntityPlayer player, ItemStack stack, EnumHand hand) {
         if (isCharged(stack)) {
-            // Charged, it can drink in one thing more: the Living Tribunal, while he lies beaten.
-            if (absorbed(stack).contains(TRIBUNAL)) {
+            // Charged, it can drink in more: the Living Tribunal, Master Order or Lord Chaos while they lie beaten,
+            // the In-Betweener while he lies fallen outside his glass.
+            List<String> held = absorbed(stack);
+            if (world.isRemote) {
+                boolean any = !held.contains(TRIBUNAL) && EntityLivingTribunal.downedNear(player) || EntityOrderChaos.downedNear(player)
+                        || !held.contains(INBETWEENER) && EntityInBetweener.fallenNear(player) || EntityOrderChaos.standingBefore(player);
+                return any ? EnumActionResult.SUCCESS : EnumActionResult.PASS;
+            }
+            if (!(player instanceof EntityPlayerMP)) {
                 return EnumActionResult.PASS;
             }
-            if (world.isRemote) {
-                return EntityLivingTribunal.downedNear(player) ? EnumActionResult.SUCCESS : EnumActionResult.PASS;
-            }
-            return player instanceof EntityPlayerMP && TribunalDirector.INSTANCE.tryAbsorb((EntityPlayerMP) player, hand)
-                    ? EnumActionResult.SUCCESS : EnumActionResult.PASS;
+            EntityPlayerMP mp = (EntityPlayerMP) player;
+            boolean took = !held.contains(TRIBUNAL) && TribunalDirector.INSTANCE.tryAbsorb(mp, hand)
+                    || OrderAndChaos.INSTANCE.tryAbsorb(mp, hand)
+                    || !held.contains(INBETWEENER) && InBetweenerDirector.INSTANCE.tryAbsorb(mp, hand)
+                    // Raised at one of them still standing, it takes nothing, but they notice.
+                    || OrderAndChaos.INSTANCE.regulatorRaised(mp);
+            return took ? EnumActionResult.SUCCESS : EnumActionResult.PASS;
         }
         if (world.isRemote) {
             return EnumActionResult.SUCCESS;
@@ -184,6 +214,9 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
             if (!player.capabilities.isCreativeMode) {
                 stack.shrink(1);
             }
+            return EnumActionResult.SUCCESS;
+        }
+        if (player instanceof EntityPlayerMP && OrderAndChaos.INSTANCE.regulatorRaised((EntityPlayerMP) player)) {
             return EnumActionResult.SUCCESS;
         }
         return EnumActionResult.FAIL;
@@ -203,6 +236,15 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
         }
         if (ids.contains(TRIBUNAL)) {
             rate += 100_000_000L;
+        }
+        if (ids.contains(ORDER)) {
+            rate += 250_000_000L;
+        }
+        if (ids.contains(CHAOS)) {
+            rate += 250_000_000L;
+        }
+        if (ids.contains(INBETWEENER)) {
+            rate += 500_000_000L;
         }
         return (int) Math.min(Integer.MAX_VALUE, rate);
     }

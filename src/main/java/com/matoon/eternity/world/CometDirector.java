@@ -350,7 +350,7 @@ public final class CometDirector {
 
     private static float heatPerSecond(CometData d, EntityLivingBase victim) {
         double scale = d.space ? 1D : EternityConfig.comet.overworldHeatScale;
-        return (float) ((EternityConfig.comet.heatPerSecond + EternityConfig.comet.heatMaxHealthPerSecond * victim.getMaxHealth()) * scale);
+        return (float) ((EternityConfig.comet.heatDamage + EternityConfig.comet.heatMaxHealthShare * victim.getMaxHealth()) * scale);
     }
 
     /** Creative and spectating players watch; everything else burns. */

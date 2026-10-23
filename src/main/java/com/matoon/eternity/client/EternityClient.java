@@ -20,7 +20,7 @@ import com.matoon.eternity.network.MsgOmen;
 import com.matoon.eternity.network.MsgOpenRiftGate;
 import com.matoon.eternity.network.MsgPresence;
 import com.matoon.eternity.network.MsgRift;
-import com.matoon.eternity.network.MsgStoneTarget;
+import com.matoon.eternity.network.MsgRelicTarget;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.ISound;
@@ -203,8 +203,8 @@ public final class EternityClient {
             onCue((MsgCue) message);
         } else if (message instanceof MsgFinale) {
             onFinale((MsgFinale) message);
-        } else if (message instanceof MsgStoneTarget) {
-            StoneFinderAngle.receive((MsgStoneTarget) message);
+        } else if (message instanceof MsgRelicTarget) {
+            RelicTrackerAngle.receive((MsgRelicTarget) message);
         } else if (message instanceof MsgOpenRiftGate) {
             mc.displayGuiScreen(new GuiRiftGate());
         }
@@ -842,7 +842,7 @@ public final class EternityClient {
         float droneVolume = present && !finale ? 0.05F + 0.33F * intensity : 0F;
         float windVolume = sky && present && !finale ? 0.32F * Math.max(0F, intensity - 0.12F) : 0F;
         float abyssVolume = finale ? 0F : space && present ? 0.15F + 0.5F * intensity : Math.max(0F, intensity - 0.55F) * 0.9F;
-        float encounterVolume = hunted && nearby != null && !finale ? 0.8F : 0F;
+        float encounterVolume = hunted && nearby != null && !finale ? FightMusic.INSTANCE.playing() ? 0.35F : 0.8F : 0F;
         if (doomStage == MsgFinale.UNMAKING) {
             droneVolume = 0.3F + 0.4F * doomLevel;
             abyssVolume = 0.2F + 0.6F * doomLevel;
@@ -962,6 +962,12 @@ public final class EternityClient {
                 want = pickDoomShader();
             } else if (doomStage == MsgFinale.OBLIVION) {
                 want = glitchUntil > tick ? "deconverge" : "desaturate";
+            } else if (InBetweenerClient.INSTANCE.shader() != null) {
+                // Inside the In-Betweener's bubble: the world turned inside out, then drained while time stands still.
+                want = InBetweenerClient.INSTANCE.shader();
+            } else if (NexusClient.INSTANCE.sinking() > 0F) {
+                // Going under in the Nexus's abyss: the image splits, then the colour drains out of it.
+                want = NexusClient.INSTANCE.sinking() > 0.65F ? "desaturate" : "deconverge";
             }
         }
         if (Objects.equals(want, activeShader)) {
@@ -1130,16 +1136,21 @@ public final class EternityClient {
         }
     }
 
-    /** During silences the world's own sounds simply do not happen, and music never plays near him. */
+    /** During silences the world's own sounds simply do not happen, and no music but his own plays near him. */
     @SubscribeEvent
     public void onPlaySound(PlaySoundEvent event) {
         ISound sound = event.getSound();
-        if (sound == null || Eternity.MODID.equals(sound.getSoundLocation().getNamespace())) {
+        if (sound == null || FightMusic.isFightMusic(sound)) {
+            return;
+        }
+        boolean music = sound.getCategory() == SoundCategory.MUSIC;
+        // Our own sounds are part of him, except music: even the Nexus's music falls silent near him.
+        if (Eternity.MODID.equals(sound.getSoundLocation().getNamespace()) && !music) {
             return;
         }
         if (isSilenced()) {
             event.setResultSound(null);
-        } else if (sound.getCategory() == SoundCategory.MUSIC && (intensity > 0.3F || finaleStage >= 0 || doomStage >= 0 || hunted)) {
+        } else if (music && (intensity > 0.3F || finaleStage >= 0 || doomStage >= 0 || hunted)) {
             event.setResultSound(null);
         }
     }
@@ -1201,6 +1212,16 @@ public final class EternityClient {
 
     private boolean isSilenced() {
         return silenceUntil > tick || finaleStage == MsgFinale.SILENCE || doomStage == MsgFinale.VOID;
+    }
+
+    /** His body, if he is near and hunting you and the world is not already ending. */
+    public EntityEternity foe() {
+        return hunted && nearby != null && !nearby.isDying() && finaleStage < 0 && doomStage < 0 ? nearby : null;
+    }
+
+    /** Whether the world has ended and only the void remains. */
+    public boolean inVoid() {
+        return doomStage == MsgFinale.VOID;
     }
 
     private void silence(int ticks) {

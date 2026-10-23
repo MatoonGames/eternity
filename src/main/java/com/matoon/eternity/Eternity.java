@@ -7,9 +7,14 @@ import com.matoon.eternity.compat.Tickrate;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.world.CometDirector;
 import com.matoon.eternity.world.Director;
+import com.matoon.eternity.world.InBetweenerDirector;
+import com.matoon.eternity.world.MastersPowers;
+import com.matoon.eternity.world.Nexus;
+import com.matoon.eternity.world.OrderAndChaos;
+import com.matoon.eternity.world.NexusDirector;
 import com.matoon.eternity.world.RegulatorPowers;
 import com.matoon.eternity.world.StarChamber;
-import com.matoon.eternity.world.StoneTracker;
+import com.matoon.eternity.world.RelicTracker;
 import com.matoon.eternity.world.TribunalDirector;
 import com.matoon.eternity.world.TribunalPowers;
 import net.minecraftforge.common.MinecraftForge;
@@ -42,12 +47,17 @@ public class Eternity {
     public void preInit(FMLPreInitializationEvent event) {
         EternityNetwork.init();
         MinecraftForge.EVENT_BUS.register(Director.INSTANCE);
-        MinecraftForge.EVENT_BUS.register(StoneTracker.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(RelicTracker.INSTANCE);
         MinecraftForge.EVENT_BUS.register(CometDirector.INSTANCE);
         MinecraftForge.EVENT_BUS.register(TribunalDirector.INSTANCE);
         MinecraftForge.EVENT_BUS.register(RegulatorPowers.INSTANCE);
         MinecraftForge.EVENT_BUS.register(TribunalPowers.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(NexusDirector.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(InBetweenerDirector.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(OrderAndChaos.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(MastersPowers.INSTANCE);
         StarChamber.register();
+        Nexus.register();
         proxy.preInit();
     }
 
@@ -77,9 +87,11 @@ public class Eternity {
     @Mod.EventHandler
     public void serverStopped(FMLServerStoppedEvent event) {
         Director.INSTANCE.reset();
-        StoneTracker.INSTANCE.reset();
+        RelicTracker.INSTANCE.reset();
         CometDirector.INSTANCE.reset();
         TribunalDirector.INSTANCE.reset();
         TribunalPowers.INSTANCE.reset();
+        InBetweenerDirector.INSTANCE.reset();
+        MastersPowers.INSTANCE.reset();
     }
 }

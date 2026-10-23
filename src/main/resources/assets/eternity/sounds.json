@@ -28,5 +28,19 @@
 
   "comet.flyby":  { "sounds": [ { "name": "eternity:comet/flyby", "stream": true } ] },
   "comet.impact": { "sounds": [ "eternity:comet/impact" ] },
-  "comet.blast":  { "sounds": [ "eternity:comet/blast" ] }
+  "comet.blast":  { "sounds": [ "eternity:comet/blast" ] },
+
+  "tesseract.hum": { "sounds": [ "eternity:tesseract/hum" ] },
+
+  "music.nexus":  { "sounds": [ { "name": "eternity:music/creative_mind", "stream": true }, { "name": "eternity:music/shadow_catch_you_tiring", "stream": true },
+                                { "name": "eternity:music/psychedelic_poster_1", "stream": true }, { "name": "eternity:music/psychedelic_poster_2", "stream": true, "volume": 0.75 } ] },
+  "nexus.abyss":  { "sounds": [ { "name": "eternity:nexus/screaming", "stream": true } ] },
+
+  "music.eternity":           { "sounds": [ { "name": "eternity:music/eternity_theme", "stream": true } ] },
+  "music.eternity_wounded":   { "sounds": [ { "name": "eternity:music/final_boss_theme", "stream": true, "volume": 0.79 } ] },
+  "music.tribunal_trial":     { "sounds": [ { "name": "eternity:music/for_whom_the_bell_tolls", "stream": true, "volume": 0.38 } ] },
+  "music.tribunal":           { "sounds": [ { "name": "eternity:music/living_tribunal_theme", "stream": true, "volume": 0.86 } ] },
+  "music.tribunal_ascended":  { "sounds": [ { "name": "eternity:music/franks_choice", "stream": true, "volume": 0.55 } ] },
+  "music.masters":            { "sounds": [ { "name": "eternity:music/clubbed_to_death", "stream": true, "volume": 0.54 } ] },
+  "music.void":               { "sounds": [ { "name": "eternity:music/title_screen_waiting", "stream": true } ] }
 }

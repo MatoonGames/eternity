@@ -3,7 +3,7 @@ package com.matoon.eternity.network;
 import io.netty.buffer.ByteBuf;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 
-/** The Living Tribunal's attacks, for everyone who can see them. */
+/** The Living Tribunal's attacks, and Master Order's and Lord Chaos's, for everyone who can see them. */
 public class MsgTribunalFx implements IMessage {
 
     /** A golden sigil of judgement burns onto the floor at (x,y,z). a = radius, time = ticks until it strikes. */
@@ -38,6 +38,34 @@ public class MsgTribunalFx implements IMessage {
     public static final byte ECHO = 14;
     /** Crushing weight bears down on everything around (x,y,z). a = radius, time = how long. */
     public static final byte GRAVITY = 15;
+    /** Lord Chaos: a patch of the world at (x,y,z) flickers onto deep space, then bursts. a = radius, time = ticks until it bursts. */
+    public static final byte CHAOS_BURST = 16;
+    /** Lord Chaos inhales: space streams from around (x,y,z) into his maw at (a,b,c). time = how long. */
+    public static final byte CHAOS_MAW = 17;
+    /** Lord Chaos flings something from (x,y,z) to (a,b,c). */
+    public static final byte CHAOS_SCATTER = 18;
+    /** Master Order lays down an edict for everyone at the junction. id = which (0 stand still, 1 do not strike, 2 look upon me), time = how long it holds. */
+    public static final byte ORDER_EDICT = 19;
+    /** A straight golden bolt of punishment falls on (x,y,z), for breaking his edict. */
+    public static final byte ORDER_BOLT = 20;
+    /** A five-by-five grid of golden tiles around (x,y,z), a blocks across each; id = which tiles are lit, one bit each. time = ticks until they erupt. */
+    public static final byte ORDER_TILES = 21;
+    /** The lit tiles of a grid erupt. Same fields as ORDER_TILES. */
+    public static final byte ORDER_ERUPT = 22;
+    /** A golden line is drawn across the floor from (x,y,z) to (a,b,c); everything is pulled toward it. time = how long. */
+    public static final byte ORDER_LINE = 23;
+    /** A beam of judgement runs the length of the line from (x,y,z) to (a,b,c). */
+    public static final byte ORDER_BEAM = 24;
+    /** Lord Chaos rolls two vast dice, landing at (x,y,z). id = the two faces, as tens and units. time = how long they tumble. */
+    public static final byte CHAOS_DICE = 25;
+    /** A star falls from (x,y,z) onto (a,b,c). time = how long it falls. */
+    public static final byte CHAOS_STAR = 26;
+    /** A little rift of deep space wanders at (x,y,z), a across. Sent every couple of ticks while it lives. */
+    public static final byte CHAOS_WANDER = 27;
+    /** Chaos's beam of deep space, from his maw at (x,y,z) to (a,b,c), for this instant. */
+    public static final byte CHAOS_BEAM = 28;
+    /** One of the In-Betweener's paradoxes takes hold at (x,y,z): two rings, one white and one black, turning through each other. a = radius. */
+    public static final byte PARADOX = 29;
 
     public byte type;
     public double x, y, z;

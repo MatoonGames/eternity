@@ -24,8 +24,60 @@ public class EternityConfig {
     @Config.Comment("The Living Tribunal, who comes for whoever caged Eternity.")
     public static Tribunal tribunal = new Tribunal();
 
+    @Config.Comment("The Nexus of All Realities.")
+    public static NexusSettings nexus = new NexusSettings();
+
+    @Config.Comment("The In-Betweener, imprisoned at the point of absolute neutrality in the Nexus.")
+    public static InBetweenerSettings inbetweener = new InBetweenerSettings();
+
     @Config.Comment("Client-side presentation. Each player can change these.")
     public static Client client = new Client();
+
+    public static class InBetweenerSettings {
+        @Config.Comment("Master switch. When false he is not there, and nobody can speak to him.")
+        public boolean enabled = true;
+
+        @Config.Comment({"Whether the Soul Stone is set in his brow, for anyone clever or cruel enough to take it. There is",
+                "only ever one: if a Soul Stone already exists anywhere else in the world, his brow is empty."})
+        public boolean holdsSoulStone = true;
+
+        @Config.Comment("Seconds after his glass breaks before Master Order and Lord Chaos arrive, and his empty body is cast off into the Nexus.")
+        @Config.RangeInt(min = 15, max = 3600)
+        public int wrathSeconds = 60;
+
+        @Config.Comment({"Anyone this close to the junction when they arrive must face them: first in words, then in battle.",
+                "Farther away, you have escaped."})
+        @Config.RangeInt(min = 8, max = 1024)
+        public int wrathRadius = 64;
+
+        @Config.Comment({"Damage it takes, in total, to break his glass while he presses from within.",
+                "Only blows at least as strong as shatterBlow count at all."})
+        @Config.RangeDouble(min = 1, max = 100000)
+        public double shatterStrength = 300.0;
+
+        @Config.Comment({"The weakest blow his glass even notices: your attack damage with the weapon in hand, its enchantments,",
+                "how fully the swing was charged, and a critical. A charged Astral Regulator or the Power Stone in hand doubles it."})
+        @Config.RangeDouble(min = 0, max = 10000)
+        public double shatterBlow = 12.0;
+
+        @Config.Comment("Damage Master Order and Lord Chaos each take before they withdraw.")
+        @Config.RangeDouble(min = 1, max = 10000000)
+        public double mastersHealth = 1500.0;
+
+        @Config.Comment("Largest share of either one's health a single blow can remove.")
+        @Config.RangeDouble(min = 0.0001, max = 1)
+        public double mastersMaxHitFraction = 0.02;
+
+        @Config.Comment({"Minutes he keeps his back turned, refusing to speak, after you offend him or he sees through you.",
+                "Outside his glass that is all he can do; he cannot make you leave, and you can keep pestering him."})
+        @Config.RangeInt(min = 0, max = 100000)
+        public int castOutMinutes = 5;
+    }
+
+    public static class NexusSettings {
+        @Config.Comment("Dimension id of the Nexus of All Realities. Change it if another mod uses it.")
+        public int dimension = -1932;
+    }
 
     public static class Tribunal {
         @Config.Comment("Master switch. When false the Living Tribunal never comes.")
@@ -121,12 +173,12 @@ public class EternityConfig {
         @Config.Comment({"Damage per second its heat deals at its surface, before the share of max health below.",
                 "Armour, resistance and fire resistance do nothing against it. Only absorption soaks it up."})
         @Config.RangeDouble(min = 0, max = 100000)
-        public double heatPerSecond = 30.0;
+        public double heatDamage = 15.0;
 
         @Config.Comment({"Share of the victim's max health its heat burns away per second at its surface.",
                 "Because it scales with max health, extra hearts do not help. Absorption does."})
         @Config.RangeDouble(min = 0, max = 100)
-        public double heatMaxHealthPerSecond = 1.0;
+        public double heatMaxHealthShare = 0.5;
 
         @Config.Comment("Heat multiplier over the overworld, where its fire is thinned by the air.")
         @Config.RangeDouble(min = 0, max = 10)
@@ -247,6 +299,10 @@ public class EternityConfig {
 
         @Config.Comment("Applies post-processing distortion (chromatic split, desaturation) at key moments.")
         public boolean distortionShaders = true;
+
+        @Config.Comment({"In the Nexus of All Realities the horizon leans gently and the view slowly breathes.",
+                "Off, or with reduceFlashing on, the view holds still."})
+        public boolean nexusWarp = true;
     }
 
     @Mod.EventBusSubscriber(modid = Eternity.MODID)

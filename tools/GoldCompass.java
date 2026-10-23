@@ -3,7 +3,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 
 /**
- * Builds the Stone Finder textures from the vanilla compass frames: the iron case is
+ * Builds the Relic Tracker textures from the vanilla compass frames: the iron case is
  * recoloured gold, the face goes void-dark and the red needle turns cosmic violet.
  *
  * Usage: java GoldCompass <vanilla textures/items dir> <output dir>
@@ -27,7 +27,7 @@ public class GoldCompass {
                     dst.setRGB(x, y, recolour(src.getRGB(x, y), ramp));
                 }
             }
-            ImageIO.write(dst, "png", new File(out, String.format("stone_finder_%02d.png", i)));
+            ImageIO.write(dst, "png", new File(out, String.format("relic_tracker_%02d.png", i)));
         }
     }
 
