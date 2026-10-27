@@ -52,5 +52,29 @@ public final class EternityEntities {
                 .name(Eternity.MODID + ".order_and_chaos")
                 .tracker(256, 1, true)
                 .build());
+        event.getRegistry().register(EntityEntryBuilder.create()
+                .entity(EntityAdamWarlock.class)
+                .id(new ResourceLocation(Eternity.MODID, "adam_warlock"), 6)
+                .name(Eternity.MODID + ".adam_warlock")
+                .tracker(256, 1, true)
+                .build());
+        event.getRegistry().register(EntityEntryBuilder.create()
+                .entity(EntityChampion.class)
+                .id(new ResourceLocation(Eternity.MODID, "champion"), 7)
+                .name(Eternity.MODID + ".champion")
+                .tracker(256, 1, true)
+                .build());
+        event.getRegistry().register(EntityEntryBuilder.create()
+                .entity(EntityEinherjar.class)
+                .id(new ResourceLocation(Eternity.MODID, "einherjar"), 8)
+                .name(Eternity.MODID + ".einherjar")
+                .tracker(128, 1, true)
+                .build());
+        event.getRegistry().register(EntityEntryBuilder.create()
+                .entity(EntityDestroyer.class)
+                .id(new ResourceLocation(Eternity.MODID, "destroyer"), 9)
+                .name(Eternity.MODID + ".destroyer")
+                .tracker(200, 1, true)
+                .build());
     }
 }

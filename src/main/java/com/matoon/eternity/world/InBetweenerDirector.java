@@ -698,7 +698,10 @@ public final class InBetweenerDirector {
         if ((req & InBetweenerDialogue.REQ_GEM) != 0 && !wearsGem()) {
             return false;
         }
-        if ((req & InBetweenerDialogue.REQ_REGULATOR) != 0 && !ItemAstralRegulator.holdsCharged(player)) {
+        if ((req & InBetweenerDialogue.REQ_REGULATOR) != 0 && !ItemAstralRegulator.holdsRegulator(player)) {
+            return false;
+        }
+        if ((req & InBetweenerDialogue.REQ_ETERNITY) != 0 && !ItemAstralRegulator.holds(player, ItemAstralRegulator.ETERNITY)) {
             return false;
         }
         if ((req & InBetweenerDialogue.REQ_PLANNED) != 0 && (facts & InBetweenerDialogue.F_PLANNED) == 0) {
@@ -849,8 +852,7 @@ public final class InBetweenerDirector {
                 break;
             case InBetweenerDialogue.ABSORB:
                 speak(player, InBetweenerDialogue.ABSORBED);
-                beginAbsorb(player, ItemAstralRegulator.holdsCharged(player) && isRegulator(player.getHeldItemMainhand())
-                        ? EnumHand.MAIN_HAND : EnumHand.OFF_HAND);
+                beginAbsorb(player, isRegulator(player.getHeldItemMainhand()) ? EnumHand.MAIN_HAND : EnumHand.OFF_HAND);
                 break;
             default:
                 speak(player, next);
@@ -1303,13 +1305,13 @@ public final class InBetweenerDirector {
 
     /**
      * Someone right-clicks him. Fallen, the gem on his brow is there for the taking; or,
-     * with a charged Astral Regulator in hand, he himself is.
+     * with an Astral Regulator in hand, empty or not, he himself is.
      */
     public boolean touched(EntityPlayerMP player) {
         if (body == null || !data().broken || player.isSpectator() || freeing) {
             return false;
         }
-        boolean regulator = isRegulator(player.getHeldItemMainhand()) && ItemAstralRegulator.isCharged(player.getHeldItemMainhand());
+        boolean regulator = isRegulator(player.getHeldItemMainhand());
         if (stage == Stage.SPEAKING && player.getUniqueID().equals(visitor) && node == InBetweenerDialogue.FALLEN) {
             if (regulator) {
                 speak(player, InBetweenerDialogue.ABSORBED);
@@ -1339,7 +1341,7 @@ public final class InBetweenerDirector {
         return true;
     }
 
-    /** Someone with a charged Regulator, from the Regulator's side: absorbs him if he lies fallen near them. */
+    /** Someone with a Regulator, from the Regulator's side: absorbs him if he lies fallen near them. */
     public boolean tryAbsorb(EntityPlayerMP player, EnumHand hand) {
         if (body == null || !data().broken || freeing || body.world != player.world || body.getDistance(player) > 12F
                 || stage == Stage.ABSORBING || stage == Stage.BATTLE) {
@@ -1373,7 +1375,7 @@ public final class InBetweenerDirector {
 
     /** He streams into the crystal, grey and then nothing. The gem, if he still wore it, falls free. */
     private void absorbing(EntityInBetweener entity, @Nullable EntityPlayerMP player) {
-        if (player == null || !ItemAstralRegulator.holdsCharged(player)) {
+        if (player == null || !ItemAstralRegulator.holdsRegulator(player)) {
             abandon();
             return;
         }
@@ -1389,7 +1391,7 @@ public final class InBetweenerDirector {
             return;
         }
         ItemStack stack = player.getHeldItem(absorbHand);
-        if (!isRegulator(stack) || !ItemAstralRegulator.isCharged(stack)) {
+        if (!isRegulator(stack)) {
             stack = player.getHeldItem(absorbHand == EnumHand.MAIN_HAND ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND);
         }
         if (wearsGem()) {

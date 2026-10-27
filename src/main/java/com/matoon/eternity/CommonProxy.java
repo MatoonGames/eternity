@@ -10,4 +10,9 @@ public class CommonProxy {
 
     public void receive(IMessage message) {
     }
+
+    /** Whether Tamarata is broken, as the client has been told. Only the client ever asks. */
+    public boolean tamarataBroken() {
+        return false;
+    }
 }

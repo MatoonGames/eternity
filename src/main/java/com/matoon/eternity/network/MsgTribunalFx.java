@@ -3,7 +3,10 @@ package com.matoon.eternity.network;
 import io.netty.buffer.ByteBuf;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 
-/** The Living Tribunal's attacks, and Master Order's and Lord Chaos's, for everyone who can see them. */
+/**
+ * The Living Tribunal's attacks, Master Order's and Lord Chaos's, Adam Warlock's, and the Champion of the
+ * Universe's, for everyone who can see them.
+ */
 public class MsgTribunalFx implements IMessage {
 
     /** A golden sigil of judgement burns onto the floor at (x,y,z). a = radius, time = ticks until it strikes. */
@@ -66,6 +69,86 @@ public class MsgTribunalFx implements IMessage {
     public static final byte CHAOS_BEAM = 28;
     /** One of the In-Betweener's paradoxes takes hold at (x,y,z): two rings, one white and one black, turning through each other. a = radius. */
     public static final byte PARADOX = 29;
+
+    // Adam Warlock. Everything from WARLOCK_BOOM on is his.
+    /** He breaks the sound barrier at (x,y,z), leaving along (a,b,c). time = how long the ring lasts. */
+    public static final byte WARLOCK_BOOM = 30;
+    /** A blow lands at (x,y,z), driving along (a,b,c). id = who it struck (-1 for nobody), time = 0 a jab, 1 a big hit, 2 a hammer. */
+    public static final byte WARLOCK_IMPACT = 31;
+    /** He stops dead in the air at (x,y,z), and the air keeps going. a = how far the ring goes. */
+    public static final byte WARLOCK_LAND = 32;
+    /** Sparks of power stream into (x,y,z) from a around, on entity {@link #id}, for time ticks. */
+    public static final byte WARLOCK_CHARGE = 33;
+    /** A bolt of quantum energy leaves (x,y,z) at (a,b,c) blocks a tick. id = the bolt, time = how long it can fly. */
+    public static final byte WARLOCK_BOLT = 34;
+    /** Bolt {@link #id} bursts at (x,y,z), a across. */
+    public static final byte WARLOCK_BURST = 35;
+    /** His beam, from his palms at (x,y,z) to (a,b,c), for this instant. id = the tick it is in, for the spiral. */
+    public static final byte WARLOCK_BEAM = 36;
+    /** A ring of gold on the ground at (x,y,z), a across: where he will land, in time ticks. */
+    public static final byte WARLOCK_MARK = 37;
+    /** He lands at (x,y,z), fists first. a = how far the ground shakes. */
+    public static final byte WARLOCK_SLAM = 38;
+    /** He is gone from (x,y,z) and at (a,b,c) in the same instant. */
+    public static final byte WARLOCK_BLINK = 39;
+    /** His cocoon hatches at (x,y,z). a = how far it throws its light; id = him. */
+    public static final byte WARLOCK_EMERGE = 40;
+    /** His cocoon is broken open at (x,y,z) before it was ready. */
+    public static final byte WARLOCK_SHATTER = 41;
+
+    // The Champion of the Universe. Everything from CHAMPION_IMPACT on is his.
+    /** A blow lands at (x,y,z), driving along (a,b,c). id = who it struck (-1 for nobody), time = 0 a jab, 1 a big hit, 2 a haymaker. */
+    public static final byte CHAMPION_IMPACT = 42;
+    /** A blow of yours meets his guard at (x,y,z), facing along (a,b,c). time = 0 blocked, 1 slipped, 2 parried. */
+    public static final byte CHAMPION_GUARD = 43;
+    /** Shockwave rings race out across the ground from (x,y,z). a = how far, time = ticks; id = how many rings. */
+    public static final byte CHAMPION_QUAKE = 44;
+    /** The ground cracks open at (x,y,z) toward (a,b,c). time = how long the cracks glow; id = a seed. */
+    public static final byte CHAMPION_CRACK = 45;
+    /** He roars at (x,y,z): a ring of distorted air, a = how far. id = him. */
+    public static final byte CHAMPION_ROAR = 46;
+    /** He leaves the ground at (x,y,z) for (a,b,c): dust kicked up, and a ring where he jumped. time = how long he flies. */
+    public static final byte CHAMPION_LEAP = 47;
+    /** Purple arcs crawl from the stone in his brow, entity {@link #id}, for time ticks. a = how wild, 0 to 1. */
+    public static final byte CHAMPION_ARCS = 48;
+    /** Planet Breaker: his fists come down at (x,y,z). a = how far the world breaks. */
+    public static final byte CHAMPION_BREAK = 49;
+    /** A ring of purple marks the ground at (x,y,z), a across: where he will land, in time ticks. */
+    public static final byte CHAMPION_MARK = 50;
+    /** The stone's light flies from his brow at (x,y,z) to the hand of entity {@link #id}. */
+    public static final byte CHAMPION_STONE = 51;
+    /** Rocket entity {@link #id} fires its engine, for time ticks. a = 0 idling, 1 lifting off. */
+    public static final byte CHAMPION_EXHAUST = 52;
+    /** He shoulder-charges from (x,y,z) along (a,b,c): dust and a bow wave of air. time = how long. */
+    public static final byte CHAMPION_RUSH = 53;
+    /** Tamarata's state, for whoever is there: id = 1 if it is broken, 0 if it is whole. */
+    public static final byte CHAMPION_WORLD = 54;
+
+    // Odin's Vault: its guards, the Destroyer, the Casket of Ancient Winters. Everything from VAULT_STATE on is the vault's.
+    /** What stands where in the vault, for whoever is there: id = 1 if the Casket is on its pedestal. */
+    public static final byte VAULT_STATE = 55;
+    /** The Destroyer wakes in its niche: entity {@link #id}. */
+    public static final byte DESTROYER_WAKE = 56;
+    /** The Destroyer's foot comes down at (x,y,z). a = how hard, 0 to 1. */
+    public static final byte DESTROYER_STEP = 57;
+    /** A blow lands at (x,y,z), driving along (a,b,c). id = who it struck (-1 for nobody), time = 0 a punch, 1 a backhand, 2 both fists. */
+    public static final byte DESTROYER_IMPACT = 58;
+    /** Its fists come down at (x,y,z): rings of force race out across the floor. a = how far, time = ticks. */
+    public static final byte DESTROYER_QUAKE = 59;
+    /** Its face opens and heat gathers in it: entity {@link #id}, for time ticks. */
+    public static final byte DESTROYER_CHARGE = 60;
+    /** Its ray, from its face at (x,y,z) to (a,b,c), for this instant. id = the tick it is in. */
+    public static final byte DESTROYER_RAY = 61;
+    /** It falls at (x,y,z): smoke, sparks, the fire in its face going out. id = it. */
+    public static final byte DESTROYER_FALL = 62;
+    /** A blow meets an Einherjar's shield at (x,y,z), facing along (a,b,c). */
+    public static final byte EINHERJAR_BLOCK = 63;
+    /** An Einherjar's spear strikes at (x,y,z), driving along (a,b,c). id = who it struck. */
+    public static final byte EINHERJAR_HIT = 64;
+    /** The Casket's winter pours out from (x,y,z) along (a,b,c), for time ticks. id = 0 a gale ahead, 1 a burst all round a blocks. */
+    public static final byte CASKET_WINTER = 65;
+    /** Entity {@link #id} is frozen in ice for time ticks. */
+    public static final byte CASKET_FREEZE = 66;
 
     public byte type;
     public double x, y, z;

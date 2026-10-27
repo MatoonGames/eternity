@@ -30,8 +30,135 @@ public class EternityConfig {
     @Config.Comment("The In-Betweener, imprisoned at the point of absolute neutrality in the Nexus.")
     public static InBetweenerSettings inbetweener = new InBetweenerSettings();
 
+    @Config.Comment("Adam Warlock, who wants the stones for himself.")
+    public static Warlock warlock = new Warlock();
+
+    @Config.Comment("The Champion of the Universe, and Tamarata, the war-ruined planet he lives on.")
+    public static Champion champion = new Champion();
+
+    @Config.Comment("Odin's Treasure Room, the vault under Asgard's palace: its guards, the Destroyer, and the Casket of Ancient Winters.")
+    public static Vault vault = new Vault();
+
     @Config.Comment("Client-side presentation. Each player can change these.")
     public static Client client = new Client();
+
+    public static class Vault {
+        @Config.Comment("Dimension id of Odin's Vault. Change it if another mod uses it.")
+        public int dimension = -1934;
+
+        @Config.Comment("Seconds after someone enters the vault before the Destroyer wakes.")
+        @Config.RangeInt(min = 0, max = 3600)
+        public int destroyerDelay = 20;
+
+        @Config.Comment("The Destroyer's health.")
+        @Config.RangeDouble(min = 1, max = 100000)
+        public double destroyerHealth = 800.0;
+
+        @Config.Comment({"Share of a blow that gets through the Destroyer's armour from anyone not wielding something worthy",
+                "of it: the Power Stone (held, or in a gauntlet in hand), Mjolnir, or a charged Astral Regulator."})
+        @Config.RangeDouble(min = 0, max = 1)
+        public double destroyerArmour = 0.12;
+
+        @Config.Comment("Most of the Destroyer's health a single blow can take; a tenth of that without something worthy of it.")
+        @Config.RangeDouble(min = 0.0001, max = 1)
+        public double destroyerMaxHitFraction = 0.06;
+
+        @Config.Comment({"Scales everything the Destroyer does to you. Its blows take shares of your maximum health, through",
+                "armour: a punch 18%, its fists brought down together 26%, and its ray as long as you stand in it."})
+        @Config.RangeDouble(min = 0, max = 10)
+        public double destroyerDamageScale = 1.0;
+
+        @Config.Comment("Minutes after it falls before Odin's smiths have the Destroyer standing in its niche again.")
+        @Config.RangeInt(min = 0, max = 100000)
+        public int destroyerRepairMinutes = 20;
+
+        @Config.Comment("Each Einherjar guard's health.")
+        @Config.RangeDouble(min = 1, max = 10000)
+        public double einherjarHealth = 60.0;
+
+        @Config.Comment("Damage of a spear thrust from an Einherjar. Armour turns it like any blow.")
+        @Config.RangeDouble(min = 0, max = 1000)
+        public double einherjarDamage = 8.0;
+
+        @Config.Comment({"Whether the Casket of Ancient Winters changes the world it is opened on: water freezing, snow on",
+                "the ground, ice erupting from it. Never inside the vault itself."})
+        public boolean casketChangesTerrain = true;
+    }
+
+    public static class Champion {
+        @Config.Comment("Master switch. When false he is not on Tamarata, though the planet is still there to visit.")
+        public boolean enabled = true;
+
+        @Config.Comment("Dimension id of Tamarata. Change it if another mod uses it. Galacticraft registers it.")
+        public int dimension = -1933;
+
+        @Config.Comment("Rocket tier needed to reach Tamarata.")
+        @Config.RangeInt(min = 1, max = 10)
+        public int tierRequired = 3;
+
+        @Config.Comment({"Whether the Power Stone is set in his brow, the price of the rocket that gets him off his broken",
+                "planet. There is only ever one: if a Power Stone already exists anywhere else, his brow is empty."})
+        public boolean holdsPowerStone = true;
+
+        @Config.Comment("His health. Knocked down, the stone heals him back up, so this only decides how often that happens.")
+        @Config.RangeDouble(min = 1, max = 100000)
+        public double health = 1500.0;
+
+        @Config.Comment({"Most of his health any single blow can take. He blocks or slips most blows from the front anyway;",
+                "beating him head-on is meant to be hopeless."})
+        @Config.RangeDouble(min = 0.0001, max = 1)
+        public double maxHitFraction = 0.015;
+
+        @Config.Comment({"Scales everything he does to you. His blows take shares of your maximum health, through armour:",
+                "a jab 6%, a haymaker 30%, a hammer quake up to 40%. Berserk, half again as much."})
+        @Config.RangeDouble(min = 0, max = 10)
+        public double damageScale = 1.0;
+
+        @Config.Comment({"How fast his rage builds when you make a fool of him: every blow you slip, every second you stay",
+                "out of his reach, every cheap shot from range, every taunt. 1 is normal."})
+        @Config.RangeDouble(min = 0, max = 10)
+        public double rageGain = 1.0;
+
+        @Config.Comment("How fast his rage cools while you stand and trade blows with him honourably. 1 is normal.")
+        @Config.RangeDouble(min = 0, max = 10)
+        public double rageDecay = 1.0;
+
+        @Config.Comment({"How far out from his arena his planet-breaking blow erases Tamarata. The rest of the planet breaks",
+                "apart as it is seen. It never touches any other dimension."})
+        @Config.RangeInt(min = 32, max = 400)
+        public int destructionRadius = 160;
+
+        @Config.Comment({"Chunks torn into rubble each tick while the planet breaks: first the wave out from his fists, then,",
+                "once it has run its course, the whole rest of the planet anyone has loaded, all at once. Each chunk is",
+                "cheap. Only a quarter of them may be chunks a player can see, since each of those is rebuilt on their screen.",
+                "Lower it if the server struggles; the breaking only takes longer."})
+        @Config.RangeInt(min = 1, max = 256)
+        public int chunksPerTick = 24;
+    }
+
+    public static class Warlock {
+        @Config.Comment("Damage he takes before he is driven off.")
+        @Config.RangeDouble(min = 1, max = 1024)
+        public double health = 600.0;
+
+        @Config.Comment({"Most of his health any single blow can take. Landing, and reeling from a broken cocoon, he is open",
+                "and takes half again as much."})
+        @Config.RangeDouble(min = 0.001, max = 1)
+        public double maxHitFraction = 0.04;
+
+        @Config.Comment({"Scales everything he does to you. His blows take shares of your maximum health, through armour:",
+                "a fly-by punch 30%, the combo up to half, the meteor dive up to a third. Evolved, a quarter more."})
+        @Config.RangeDouble(min = 0, max = 10)
+        public double damageScale = 1.0;
+
+        @Config.Comment("Damage his cocoon takes before it breaks, as a share of his maximum health.")
+        @Config.RangeDouble(min = 0.01, max = 10)
+        public double cocoonStrength = 0.2;
+
+        @Config.Comment("Share of his maximum health he comes out of an unbroken cocoon with.")
+        @Config.RangeDouble(min = 0.01, max = 1)
+        public double evolvedHealth = 0.65;
+    }
 
     public static class InBetweenerSettings {
         @Config.Comment("Master switch. When false he is not there, and nobody can speak to him.")

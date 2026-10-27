@@ -15,8 +15,9 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 @SideOnly(Side.CLIENT)
 public class RegulatorItemRenderer extends TileEntityItemStackRenderer {
 
+    /** The overload everything ends in, including other mods drawing it inside their own items. */
     @Override
-    public void renderByItem(ItemStack stack) {
+    public void renderByItem(ItemStack stack, float partialTicks) {
         float time = (Minecraft.getSystemTime() % 3600000L) / 50F;
         GlStateManager.pushMatrix();
         GlStateManager.translate(0.5F, 0.5F, 0.5F);

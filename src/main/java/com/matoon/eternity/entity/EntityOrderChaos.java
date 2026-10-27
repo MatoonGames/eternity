@@ -1106,7 +1106,7 @@ public class EntityOrderChaos extends EntityLiving {
         }
     }
 
-    /** A charged Regulator is raised while it lies beaten. It is drawn in. */
+    /** A Regulator, empty or not, is raised while it lies beaten. It is drawn in. */
     public boolean absorbBy(EntityPlayerMP player, EnumHand hand) {
         if (getState() != State.DOWNED) {
             return false;

@@ -1,5 +1,6 @@
 package com.matoon.eternity.entity;
 
+import com.matoon.eternity.client.render.EternityPose;
 import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.EternitySounds;
 import com.matoon.eternity.compat.Galacticraft;
@@ -59,10 +60,20 @@ public class EntityEternity extends EntityLiving {
     private static final DataParameter<Byte> STATE = EntityDataManager.createKey(EntityEternity.class, DataSerializers.BYTE);
     private static final DataParameter<Integer> TARGET = EntityDataManager.createKey(EntityEternity.class, DataSerializers.VARINT);
     private static final DataParameter<Float> CONTAINMENT = EntityDataManager.createKey(EntityEternity.class, DataSerializers.FLOAT);
+    private static final DataParameter<Byte> ATTACK = EntityDataManager.createKey(EntityEternity.class, DataSerializers.BYTE);
 
     public enum State { DRIFT, EMERGE, STARE, HUNT, CHANNEL, DEPART, DYING }
 
-    private enum Attack { UNMAKE, SINGULARITY, LANCES, STARFALL, SHATTER }
+    /** His attacks, and how long each is gathered before it is loosed. */
+    public enum Attack {
+        UNMAKE(14), SINGULARITY(45), LANCES(26), STARFALL(30), SHATTER(30);
+
+        public final int ticks;
+
+        Attack(int ticks) {
+            this.ticks = ticks;
+        }
+    }
 
     private enum StrikeType { LANCE, STAR, ERUPT }
 
@@ -87,6 +98,20 @@ public class EntityEternity extends EntityLiving {
 
     /** Client: ticks since the synced state last changed. */
     public int clientStateTicks;
+    /** Client: the pose he was last drawn in, and the pose he was in when his state last changed, to blend out of. */
+    public final float[] poseLast = new float[EternityPose.N], poseFrom = new float[EternityPose.N];
+    /** Client: the air against him as he moves, in his own frame, smoothed; it streams his cloak. */
+    public final double[] wind = new double[3], prevWind = new double[3];
+    /** Client: how far each segment of his cloak swings back, its sideways sway, the shoulder panels, the crests. */
+    public static final int CAPE = 5, PANEL = 3;
+    public final float[] cape = new float[CAPE], prevCape = new float[CAPE];
+    private final float[] capeSpin = new float[CAPE];
+    public float capeSway, prevCapeSway;
+    public final float[][] panel = new float[2][PANEL], prevPanel = new float[2][PANEL];
+    private final float[][] panelSpin = new float[2][PANEL];
+    public final float[] crest = new float[2], prevCrest = new float[2];
+    private final float[] crestSpin = new float[2], lastArm = new float[2];
+    private float lastLean;
 
     /** A blow that lands a moment after it is foreshadowed. */
     private static final class Strike {
@@ -125,6 +150,7 @@ public class EntityEternity extends EntityLiving {
         dataManager.register(STATE, (byte) State.DRIFT.ordinal());
         dataManager.register(TARGET, -1);
         dataManager.register(CONTAINMENT, 0F);
+        dataManager.register(ATTACK, (byte) 0);
     }
 
     @Override
@@ -143,6 +169,7 @@ public class EntityEternity extends EntityLiving {
             setSize(BASE_WIDTH * s, BASE_HEIGHT * s);
         } else if (STATE.equals(key) && world.isRemote) {
             clientStateTicks = 0;
+            System.arraycopy(poseLast, 0, poseFrom, 0, poseLast.length);
         }
     }
 
@@ -155,6 +182,12 @@ public class EntityEternity extends EntityLiving {
     public State getState() {
         int ordinal = dataManager.get(STATE);
         return ordinal >= 0 && ordinal < State.values().length ? State.values()[ordinal] : State.DRIFT;
+    }
+
+    /** What he is gathering, while he channels. */
+    public Attack getAttack() {
+        int ordinal = dataManager.get(ATTACK);
+        return ordinal >= 0 && ordinal < Attack.values().length ? Attack.values()[ordinal] : Attack.UNMAKE;
     }
 
     public void setState(State state) {
@@ -233,6 +266,7 @@ public class EntityEternity extends EntityLiving {
             serverTick();
         } else {
             clientStateTicks++;
+            windTick();
             spawnWisps();
         }
         super.onLivingUpdate();
@@ -403,7 +437,7 @@ public class EntityEternity extends EntityLiving {
             return;
         }
         if (dist <= reach()) {
-            startChannel(Attack.UNMAKE, 14);
+            startChannel(Attack.UNMAKE);
             return;
         }
         // Weighted choice among whatever is ready.
@@ -418,19 +452,20 @@ public class EntityEternity extends EntityLiving {
         }
         float roll = rand.nextFloat() * total;
         if ((roll -= singularity) < 0F) {
-            startChannel(Attack.SINGULARITY, 45);
+            startChannel(Attack.SINGULARITY);
         } else if ((roll -= starfall) < 0F) {
-            startChannel(Attack.STARFALL, 30);
+            startChannel(Attack.STARFALL);
         } else if ((roll -= shatter) < 0F) {
-            startChannel(Attack.SHATTER, 30);
+            startChannel(Attack.SHATTER);
         } else {
-            startChannel(Attack.LANCES, 26);
+            startChannel(Attack.LANCES);
         }
     }
 
-    private void startChannel(Attack attack, int length) {
+    private void startChannel(Attack attack) {
         channelling = attack;
-        channelLength = length;
+        channelLength = attack.ticks;
+        dataManager.set(ATTACK, (byte) attack.ordinal());
         setState(State.CHANNEL);
         playSound(EternitySounds.ENTITY_GLITCH, 4F, 0.5F + rand.nextFloat() * 0.3F);
         if (attack == Attack.SINGULARITY || attack == Attack.SHATTER) {
@@ -856,21 +891,98 @@ public class EntityEternity extends EntityLiving {
 
     // ------------------------------------------------------------------ client
 
+    /**
+     * The air against him, turned into his own frame (the model's: x to his left, y down, z
+     * behind him), and eased so his cloak swings rather than snaps when he turns or stops.
+     */
+    @SideOnly(Side.CLIENT)
+    private void windTick() {
+        System.arraycopy(wind, 0, prevWind, 0, 3);
+        double k = 2D / Math.max(1D, Math.sqrt(getScale()));
+        double wx = -(posX - prevPosX) * k, wy = -(posY - prevPosY) * k, wz = -(posZ - prevPosZ) * k;
+        double theta = Math.toRadians(180F - renderYawOffset);
+        double lx = wx * Math.cos(theta) - wz * Math.sin(theta);
+        double lz = wx * Math.sin(theta) + wz * Math.cos(theta);
+        double[] goal = {-lx, -wy, lz};
+        double length = Math.sqrt(goal[0] * goal[0] + goal[1] * goal[1] + goal[2] * goal[2]);
+        for (int i = 0; i < 3; i++) {
+            goal[i] = length > 1.4D ? goal[i] * 1.4D / length : goal[i];
+            wind[i] += (goal[i] - wind[i]) * 0.12D;
+        }
+        cloakTick();
+    }
+
+    /**
+     * His cloak, its shoulder panels and his crests, on springs. The cloak streams away from
+     * wherever the air is coming from and floats when he gathers his power; each segment
+     * swings toward the one above it, so a ripple runs down it. When his arms or body move,
+     * the cloth is left behind for a moment and swings after them; when he turns, his crests
+     * sway against the turn and settle.
+     */
+    @SideOnly(Side.CLIENT)
+    private void cloakTick() {
+        float t = ticksExisted;
+        float lift = poseLast[EternityPose.CLOAK_LIFT], open = poseLast[EternityPose.CLOAK_OPEN];
+        double back = wind[2] + 0.06D + lift * 1.1D, down = 1D + wind[1] * 0.9D;
+        float theta = (float) MathHelper.clamp(Math.atan2(back, down), 0.03D, 1.5D);
+        float strength = (float) Math.min(1D, Math.sqrt(wind[0] * wind[0] + wind[2] * wind[2]) + lift * 0.6D);
+
+        // Whatever his body and arms just did, the cloth has yet to do.
+        float lean = poseLast[EternityPose.LEAN] + poseLast[EternityPose.CHEST_X] + poseLast[EternityPose.WAIST_X];
+        capeSpin[0] += (lean - lastLean) * 0.7F;
+        lastLean = lean;
+
+        prevCapeSway = capeSway;
+        capeSway += ((float) MathHelper.clamp(-wind[0] * 0.8D, -0.5D, 0.5D) + MathHelper.sin(t * 0.043F) * 0.05F - capeSway) * 0.15F;
+        for (int i = 0; i < CAPE; i++) {
+            prevCape[i] = cape[i];
+        }
+        for (int i = 0; i < CAPE; i++) {
+            float flutter = MathHelper.sin(t * (0.09F + 0.3F * strength) - i * 1.1F) * (0.04F + 0.18F * strength) * (0.5F + i * 0.35F)
+                    + MathHelper.sin(t * 0.037F + i * 0.8F) * 0.03F;
+            float goal = (i == 0 ? theta : prevCape[i - 1] * 0.72F + theta * 0.28F) + flutter + open * 0.05F * i;
+            capeSpin[i] += (goal - cape[i]) * 0.22F;
+            capeSpin[i] *= 0.7F;
+            cape[i] += capeSpin[i];
+            cape[i] = i == 0 ? Math.max(0.02F, cape[i]) : cape[i - 1] + MathHelper.clamp(cape[i] - cape[i - 1], -0.45F, 0.8F);
+        }
+
+        for (int side = 0; side < 2; side++) {
+            int arm = side == 0 ? EternityPose.RA_X : EternityPose.LA_X;
+            float armNow = poseLast[arm] + poseLast[arm + 2];
+            panelSpin[side][0] += (armNow - lastArm[side]) * 0.45F;
+            lastArm[side] = armNow;
+            for (int i = 0; i < PANEL; i++) {
+                prevPanel[side][i] = panel[side][i];
+            }
+            for (int i = 0; i < PANEL; i++) {
+                float flutter = MathHelper.sin(t * (0.11F + 0.3F * strength) - i * 1.3F + side * 2.1F) * (0.04F + 0.15F * strength) * (0.6F + i * 0.4F);
+                float goal = (i == 0 ? theta * 0.7F : prevPanel[side][i - 1] * 0.7F + theta * 0.2F) + flutter;
+                panelSpin[side][i] += (goal - panel[side][i]) * 0.25F;
+                panelSpin[side][i] *= 0.68F;
+                panel[side][i] += panelSpin[side][i];
+            }
+
+            // The crests lag behind a turn, then swing back past and settle.
+            float turn = MathHelper.wrapDegrees(renderYawOffset - prevRenderYawOffset);
+            prevCrest[side] = crest[side];
+            crestSpin[side] += (MathHelper.clamp(-turn * 0.04F, -0.6F, 0.6F) - crest[side]) * 0.18F;
+            if (hurtTime == 9) {
+                crestSpin[side] += side == 0 ? 0.25F : -0.25F;
+            }
+            crestSpin[side] *= 0.8F;
+            crest[side] += crestSpin[side];
+        }
+    }
+
     private void spawnWisps() {
         float s = getScale();
-        int count = 2 + (int) (s * 0.6F);
+        int count = 1 + (int) (s * 0.4F);
         for (int i = 0; i < count; i++) {
             double px = posX + (rand.nextDouble() - 0.5D) * width * 1.4D;
             double py = posY + rand.nextDouble() * height;
             double pz = posZ + (rand.nextDouble() - 0.5D) * width * 1.4D;
             world.spawnParticle(EnumParticleTypes.PORTAL, px, py, pz, (rand.nextDouble() - 0.5D) * 2D, -rand.nextDouble(), (rand.nextDouble() - 0.5D) * 2D);
-        }
-        // His legs come apart into the dark.
-        for (int i = 0; i < count; i++) {
-            double px = posX + (rand.nextDouble() - 0.5D) * width;
-            double py = posY + rand.nextDouble() * height * 0.25D;
-            double pz = posZ + (rand.nextDouble() - 0.5D) * width;
-            world.spawnParticle(EnumParticleTypes.SPELL_MOB, px, py, pz, 0.05D, 0D, 0.12D);
         }
         if (rand.nextInt(3) == 0) {
             world.spawnParticle(EnumParticleTypes.END_ROD, posX + (rand.nextDouble() - 0.5D) * width * 2D,

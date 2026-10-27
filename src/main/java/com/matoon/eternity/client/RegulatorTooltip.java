@@ -354,9 +354,9 @@ public final class RegulatorTooltip {
     /** One being, upright and turning, at its own size inside the crystal. */
     private static void figure(String id, float shrink, float time) {
         if (ItemAstralRegulator.ETERNITY.equals(id)) {
-            float s = 0.17F * shrink;
+            float s = 0.15F * shrink;
             GlStateManager.scale(s, s, s);
-            GlStateManager.translate(0F, -3.9F, 0F);
+            GlStateManager.translate(0F, -4.3F, 0F);
             GlStateManager.rotate(time * 0.9F, 0F, 1F, 0F);
             RenderEternity.drawFigure(0, 0, 0, 0F, 0F, 0F, 1F, 1F, time, EntityEternity.State.DRIFT, 0, 400, false);
         } else if (ItemAstralRegulator.TRIBUNAL.equals(id)) {

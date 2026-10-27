@@ -837,7 +837,7 @@ public class EntityLivingTribunal extends EntityLiving {
         }
     }
 
-    /** A charged Regulator is raised while he lies beaten. He is drawn into it. */
+    /** A Regulator, empty or not, is raised while he lies beaten. He is drawn into it. */
     public boolean absorbBy(EntityPlayerMP player, EnumHand hand) {
         if (getState() != State.DOWNED) {
             return false;

@@ -12,6 +12,7 @@ public final class EternityItems {
 
     public static final ItemRelicTracker RELIC_TRACKER = new ItemRelicTracker();
     public static final ItemAstralRegulator ASTRAL_REGULATOR = new ItemAstralRegulator();
+    public static final ItemCasket CASKET = new ItemCasket();
 
     /** The Relic Tracker's name before it learned to find Regulators too. */
     private static final ResourceLocation STONE_FINDER = new ResourceLocation(Eternity.MODID, "stone_finder");
@@ -23,6 +24,7 @@ public final class EternityItems {
     public static void register(RegistryEvent.Register<Item> event) {
         event.getRegistry().register(RELIC_TRACKER);
         event.getRegistry().register(ASTRAL_REGULATOR);
+        event.getRegistry().register(CASKET);
     }
 
     /** Stone Finders in older worlds become Relic Trackers. */

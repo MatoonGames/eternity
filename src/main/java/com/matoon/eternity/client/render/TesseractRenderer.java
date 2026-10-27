@@ -79,8 +79,13 @@ public class TesseractRenderer extends TileEntityItemStackRenderer {
     /** Whether it is seen through a perspective, in the world or in hand, rather than flat in a slot or on a screen. */
     private boolean inWorld;
 
+    /**
+     * The overload everything ends in: vanilla's one-argument form calls it, and items that
+     * hold stones (Lucraft's gauntlet, Star-Tech's Cosmi-Rod) call it directly. Overriding
+     * only the other left those vanilla's fallback, which draws a chest.
+     */
     @Override
-    public void renderByItem(ItemStack stack) {
+    public void renderByItem(ItemStack stack, float partialTicks) {
         float time = (Minecraft.getSystemTime() % 3600000L) / 50F;
         GlStateManager.pushMatrix();
         GlStateManager.translate(0.5F, 0.5F, 0.5F);
@@ -90,6 +95,8 @@ public class TesseractRenderer extends TileEntityItemStackRenderer {
 
     /** Draws the Tesseract centred on the current origin. */
     public void draw(float time) {
+        // It is drawn inside other items' renderers too, so it puts back exactly what it found.
+        GlSnapshot before = GlSnapshot.take();
         ensureTextures();
         readView();
         float pulse = 0.9F + 0.07F * MathHelper.sin(time * 0.09F) + 0.03F * MathHelper.sin(time * 0.31F);
@@ -162,15 +169,7 @@ public class TesseractRenderer extends TileEntityItemStackRenderer {
             flare(time, swell);
         }
 
-        GlStateManager.cullFace(GlStateManager.CullFace.BACK);
-        GlStateManager.depthMask(true);
-        GlStateManager.enableCull();
-        GlStateManager.shadeModel(GL11.GL_FLAT);
-        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-        GlStateManager.enableTexture2D();
-        GlStateManager.enableAlpha();
-        GlStateManager.enableLighting();
-        GlStateManager.color(1F, 1F, 1F, 1F);
+        before.restore();
     }
 
     /**

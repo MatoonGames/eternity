@@ -33,6 +33,17 @@ public class EntityLoopSound extends MovingSound {
         follow();
     }
 
+    public EntityLoopSound pitch(float pitch) {
+        this.pitch = pitch;
+        return this;
+    }
+
+    public void setTarget(float target) {
+        if (!stopping) {
+            this.target = target;
+        }
+    }
+
     public void fadeOut() {
         target = 0F;
         stopping = true;

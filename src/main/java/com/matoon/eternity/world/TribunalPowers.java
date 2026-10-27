@@ -269,6 +269,11 @@ public final class TribunalPowers {
     /** The living thing nearest the middle of the caster's view, within range. */
     @Nullable
     private static EntityLivingBase lookedAt(EntityLivingBase caster, double range) {
+        // Whatever is right under the crosshair first; failing that, whatever is nearest the middle of the view.
+        EntityLivingBase sighted = CosmicPowers.sighted(caster, range);
+        if (sighted != null) {
+            return sighted;
+        }
         Vec3d eyes = caster.getPositionEyes(1F);
         Vec3d look = caster.getLook(1F);
         EntityLivingBase best = null;

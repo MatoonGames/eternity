@@ -6,8 +6,10 @@ import com.matoon.eternity.item.ItemAstralRegulator;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
+import net.minecraft.entity.ai.attributes.RangedAttribute;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
@@ -15,8 +17,8 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 import java.util.UUID;
 
 /**
- * Holding a charged Astral Regulator, you carry Eternity's endurance as well as his
- * powers: his health is added to yours, and, just as with him, no single blow can
+ * Holding an Astral Regulator that absorbed Eternity, you carry his endurance as well as
+ * his powers: his health is added to yours, and, just as with him, no single blow can
  * take more than a sliver of it (combat.maxHitFraction).
  */
 public final class RegulatorPowers {
@@ -24,8 +26,23 @@ public final class RegulatorPowers {
     public static final RegulatorPowers INSTANCE = new RegulatorPowers();
 
     private static final UUID HEALTH = UUID.fromString("6f1b0d8e-3c2a-4b8e-9a51-2e7d4c9f1a30");
+    /** Maximum health anyone can have, his and everything else together. */
+    private static final double HEALTH_LIMIT = 1_000_000D;
 
     private RegulatorPowers() {
+    }
+
+    /**
+     * Vanilla caps maximum health at 1024, which his alone fills: anything else that gives
+     * hearts (the Infinity Gauntlet, a superpower) would add nothing on top. Lucraft raises
+     * the armour cap the same way. Called once, at start-up, on both sides.
+     */
+    public static void raiseHealthLimit() {
+        if (SharedMonsterAttributes.MAX_HEALTH instanceof RangedAttribute
+                && ((RangedAttribute) SharedMonsterAttributes.MAX_HEALTH).clampValue(Double.MAX_VALUE) < HEALTH_LIMIT) {
+            ObfuscationReflectionHelper.setPrivateValue(RangedAttribute.class, (RangedAttribute) SharedMonsterAttributes.MAX_HEALTH,
+                    HEALTH_LIMIT, "maximumValue", "field_111118_b");
+        }
     }
 
     @SubscribeEvent
@@ -34,7 +51,7 @@ public final class RegulatorPowers {
         if (event.phase != TickEvent.Phase.END || player.world.isRemote || player.ticksExisted % 10 != 0) {
             return;
         }
-        boolean holding = ItemAstralRegulator.holdsCharged(player);
+        boolean holding = ItemAstralRegulator.holds(player, ItemAstralRegulator.ETERNITY);
         IAttributeInstance maxHealth = player.getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH);
         AttributeModifier modifier = maxHealth.getModifier(HEALTH);
         if (holding && modifier == null) {
@@ -52,7 +69,8 @@ public final class RegulatorPowers {
     /** No blow takes more than Eternity himself would let one take. */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onHurt(LivingHurtEvent event) {
-        if (!(event.getEntityLiving() instanceof EntityPlayer) || !ItemAstralRegulator.holdsCharged(event.getEntityLiving())) {
+        if (!(event.getEntityLiving() instanceof EntityPlayer)
+                || !ItemAstralRegulator.holds(event.getEntityLiving(), ItemAstralRegulator.ETERNITY)) {
             return;
         }
         float cap = event.getEntityLiving().getMaxHealth() * (float) EternityConfig.combat.maxHitFraction;

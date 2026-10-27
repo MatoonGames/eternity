@@ -158,7 +158,7 @@ final class Finale {
     }
 
     /** The charged Regulator falls; the universe exhales. */
-    void complete(MinecraftServer server, Vec3d at) {
+    void complete(MinecraftServer server, Vec3d at, List<String> held) {
         if (saved) {
             return;
         }
@@ -170,7 +170,7 @@ final class Finale {
         }
         WorldServer world = server.getWorld(dimension);
         if (world != null) {
-            EntityItemIndestructible orb = new EntityItemIndestructible(world, at.x, at.y, at.z, ItemAstralRegulator.charged());
+            EntityItemIndestructible orb = new EntityItemIndestructible(world, at.x, at.y, at.z, ItemAstralRegulator.charged(held));
             orb.setEntitySize(0.5F, 0.5F);
             world.spawnEntity(orb);
             for (EntityPlayerMP player : world.getPlayers(EntityPlayerMP.class, p -> p != null && p.getDistance(x, y, z) < 200D)) {

@@ -472,7 +472,7 @@ public final class TribunalDirector {
     }
 
     /**
-     * Someone raised a charged Astral Regulator. It works only while he lies beaten, and
+     * Someone raised an Astral Regulator, empty or not. It works only while he lies beaten, and
      * only for the one he was fighting, looking at him.
      */
     public boolean tryAbsorb(EntityPlayerMP player, EnumHand hand) {
@@ -490,10 +490,10 @@ public final class TribunalDirector {
     /** He is inside the Regulator now. Whoever holds it holds the court itself. */
     public void absorbed(EntityPlayerMP player, EnumHand hand) {
         ItemStack stack = player.getHeldItem(hand);
-        if (!(stack.getItem() instanceof ItemAstralRegulator) || !ItemAstralRegulator.isCharged(stack)) {
+        if (!(stack.getItem() instanceof ItemAstralRegulator)) {
             stack = ItemStack.EMPTY;
             for (ItemStack candidate : player.inventory.mainInventory) {
-                if (candidate.getItem() instanceof ItemAstralRegulator && ItemAstralRegulator.isCharged(candidate)) {
+                if (candidate.getItem() instanceof ItemAstralRegulator) {
                     stack = candidate;
                     break;
                 }

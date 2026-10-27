@@ -28,6 +28,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.DimensionManager;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
@@ -72,6 +73,8 @@ public final class RelicTracker {
     private int ticks;
     /** Whether a Soul Stone was found anywhere in the world, or is known to lie somewhere, at the last search. */
     private boolean soulSeen;
+    /** The same for the Power Stone, against the Champion's brow. */
+    private boolean powerSeen;
 
     private static final class Candidate {
         final String item;
@@ -101,6 +104,7 @@ public final class RelicTracker {
         lastSent.clear();
         ticks = 0;
         soulSeen = false;
+        powerSeen = false;
     }
 
     @SubscribeEvent
@@ -250,6 +254,7 @@ public final class RelicTracker {
         }
         addTemples(ledger, seen);
         addInBetweener();
+        addChampion();
     }
 
     /**
@@ -400,6 +405,31 @@ public final class RelicTracker {
     /** Whether a Soul Stone exists somewhere other than the In-Betweener's brow. */
     public boolean soulElsewhere() {
         return soulSeen;
+    }
+
+    /**
+     * The Power Stone in the Champion's brow, on Tamarata or wherever he drifts once his planet
+     * is broken, while he still wears it. Like the Soul Gem, there is only ever one: if a Power
+     * Stone turned up anywhere else, his brow is empty.
+     */
+    private void addChampion() {
+        Item power = anvil.infinity.items.Items.POWER_STONE;
+        String id = power == null || power.getRegistryName() == null ? null : power.getRegistryName().toString();
+        powerSeen = false;
+        for (Candidate c : candidates) {
+            if (c.item.equals(id)) {
+                powerSeen = true;
+            }
+        }
+        Vec3d at = ChampionDirector.INSTANCE.stonePosition();
+        if (id != null && at != null) {
+            candidates.add(new Candidate(id, Tamarata.dimension(), at.x, at.y, at.z, null));
+        }
+    }
+
+    /** Whether a Power Stone exists somewhere other than the Champion's brow. */
+    public boolean powerElsewhere() {
+        return powerSeen;
     }
     private static boolean isLoaded(int dim, double x, double y, double z) {
         WorldServer world = DimensionManager.getWorld(dim);

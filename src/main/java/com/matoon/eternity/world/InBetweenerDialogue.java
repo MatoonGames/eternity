@@ -61,6 +61,8 @@ public final class InBetweenerDialogue {
     static final int REQ_HOLDS_SOUL = 4;
     static final int REQ_PLANNED = 8;
     static final int REQ_TRAP = 16;
+    /** Only with Eternity himself inside the Regulator in hand. */
+    static final int REQ_ETERNITY = 32;
 
     // ------------------------------------------------------------------ what happens next
 
@@ -1014,7 +1016,7 @@ public final class InBetweenerDialogue {
                 a("He wanted out. I helped.", W_ACCOUNT),
                 a("I broke him out so I could take the Soul Gem. It worked.", W_PRIDE),
                 a("Out here he fell flat, just like you built him to. Your design works.", W_DESIGN),
-                a("I've got Eternity in this crystal. You answer to him, so you answer to me.", W_ETERNITY, REQ_REGULATOR),
+                a("I've got Eternity in this crystal. You answer to him, so you answer to me.", W_ETERNITY, REQ_ETERNITY),
                 a("Get out of my way.", W_NOW));
 
         masters(WRATH_BYSTANDER, B_NONE, FX_NONE, duo(
@@ -1023,7 +1025,7 @@ public final class InBetweenerDialogue {
                 "O:Someone answers for this. You are here."),
                 a("I didn't do anything.", W_INNOCENT),
                 a("Whoever did it already ran.", W_POINTED),
-                a("I've got Eternity in this crystal. You answer to him, so you answer to me.", W_ETERNITY, REQ_REGULATOR),
+                a("I've got Eternity in this crystal. You answer to him, so you answer to me.", W_ETERNITY, REQ_ETERNITY),
                 a("Then let's get it over with.", W_NOW));
 
         masters(WRATH_EMPTY, B_NONE, FX_NONE, duo(
@@ -1034,7 +1036,7 @@ public final class InBetweenerDialogue {
                         + "love that.",
                 "O:Explain yourself."),
                 a("He's mine now.", W_DARED),
-                a("Eternity's in there too. You answer to him.", W_ETERNITY, REQ_REGULATOR),
+                a("Eternity's in there too. You answer to him.", W_ETERNITY, REQ_ETERNITY),
                 a("Get out of my way.", W_NOW));
 
         masters(W_ACCOUNT, B_NONE, FX_ORDER_ANGERED, duo(

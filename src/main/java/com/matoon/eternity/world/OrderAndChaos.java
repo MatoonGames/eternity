@@ -367,7 +367,7 @@ public final class OrderAndChaos {
     }
 
     /**
-     * Someone raised a charged Astral Regulator. It works only on one of them lying beaten,
+     * Someone raised an Astral Regulator, empty or not. It works only on one of them lying beaten,
      * near enough and in front of the one who raised it.
      */
     public boolean tryAbsorb(EntityPlayerMP player, EnumHand hand) {
@@ -386,11 +386,11 @@ public final class OrderAndChaos {
     /** One of them is inside the Regulator now, and never comes again. */
     public void absorbed(EntityOrderChaos head, EntityPlayerMP player, EnumHand hand) {
         ItemStack stack = player.getHeldItem(hand);
-        if (!(stack.getItem() instanceof ItemAstralRegulator) || !ItemAstralRegulator.isCharged(stack)) {
+        if (!(stack.getItem() instanceof ItemAstralRegulator)) {
             stack = player.getHeldItem(hand == EnumHand.MAIN_HAND ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND);
         }
         boolean isOrder = head.isOrder();
-        if (stack.getItem() instanceof ItemAstralRegulator && ItemAstralRegulator.isCharged(stack)) {
+        if (stack.getItem() instanceof ItemAstralRegulator) {
             ItemAstralRegulator.absorb(stack, isOrder ? ItemAstralRegulator.ORDER : ItemAstralRegulator.CHAOS);
         }
         InBetweenerData d = InBetweenerDirector.INSTANCE.data();

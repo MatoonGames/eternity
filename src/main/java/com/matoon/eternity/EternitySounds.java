@@ -63,6 +63,10 @@ public final class EternitySounds {
     public static final SoundEvent MUSIC_TRIBUNAL = create("music.tribunal");
     public static final SoundEvent MUSIC_TRIBUNAL_ASCENDED = create("music.tribunal_ascended");
     public static final SoundEvent MUSIC_MASTERS = create("music.masters");
+    // The Champion of the Universe. No track of his own yet: it borrows a fight track until one is supplied.
+    public static final SoundEvent MUSIC_CHAMPION = create("music.champion");
+    // The Destroyer. It borrows a fight track too.
+    public static final SoundEvent MUSIC_DESTROYER = create("music.destroyer");
     public static final SoundEvent MUSIC_VOID = create("music.void");
 
     private EternitySounds() {

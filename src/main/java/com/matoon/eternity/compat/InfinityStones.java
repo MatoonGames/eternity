@@ -5,6 +5,7 @@ import lucraft.mods.lucraftcore.infinity.items.InventoryInfinityGauntlet;
 import lucraft.mods.lucraftcore.infinity.items.ItemInfinityGauntlet;
 import lucraft.mods.lucraftcore.infinity.items.ItemInfinityStone;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 
@@ -51,6 +52,13 @@ public final class InfinityStones {
 
     public static int countHeld(Entity entity) {
         return count(scan(entity));
+    }
+
+    /** Whether the Power Stone is in either of someone's hands, on its own or set in a gauntlet. */
+    public static boolean wieldsPower(EntityLivingBase entity) {
+        int power = bit(EnumInfinityStone.POWER);
+        boolean remote = entity.world.isRemote;
+        return (of(entity.getHeldItemMainhand(), remote) & power) != 0 || (of(entity.getHeldItemOffhand(), remote) & power) != 0;
     }
 
     private static int of(ItemStack stack, boolean remote) {

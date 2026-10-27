@@ -16,6 +16,18 @@ Requires Lucraft: Core, InfinityCraft, HeroesExpansion, Galacticraft Legacy and 
   chains, horns. They come from his direction. Closer means more often and louder.
 - **You can see him coming.** His rifts are cracks across the whole sky, hundreds of
   blocks tall, visible to the entire dimension at any distance and through terrain.
+- **You will know him when you see him.** A gaunt giant whose body is a window onto deep
+  space, stars moving inside it and twinkling on it. A blue mask of a face looks out of a
+  tall squared hood, two great jointed crests curl out of it into hooks, his fingers are
+  long splinters, and a pale tattered cloak hangs down his back with panels at each shoulder
+  that lift with his arms like wings. Cloak and crests swing on springs, trailing after
+  everything he does. Splinters of broken reality turn in the air around
+  him and stardust trails from his fingers. Every attack shows in his hands first: a hand
+  drawn back burning, a black star cupped between his palms, dark lances growing round a
+  raised hand, columns of light climbing from both palms, fists brought down like a forge.
+- **The world's music makes way.** When a fight begins or he comes close, whatever
+  Minecraft was playing fades out instead of playing on underneath, and nothing new starts
+  until a while after the fight is over.
 - **You can follow him.** A rift stays open for a while after he passes through it
   (`riftLingerSeconds`). Step into its heart and you come out where he went.
 - **The stones draw him.** Each new stone type you take changes the world around you
@@ -380,6 +392,178 @@ than he is, and not so absolute. They do not simply unmake whoever is there.
   body drifts off on its own when the time runs out. Flee more than 120 blocks from the junction, or die, and they let the
   rest go.
 
+## Adam Warlock
+
+Grown in a cocoon by the Sovereign to be perfect, and sure that he is. He wants the stones for
+himself, and whoever has been collecting them is in his way. For now he only comes when called
+(`/eternity warlock summon`); one day he will come on his own.
+
+- **How he looks.** A man a little taller than you in crimson armour: plates over a dark mesh
+  suit, a chevron of gold converging down his chest, a high collar, layered pauldrons,
+  vambraces, knee guards and boots, a gold belt with a jewelled buckle. Slicked-back golden hair
+  with a quiff, blue eyes, an amber gem on his brow, and a crimson cape lined with gold that
+  streams and ripples with every move he makes.
+- **How he burns.** As his power rises his skin turns to burnished gold, his eyes, the gem and
+  the seams of his armour light from within, and a corona of golden fire stands out behind him.
+  Embers stream off him. Flying, he leans head first into it, banks through his turns, and
+  leaves a trail of fire and golden afterimages of himself.
+- **How he fights.** Every blow takes a share of your maximum health, through armour, but he
+  cannot touch creative mode.
+
+  | Move | What happens |
+  | --- | --- |
+  | **Fly-by** | He coils in the air, fist drawn back, then breaks the sound barrier and comes through you fist first, banks round and comes again: twice, three times evolved. A hit (30%) stops the world for an instant and sends you flying |
+  | **Combo** | In close: a jab, a cross, an uppercut that launches you; if it lands he is above you before you stop rising and hammers you back down |
+  | **Quantum volley** | Bolts of quantum energy from one palm, then the other: five, seven evolved |
+  | **Quantum beam** | Palms together around a growing sun, then a beam that follows you |
+  | **Meteor dive** | He climbs out of sight, a gold ring marks the ground, and he comes down fists first and lands like a hero. For a moment after he lands he is wide open |
+  | **Cocoon** | Badly hurt, he wraps himself in gold. Break it before it hatches (it takes blows for him) and he reels, open; fail, and he comes out healed and *evolved*: brighter, faster and a quarter harder |
+
+- **He cannot be killed.** No blow takes more than 4% of him (half again as much while he lands
+  or reels). Beaten, he presses a hand to his side, swears it is not over, and leaves.
+
+`/eternity warlock showcase` brings him to show you everything he can do, one move after another,
+without hurting anyone.
+
+## Tamarata
+
+A desert planet out past Neptune, added to Galacticraft's solar system. It needs a tier-3
+rocket (configurable). It is hot and windy, but the air is breathable and the gravity is like
+home. That lasts only as long as the planet does: once it is broken, the air is gone and nothing
+falls, so bring oxygen gear, and bring whatever you need to fuel a rocket home.
+
+- **The land.** Red dunes over banded terracotta, old craters, and plains of sand fused to glass.
+  Everywhere are the remains of the people who lived here and of the armies that came to fight
+  the Champion: broken towers of quartz and prismarine, toppled colossi half sunk in the sand,
+  the ribcages of things too big to have been animals, skull piles, trench lines, and fields of
+  armour stands in dented armour beside rusted blades, broken anvils and torn banners.
+- **The landing site.** Arrivals come down in landing balloons onto a paved plateau ringed with
+  broken obelisks. In the middle is an intact launch pad.
+- **The Colosseum.** 150 blocks east of the landing site: a ruined arena, its floor drifted with
+  sand, tiers of seats around it with whole sections fallen in, an outer wall of arches broken
+  down to its footings in places, and four gates. The Champion lives here.
+- **The sky.** Rust overhead, burnt orange at the horizon, a small white sun a long way off, and
+  low in the east a ringed giant. Like the vanilla sun, both are square: the sun a hard white tile
+  with a square glow, the giant a face of shaded cells banded with cloud, its flat ring passing
+  behind and in front of it. Broken, the planet has no sky: only space, stars and a belt of
+  rubble. The sky itself never cracks; that is for the end of the universe alone.
+
+## The Champion of the Universe
+
+Tryco Slatterus: an Elder of the Universe who has spent billions of years doing the one thing he
+cares about, which is fighting. He is three blocks tall and built like a mountain, with pale
+blue-grey skin, a great swept-back red mane, a high gold collar, a navy sleeveless top cut in a
+deep V, a gold championship belt with a black-stone plate, gold cuffs, red tights and red boots.
+He wears the Power Stone in his brow without understanding it, and the stone feeds on his temper.
+There is one of him per world, and his story happens once.
+
+- **His arena.** Come near the Colosseum and he is there, fighting: the last warriors of Tamarata
+  still pour through his gates in waves, and he demolishes them. Come close and he finishes them
+  with a roar and calls you out.
+- **You cannot beat him head-on.** From the front he blocks most blows and slips most of the
+  rest; what gets through takes a sliver of him at most (1.5%, double that from behind or while
+  he recovers from a big swing). Knocked down, he lies there laughing, then gets up healed by the
+  stone, and angrier. Every blow of his takes a share of your maximum health, through armour,
+  but he cannot touch creative mode.
+- **His rage is everything.** It shows on his boss bar, and in him: the stone burns brighter, his
+  eyes light, the veins stand out purple, and at the top of it a crackling aura of the stone's
+  light stands out around him. He gets faster and hits harder with every stage: *Composed*,
+  *Heated*, *Furious*, *Berserk* (half again as hard).
+
+  | Makes him angrier | Calms him |
+  | --- | --- |
+  | Slipping his blows while you are close enough to be hit | Standing in front of him and trading blows, which he respects |
+  | Staying out of his reach | |
+  | Hitting him from range (arrows, or swings from too far away) | |
+  | Refusing his counter-stance dare | |
+  | Taunting him: sneaking up and down in front of him, or slapping him with an empty hand | |
+
+- **How he fights.** Boxing first, and raw strength; never a beam.
+
+  | Move | What happens |
+  | --- | --- |
+  | **Jab-jab-cross** | The lead hand twice, then the right with all his weight turned behind it |
+  | **Liver hook** | A step to the side and in, and the left hook whips round, low |
+  | **Uppercut** | Down and coiled, then up through you: it launches you |
+  | **Superman punch** | A crouch, a leap across the arena flat out with his fist ahead of him, and down into a lunge (30%) |
+  | **Clinch and throw** | He reaches for you; if he gets hold, up over his head you go, and then you are thrown |
+  | **Shoulder charge** | Shoulder down, and he comes straight, through whatever is in the way |
+  | **Ground pound** | Both fists high, a hop, and down: rings of force race out across the ground and the floor cracks |
+  | **Counter stance** | Guard dropped, chin out, beckoning. Hit him and the right comes over the top of your swing |
+  | **Primordial roar** | The air itself is thrown back from him, and so are you. The stone drinks it in |
+  | **Flex** | Between bouts, because he can |
+  | **Hammer quake** | Berserk only: a leap with both fists locked overhead, and down like a hammer (up to 40%) |
+
+- **Planet Breaker.** At the top of his rage he loses himself entirely: he gathers himself, the
+  stone blazing, leaps out of sight, hangs there a moment like a second sun, and drives both fists
+  into Tamarata. A wave runs out from the Colosseum for about sixteen seconds, tearing the planet
+  apart behind it a chunk at a time into a field of drifting fragments, and then the whole rest of
+  the planet anyone has loaded turns to rubble at once. Anywhere loaded later breaks as it loads,
+  and anywhere never visited is rubble from the start. Only the island your launch pad stands on
+  holds. From then on there
+  is no up and no down there: you drift, pushing along where you look (jump to rise, sneak to
+  sink), and nobody falls out of the wreck. Planet Breaker does not hurt you; it ends the world
+  under your feet instead. It never touches any other dimension, and a Champion summoned anywhere
+  else by command only goes through the motions.
+- **The trade.** Stranded, unable to fly or even swim through the wreck, he bargains: the stone
+  for a rocket. Right-click him holding a Galacticraft rocket (tier one to three) and it is
+  his. He tears the stone from his brow and throws it to you (it is the one true Power Stone,
+  claimed by you, and the Relic Tracker follows it), hauls himself across to the rocket, climbs
+  in, and is gone for good. Your own rocket is still where you left it, on the island.
+- **One Power Stone.** If a Power Stone already exists anywhere else, his brow is empty, and he
+  only owes you a debt.
+
+`/eternity champion showcase` brings him to wherever you are to show you every move, without
+hurting anyone or breaking anything. His music borrows a fight track until he has one of his own.
+
+## Odin's Vault
+
+Odin's Treasure Room, deep under the palace of Valaskjalf: a dimension of its own (-1934,
+`vault.dimension`) with nothing in it but the inside of the vault. There is no sky and no outside to
+see. For now the only way in is `/eternity vault`; the doors behind you lead back to wherever you
+came from.
+
+- **The hall.** You arrive at the foot of a flight of steps, lamps set low in its walls. At the top
+  is the hall: tall and narrow, its walls stepping in as they rise toward a lattice of light running
+  the length of the roof, scored with diagonal grooves, with deep bays down either side where the
+  treasures stand in pools of light. A cold haze swallows the far end, where a wall of light glows
+  through the gloom; pale shafts fall from the roof, dust turns slowly in them, and away from the
+  lamps it is dark. Nothing in the vault can be built or broken.
+- **The treasures.** Down the right side: the Warlock's Eye, a milky orb in three gold claws that
+  turns to watch you; HeroesExpansion's Tesseract on a gold cradle; the Crown of Black Fire, Surtur's
+  black iron split with burning cracks, dark fire licking off it; and the Eternal Flame, burning in
+  the bronze Chalice of Muspelheim on the fluted Pillar of Privaldi. Down the left: the fake Infinity
+  Gauntlet with all six stones; the Tuning Fork, its tines shivering as it rings; the Tablet of Life
+  and Time, carved with a ring of runes that glows; and HeroesExpansion's Mjolnir, which only the
+  worthy can lift. In the middle of the floor, on the frosted Pedestal of Fimbulvetr, the Casket of
+  Ancient Winters. Mjolnir and the Tesseract are set out the first time anyone comes (the Tesseract
+  only while nobody has claimed one, and it follows the one-true-relic rules like a village's).
+- **The Einherjar.** Two of Asgard's palace guard stand at the head of the steps: blackened steel and
+  gold, mustard cloaks, helms crowned with a ring of horns, round bronze shields and spears taller
+  than they are. They challenge you and come at you from either side behind their shields: a thrust
+  with their whole weight behind it, quick jabs, the shaft swept flat across, a shield bash, or a
+  crouch behind the shield with the spear over it, answering any blow on the shield at once. Blows
+  from in front land on their shields unless an axe knocks them aside. They are only mortal.
+- **The Destroyer.** About twenty seconds after you come in (`destroyerDelay`), or the moment anyone
+  lifts the Casket, the Destroyer wakes in its niche at the far end: a shudder through every plate,
+  fire kindling behind its face, its head coming round to you, and a first step. It punches and
+  backhands you across the hall, brings both fists down so rings of force race over the floor, and
+  stamps at anything near its feet. Then its face plates swing open, the furnace behind them gathers,
+  and it pours out a ray that follows you, or sweeps it across the hall at chest height. Almost
+  nothing hurts it: only someone wielding something worthy of it (the Power Stone, held or in a
+  gauntlet in hand; Mjolnir or Stormbreaker, held or thrown; a charged Astral Regulator) gets through
+  its armour; anything else lands a tenth as hard at most. Beaten, it falls to its knees and then on
+  its face, and the fire in it goes out; Odin's smiths have it standing in its niche again after
+  `destroyerRepairMinutes` (20). Every blow of its takes a share of your maximum health, through
+  armour, but it cannot touch creative mode. Its music borrows a fight track for now.
+- **The Casket of Ancient Winters** works. Right-click its pedestal to take it (and wake the
+  Destroyer), or to put it back. Use it and a gale of ancient winter pours out ahead of you: whatever
+  it catches is frozen in ice where it stands and can barely move for five seconds; water ices over,
+  lava crusts to stone, fires go out, snow settles and spikes of ice erupt from the ground. Sneak and
+  use it and winter bursts out all round you instead. Held, it freezes the water under your feet. It
+  never changes the world inside the vault, the Star Chamber or the Nexus, nor anywhere with
+  `casketChangesTerrain` off, and like the stones it cannot be destroyed.
+
 ## The Astral Regulator
 
 A faceted crystal of pale light with a gold ring set inside it. It cannot be crafted: the
@@ -472,8 +656,8 @@ one another, and past two their powers run on into a second column.
 | `/eternity hunt [player]` / `release` | Starts or ends a hunt |
 | `/eternity omen <1-6> [player]` | Plays a stone omen (6 includes the arrival heralds) |
 | `/eternity stones [player]` | Lists the stones a player is carrying |
-| `/eternity relics` | Who claimed the Tesseract and the Soul Stone and when, and where each relic was last seen |
-| `/eternity relics release <tesseract\|soul_stone>` | Forgets a claim, so the next copy someone takes becomes the true one |
+| `/eternity relics` | Who claimed the Tesseract, the Soul Stone and the Power Stone and when, and where each relic was last seen |
+| `/eternity relics release <tesseract|soul_stone|power_stone>` ||soul_stone>` | Forgets a claim, so the next copy someone takes becomes the true one |
 | `/eternity wound <percent>` | Damages him, for testing the fight |
 | `/eternity slay` | Starts the finale immediately |
 | `/eternity doom [0-1]` | Skips straight into the end of the world, at the given progress |
@@ -494,6 +678,33 @@ one another, and past two their powers run on into a second column.
 | `/eternity inbetweener revive` | Puts him back in whole glass, colour and all, keeping what he remembers of everyone |
 | `/eternity inbetweener reset` | Mends his glass, puts the gem back on his brow (unless a Soul Stone exists elsewhere), brings back him and his masters if they were absorbed, and makes him forget everyone |
 | `/eternity comet restore` | Makes it whole and lets it return, even after it was broken open |
+| `/eternity warlock [status]` | Where Adam Warlock is, what he is doing, his health, and whether he has evolved |
+| `/eternity warlock summon [player]` | He streaks down out of the sky at them and fights |
+| `/eternity warlock showcase [player]` | He comes to show off every move in turn, harmlessly |
+| `/eternity warlock fight` / `calm` | He stops holding back, or pulls his punches |
+| `/eternity warlock move <taunt\|flyby\|combo\|volley\|beam\|dive\|cocoon>` | He does that next |
+| `/eternity warlock wound <percent>` | Damages him, for testing his cocoon and his retreat |
+| `/eternity warlock dismiss` | He leaves |
+| `/eternity champion [status]` | Where the Champion is in his story, what he is doing, his rage, and where the Power Stone is |
+| `/eternity champion visit [player]` | Sends them to Tamarata, outside the Colosseum (or to the island, once the planet is broken) |
+| `/eternity champion summon [player]` | A Champion of their own, wherever they are, who fights them; he never breaks anything |
+| `/eternity champion showcase [player]` | The same, showing off every move in turn, harmlessly |
+| `/eternity champion move <flex|challenge|jab_cross|hook|uppercut|haymaker|grab|rush|pound|counter|roar|hammer|breaker>` | He does that next |
+| `/eternity champion rage <0-100>` | Sets his rage |
+| `/eternity champion break` | He loses his temper completely and breaks Tamarata |
+| `/eternity champion strand` | Skips to him adrift in the wreck, the planet breaking around him |
+| `/eternity champion restore` | Brings him back to his Colosseum with the stone in his brow; Tamarata is whole wherever it was not yet broken, and chunks generated from then on are whole again |
+| `/eternity champion dismiss` | Sends a summoned Champion away |
+| `/eternity vault [visit] [player]` | Sends them into Odin's Vault, at the foot of the steps |
+| `/eternity vault leave [player]` | Sends them back out to wherever they came in from |
+| `/eternity vault status` | Who is inside, how long until the Destroyer wakes, its state, the guards, the Casket and the relics |
+| `/eternity vault wake` | The Destroyer wakes now |
+| `/eternity vault guards` | Two fresh Einherjar take their posts |
+| `/eternity vault calm` / `fight` | Everything in the vault pulls its blows, or stops pulling them |
+| `/eternity vault move <punch\|backhand\|hammer\|stomp\|ray\|sweep>` | The Destroyer does that next |
+| `/eternity vault guard <thrust\|jab\|sweep\|bash\|guard>` | The Einherjar do that next |
+| `/eternity vault wound <percent>` | Damages the Destroyer, for testing its fall |
+| `/eternity vault restore` | The Casket back on its pedestal, Mjolnir and the Tesseract back on their stands if they are gone, the Destroyer mended |
 | `/tpdimension <player> <dim> [x y z]` | Sends a player to another dimension: to its spawn on safe ground, or to exact coordinates (`~` is relative to the player) |
 
 ## Configuration
@@ -503,7 +714,11 @@ blacklisted dimensions, space scale, the damage table by stone count, the Cosmic
 (how rare it is, its space dimension, size, speed, heat, health and escape time), the
 In-Betweener (whether he wears the Soul Stone, how hard his glass is to break, how long he
 keeps his back turned when offended) and his masters (how long they take to come, how near you must
-be to face them, how much they can take), and client options: presence strength, screen
+be to face them, how much they can take), the Champion (whether he is there and wears the Power
+Stone, Tamarata's dimension id and rocket tier, his health, damage and how much a blow can take of him,
+how fast his rage builds and cools, how far Planet Breaker reaches and how fast it erases), Odin's Vault (its
+dimension id, how soon the Destroyer wakes, its health and armour, how hard it hits, how long it takes to mend, the
+Einherjar's health and spears, and whether the Casket changes the world), and client options: presence strength, screen
 shake, reduced flashing, forced gaze and distortion shaders.
 
 ## Building
@@ -513,8 +728,9 @@ shake, reduced flashing, forced gaze and distortion shaders.
 ```
 
 Lucraft, HeroesExpansion and InfinityCraft deobfuscated jars live in `libs/`.
-Galacticraft is reached by reflection, so it is not needed to compile. To run the
-dev client or server, put the Galacticraft Legacy release jar in `run/mods/`.
+The Galacticraft Legacy release jar goes in `run/mods/`: the build deobfuscates it to
+compile Tamarata against (only `compat/galacticraft` uses its classes, and none of it is
+shipped), and the dev client and server load it from there.
 
 Sounds are converted from the original WAV pack with
 `tools/convert_sounds.sh <wav dir> [ffmpeg]`. They come from Freesound; see the
@@ -527,3 +743,12 @@ layout must match `client/render/ModelTribunal.java`. The In-Betweener's skin an
 drained grey twin are painted the same way by `tools/InBetweenerSkin.java`, in the vanilla
 player layout, matching `client/render/ModelInBetweener.java`; Master Order's and Lord
 Chaos's heads by `tools/OrderChaosSkin.java`, matching `client/render/ModelOrderChaos.java`.
+Adam Warlock's skin, his golden form and his glow layer are painted by `tools/WarlockSkin.java`
+in a 128x128 layout of their own, matching `client/render/ModelAdamWarlock.java`.
+The Champion's skin, his rage and stone glow layers, and Tamarata's icon for the celestial map are
+painted by `tools/ChampionSkin.java` (`java -cp out ChampionSkin <entity texture dir> <celestialbodies
+texture dir>`), in a 128x128 layout matching `client/render/ModelChampion.java`.
+Everything in Odin's Vault that is not a block (the Einherjar, the Destroyer and its glow, the treasures and
+their glow) is painted by `tools/VaultSkin.java` onto the layouts `client/render/VaultBoxes.java` packs:
+`javac -d out tools/VaultSkin.java src/main/java/com/matoon/eternity/client/render/VaultBoxes.java` then
+`java -cp out VaultSkin src/main/resources/assets/eternity/textures/entity`.

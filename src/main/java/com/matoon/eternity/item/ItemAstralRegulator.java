@@ -45,10 +45,11 @@ import java.util.List;
 
 /**
  * A faceted crystal built to hold what should never be released. Used on Eternity as
- * he dies, it drinks his escaping energy back in and saves the universe. Afterwards
- * it is charged: its name burns purple, it remembers what it absorbed, and whoever
- * holds it can wield those powers as Lucraft abilities. Like the stones, it cannot
- * be destroyed.
+ * he dies, it drinks his escaping energy back in and saves the universe; used on any of
+ * the other cosmic beings once they are beaten, it drinks them in too, in whatever order.
+ * Once it holds anything it is charged: its name burns purple, it remembers what it
+ * absorbed, and whoever holds it can wield those powers as Lucraft abilities. Like the
+ * stones, it cannot be destroyed.
  */
 public class ItemAstralRegulator extends ItemIndestructible implements IAbilityProvider {
 
@@ -119,15 +120,41 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
         return stack.getItem() instanceof ItemAstralRegulator && isCharged(stack);
     }
 
+    /** Whether this entity holds a Regulator, empty or not, in either hand. */
+    public static boolean holdsRegulator(@Nullable Entity entity) {
+        if (!(entity instanceof EntityLivingBase)) {
+            return false;
+        }
+        EntityLivingBase living = (EntityLivingBase) entity;
+        return living.getHeldItemMainhand().getItem() instanceof ItemAstralRegulator
+                || living.getHeldItemOffhand().getItem() instanceof ItemAstralRegulator;
+    }
+
+    /** Whether this entity holds, in either hand, a Regulator with this being inside. */
+    public static boolean holds(@Nullable Entity entity, String id) {
+        if (!(entity instanceof EntityLivingBase)) {
+            return false;
+        }
+        EntityLivingBase living = (EntityLivingBase) entity;
+        return holdsIn(living.getHeldItemMainhand(), id) || holdsIn(living.getHeldItemOffhand(), id);
+    }
+
+    private static boolean holdsIn(ItemStack stack, String id) {
+        return stack.getItem() instanceof ItemAstralRegulator && absorbed(stack).contains(id);
+    }
+
     /** A Regulator that has drunk in Eternity. */
     public static ItemStack charged() {
+        return charged(new ArrayList<>());
+    }
+
+    /** A Regulator that has drunk in Eternity, on top of whatever it already held. */
+    public static ItemStack charged(List<String> already) {
         ItemStack stack = new ItemStack(EternityItems.ASTRAL_REGULATOR);
-        NBTTagCompound tag = new NBTTagCompound();
-        tag.setBoolean(CHARGED, true);
-        NBTTagList list = new NBTTagList();
-        list.appendTag(new NBTTagString(ETERNITY));
-        tag.setTag(ABSORBED, list);
-        stack.setTagCompound(tag);
+        for (String id : already) {
+            absorb(stack, id);
+        }
+        absorb(stack, ETERNITY);
         return stack;
     }
 
@@ -186,40 +213,36 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
                 && release(player.world, player, stack, hand) == EnumActionResult.SUCCESS;
     }
 
+    /**
+     * Empty or not, it drinks in whichever of them it is raised at, in any order: Eternity as he
+     * dies, the Living Tribunal, Master Order or Lord Chaos while they lie beaten, the
+     * In-Betweener while he lies fallen outside his glass.
+     */
     private static EnumActionResult release(World world, EntityPlayer player, ItemStack stack, EnumHand hand) {
-        if (isCharged(stack)) {
-            // Charged, it can drink in more: the Living Tribunal, Master Order or Lord Chaos while they lie beaten,
-            // the In-Betweener while he lies fallen outside his glass.
-            List<String> held = absorbed(stack);
-            if (world.isRemote) {
-                boolean any = !held.contains(TRIBUNAL) && EntityLivingTribunal.downedNear(player) || EntityOrderChaos.downedNear(player)
-                        || !held.contains(INBETWEENER) && EntityInBetweener.fallenNear(player) || EntityOrderChaos.standingBefore(player);
-                return any ? EnumActionResult.SUCCESS : EnumActionResult.PASS;
-            }
-            if (!(player instanceof EntityPlayerMP)) {
-                return EnumActionResult.PASS;
-            }
-            EntityPlayerMP mp = (EntityPlayerMP) player;
-            boolean took = !held.contains(TRIBUNAL) && TribunalDirector.INSTANCE.tryAbsorb(mp, hand)
-                    || OrderAndChaos.INSTANCE.tryAbsorb(mp, hand)
-                    || !held.contains(INBETWEENER) && InBetweenerDirector.INSTANCE.tryAbsorb(mp, hand)
-                    // Raised at one of them still standing, it takes nothing, but they notice.
-                    || OrderAndChaos.INSTANCE.regulatorRaised(mp);
-            return took ? EnumActionResult.SUCCESS : EnumActionResult.PASS;
-        }
+        List<String> held = absorbed(stack);
         if (world.isRemote) {
-            return EnumActionResult.SUCCESS;
+            boolean any = !held.contains(ETERNITY)
+                    || !held.contains(TRIBUNAL) && EntityLivingTribunal.downedNear(player) || EntityOrderChaos.downedNear(player)
+                    || !held.contains(INBETWEENER) && EntityInBetweener.fallenNear(player) || EntityOrderChaos.standingBefore(player);
+            return any ? EnumActionResult.SUCCESS : EnumActionResult.PASS;
         }
-        if (player instanceof EntityPlayerMP && Director.INSTANCE.tryContain((EntityPlayerMP) player)) {
+        if (!(player instanceof EntityPlayerMP)) {
+            return EnumActionResult.PASS;
+        }
+        EntityPlayerMP mp = (EntityPlayerMP) player;
+        // Eternity it takes by flying into his heart; it comes back holding him and everything it held before.
+        if (!held.contains(ETERNITY) && Director.INSTANCE.tryContain(mp, held)) {
             if (!player.capabilities.isCreativeMode) {
                 stack.shrink(1);
             }
             return EnumActionResult.SUCCESS;
         }
-        if (player instanceof EntityPlayerMP && OrderAndChaos.INSTANCE.regulatorRaised((EntityPlayerMP) player)) {
-            return EnumActionResult.SUCCESS;
-        }
-        return EnumActionResult.FAIL;
+        boolean took = !held.contains(TRIBUNAL) && TribunalDirector.INSTANCE.tryAbsorb(mp, hand)
+                || OrderAndChaos.INSTANCE.tryAbsorb(mp, hand)
+                || !held.contains(INBETWEENER) && InBetweenerDirector.INSTANCE.tryAbsorb(mp, hand)
+                // Raised at one of them still standing, it takes nothing, but they notice.
+                || OrderAndChaos.INSTANCE.regulatorRaised(mp);
+        return took ? EnumActionResult.SUCCESS : EnumActionResult.PASS;
     }
 
     // ------------------------------------------------------------------ energy

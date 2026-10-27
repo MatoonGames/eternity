@@ -22,6 +22,7 @@ import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.DimensionManager;
 
 import java.lang.ref.WeakReference;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -65,12 +66,44 @@ public final class CosmicPowers {
         strikes.clear();
     }
 
-    /** Where the caster is looking: the first block hit, or a point at full range. */
+    /**
+     * Where the caster is looking: the first living thing in the way, the first block hit,
+     * or a point at full range. Without the first, anything in the air (Adam Warlock, most
+     * of all) could never be aimed at: the powers went straight past it to the ground.
+     */
     public static Vec3d aim(EntityLivingBase caster, double range) {
         Vec3d eyes = caster.getPositionEyes(1F);
         Vec3d end = eyes.add(caster.getLook(1F).scale(range));
         RayTraceResult hit = caster.world.rayTraceBlocks(eyes, end, false, true, false);
-        return hit != null && hit.hitVec != null ? hit.hitVec : end;
+        Vec3d wall = hit != null && hit.hitVec != null ? hit.hitVec : end;
+        EntityLivingBase target = sighted(caster, eyes.distanceTo(wall));
+        return target != null ? target.getPositionVector().add(0D, target.height / 2D, 0D) : wall;
+    }
+
+    /**
+     * The nearest living thing under the crosshair, forgivingly: its box is grown by a block,
+     * so something small and fast still counts. Null if there is none before a wall or range.
+     */
+    @Nullable
+    public static EntityLivingBase sighted(EntityLivingBase caster, double range) {
+        Vec3d eyes = caster.getPositionEyes(1F);
+        Vec3d look = caster.getLook(1F);
+        Vec3d end = eyes.add(look.scale(range));
+        RayTraceResult wall = caster.world.rayTraceBlocks(eyes, end, false, true, false);
+        double reach = wall != null && wall.hitVec != null ? eyes.distanceTo(wall.hitVec) : range;
+        AxisAlignedBB sweep = caster.getEntityBoundingBox().expand(look.x * reach, look.y * reach, look.z * reach).grow(1.5D);
+        EntityLivingBase best = null;
+        double bestDistance = reach;
+        for (EntityLivingBase entity : caster.world.getEntitiesWithinAABB(EntityLivingBase.class, sweep, e -> isVictim(caster, e))) {
+            AxisAlignedBB box = entity.getEntityBoundingBox().grow(1D);
+            RayTraceResult through = box.calculateIntercept(eyes, end);
+            double distance = box.contains(eyes) ? 0D : through != null ? eyes.distanceTo(through.hitVec) : Double.MAX_VALUE;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = entity;
+            }
+        }
+        return best;
     }
 
     // ------------------------------------------------------------------ the powers
@@ -292,6 +325,11 @@ public final class CosmicPowers {
 
     /** The living thing nearest the centre of the caster's view, within range. */
     private static EntityLivingBase lookedAt(EntityLivingBase caster, double range) {
+        // Whatever is right under the crosshair first; failing that, whatever is nearest the middle of the view.
+        EntityLivingBase sighted = sighted(caster, range);
+        if (sighted != null) {
+            return sighted;
+        }
         Vec3d eyes = caster.getPositionEyes(1F);
         Vec3d look = caster.getLook(1F);
         EntityLivingBase best = null;

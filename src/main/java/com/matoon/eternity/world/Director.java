@@ -76,6 +76,8 @@ public final class Director {
     private int riftIds;
     /** Who released the Astral Regulator into his heart. */
     private UUID containedBy;
+    /** What that Regulator already held, which it still holds when it falls back out charged with him. */
+    private List<String> containedWith = new ArrayList<>();
 
     private static final class Scheduled {
         final long at;
@@ -897,9 +899,10 @@ public final class Director {
 
     /**
      * Someone used the Astral Regulator. It works only while he is dying and before
-     * the supernova, and only if they are near enough to see his heart.
+     * the supernova, and only if they are near enough to see his heart. {@code held} is
+     * what the Regulator already holds; it keeps all of it.
      */
-    public boolean tryContain(EntityPlayerMP player) {
+    public boolean tryContain(EntityPlayerMP player, List<String> held) {
         if (finale == null || !finale.canContain()) {
             return false;
         }
@@ -919,6 +922,7 @@ public final class Director {
         player.world.spawnEntity(new EntityAstralRegulator(player.world, from, dying));
         participants.add(player.getUniqueID());
         containedBy = player.getUniqueID();
+        containedWith = new ArrayList<>(held);
         finale.contain();
         return true;
     }
@@ -934,7 +938,8 @@ public final class Director {
     public void containmentComplete(Vec3d at) {
         MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
         if (finale != null && server != null) {
-            finale.complete(server, at);
+            finale.complete(server, at, containedWith);
+            containedWith = new ArrayList<>();
             body = null;
             // Whoever caged him has drawn the attention of something far greater.
             if (containedBy != null) {

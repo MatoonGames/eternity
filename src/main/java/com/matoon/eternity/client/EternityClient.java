@@ -6,6 +6,7 @@ import com.matoon.eternity.EternitySounds;
 import com.matoon.eternity.client.render.Cosmic;
 import com.matoon.eternity.client.render.FractureRenderer;
 import com.matoon.eternity.client.render.FxRenderer;
+import com.matoon.eternity.client.render.GlSnapshot;
 import com.matoon.eternity.client.render.RenderEternity;
 import com.matoon.eternity.client.render.RiftRenderer;
 import com.matoon.eternity.client.render.ScreenFx;
@@ -1006,6 +1007,9 @@ public final class EternityClient {
                 view.lastTickPosX + (view.posX - view.lastTickPosX) * pt,
                 view.lastTickPosY + (view.posY - view.lastTickPosY) * pt,
                 view.lastTickPosZ + (view.posZ - view.lastTickPosZ) * pt);
+        // Put back exactly what was on before: the renderers below switch things on as they finish
+        // (lighting, after the sky fractures), and anything left on is drawn into the hand and HUD.
+        GlSnapshot before = GlSnapshot.take();
         GlStateManager.disableFog();
 
         float sky = finaleCosmic + cosmicPulse + skyBleed + Math.max(0F, intensity - 0.8F) * 0.25F;
@@ -1020,6 +1024,7 @@ public final class EternityClient {
         RiftRenderer.renderAll(rifts.values(), camera, pt);
         FxRenderer.renderAll(effects, camera, pt);
         renderFarColossus(camera, pt);
+        before.restore();
     }
 
     /** In space you can see him from a very long way off, drifting through the void. */
@@ -1150,7 +1155,7 @@ public final class EternityClient {
         }
         if (isSilenced()) {
             event.setResultSound(null);
-        } else if (music && (intensity > 0.3F || finaleStage >= 0 || doomStage >= 0 || hunted)) {
+        } else if (music && holdsMusic()) {
             event.setResultSound(null);
         }
     }
@@ -1212,6 +1217,11 @@ public final class EternityClient {
 
     private boolean isSilenced() {
         return silenceUntil > tick || finaleStage == MsgFinale.SILENCE || doomStage == MsgFinale.VOID;
+    }
+
+    /** Whether the world's own music must keep quiet: he is close, hunting, or the world is ending. */
+    public boolean holdsMusic() {
+        return isSilenced() || intensity > 0.3F || finaleStage >= 0 || doomStage >= 0 || hunted;
     }
 
     /** His body, if he is near and hunting you and the world is not already ending. */

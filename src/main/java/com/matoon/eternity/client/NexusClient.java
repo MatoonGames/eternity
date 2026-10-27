@@ -77,7 +77,6 @@ public final class NexusClient {
     private int nextGlitch;
     /** How near the point of absolute neutrality you stand, from 0 to 1. */
     private float neutral;
-    private boolean silent;
     @Nullable
     private static MusicTicker.MusicType music;
 
@@ -123,11 +122,6 @@ public final class NexusClient {
         }
         EntityPlayerSP player = mc.player;
         neutral = Nexus.neutrality(player.posX, player.posZ);
-        if (silenced() && !silent && !FightMusic.INSTANCE.playing()) {
-            // Near the junction even the Nexus's music has nothing to hold on to.
-            mc.getSoundHandler().stop("", SoundCategory.MUSIC);
-        }
-        silent = silenced();
         // Gravity here is half-hearted: you drift down rather than fall.
         if (!player.onGround && !player.capabilities.isFlying && !player.isInWater()) {
             if (player.motionY < 0D) {
@@ -249,6 +243,11 @@ public final class NexusClient {
 
     private boolean silenced() {
         return neutral > 0.4F;
+    }
+
+    /** Whether music must keep quiet here: near the junction nothing plays but a fight's. */
+    public boolean holdsMusic() {
+        return inNexus() && silenced();
     }
 
     /** No music but a fight's starts near the junction, and at its epicentre nearly nothing is heard at all. */

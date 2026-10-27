@@ -38,9 +38,13 @@
 
   "music.eternity":           { "sounds": [ { "name": "eternity:music/eternity_theme", "stream": true } ] },
   "music.eternity_wounded":   { "sounds": [ { "name": "eternity:music/final_boss_theme", "stream": true, "volume": 0.79 } ] },
-  "music.tribunal_trial":     { "sounds": [ { "name": "eternity:music/for_whom_the_bell_tolls", "stream": true, "volume": 0.38 } ] },
-  "music.tribunal":           { "sounds": [ { "name": "eternity:music/living_tribunal_theme", "stream": true, "volume": 0.86 } ] },
+  "music.tribunal_trial":     { "sounds": [ { "name": "eternity:music/living_tribunal_ambience", "stream": true, "volume": 0.85 },
+                                            { "name": "eternity:music/ephyra_streets", "stream": true, "volume": 0.6 } ] },
+  "music.tribunal":           { "sounds": [ { "name": "eternity:music/living_tribunal_theme", "stream": true, "volume": 0.86 },
+                                            { "name": "eternity:music/living_tribunal_umvc3", "stream": true, "volume": 0.62 } ] },
   "music.tribunal_ascended":  { "sounds": [ { "name": "eternity:music/franks_choice", "stream": true, "volume": 0.55 } ] },
   "music.masters":            { "sounds": [ { "name": "eternity:music/clubbed_to_death", "stream": true, "volume": 0.54 } ] },
+  "music.champion":           { "sounds": [ { "name": "eternity:music/living_tribunal_umvc3", "stream": true, "volume": 0.62 } ] },
+  "music.destroyer":          { "sounds": [ { "name": "eternity:music/final_boss_theme", "stream": true, "volume": 0.7 } ] },
   "music.void":               { "sounds": [ { "name": "eternity:music/title_screen_waiting", "stream": true } ] }
 }

@@ -83,6 +83,22 @@ public final class EternityDamage {
                 .setDamageAllowedInCreativeMode();
     }
 
+    /**
+     * Adam Warlock's fists and quantum energy. Armour is no match for him, but he is no
+     * cosmic being, and creative mode is beyond him.
+     */
+    public static DamageSource warlock(Entity warlock) {
+        return new EntityDamageSource("eternity.warlock", warlock).setDamageBypassesArmor();
+    }
+
+    /**
+     * The Champion of the Universe's fists. Armour folds under them like foil, but he is a
+     * fighter, not a god, and creative mode is beyond him.
+     */
+    public static DamageSource champion(Entity champion) {
+        return new EntityDamageSource("eternity.champion", champion).setDamageBypassesArmor();
+    }
+
     /** The hands in the abyss beneath the Nexus. Nothing they take comes back. */
     public static DamageSource abyss() {
         return absolute("eternity.abyss", null);

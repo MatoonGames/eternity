@@ -31,15 +31,21 @@ minecraft {
     serverJvmArgs += "-Dfml.coreMods.load=com.matoon.eternity.dev.DevFixesPlugin"
 }
 
+repositories {
+    // The Galacticraft Legacy release jar, which also runs in the dev client from run/mods.
+    flatDir { dirs 'run/mods' }
+}
+
 dependencies {
     // Deobfuscated dev jars, shared with Beyonder.
     compile files('libs/LucraftCore-deobf.jar')
     compile files('libs/HeroesExpansion-deobf.jar')
     compile files('libs/InfinityCraft-deobf.jar')
     compile files('libs/TickrateChanger-1.0.14-deobf.jar')
-    // Galacticraft Legacy is accessed reflectively (see compat/Galacticraft), so it
-    // is not needed on the compile classpath. Drop the release jar into run/mods to
-    // test with it in the dev client.
+    // Galacticraft Legacy, deobfuscated to MCP names for compiling only, and never shipped.
+    // Only compat/galacticraft touches its classes (Tamarata, the Champion's planet); the
+    // rest of the mod reaches it reflectively through compat/Galacticraft.
+    deobfProvided 'micdoodle8:Galacticraft:4.0.7'
 }
 
 processResources {

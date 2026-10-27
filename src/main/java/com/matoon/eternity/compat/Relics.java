@@ -34,7 +34,9 @@ public final class Relics {
         /** The Tesseract, and the Space Stone inside it once it is broken open. */
         TESSERACT("the Tesseract"),
         /** The Soul Stone: the gem on the In-Betweener's brow, or any found before it. */
-        SOUL_STONE("the Soul Stone");
+        SOUL_STONE("the Soul Stone"),
+        /** The Power Stone: the gem in the Champion's brow, or any found before it. */
+        POWER_STONE("the Power Stone");
 
         public final String title;
 
@@ -67,6 +69,9 @@ public final class Relics {
         }
         if (item == anvil.infinity.items.Items.SOUL_STONE) {
             return Kind.SOUL_STONE;
+        }
+        if (item == anvil.infinity.items.Items.POWER_STONE) {
+            return Kind.POWER_STONE;
         }
         return null;
     }
