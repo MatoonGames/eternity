@@ -1,6 +1,7 @@
 package com.matoon.eternity.world;
 
 import com.matoon.eternity.EternitySounds;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EternityDamage;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.network.MsgTribunalFx;
@@ -280,10 +281,7 @@ public final class MastersPowers {
                     Vec3d to = mouth.subtract(victim.getPositionVector().add(0D, victim.height / 2D, 0D));
                     double d = to.length();
                     Vec3d pull = to.normalize().scale(0.16D * (1D - d / 22D));
-                    victim.motionX += pull.x;
-                    victim.motionY += pull.y * 0.5D;
-                    victim.motionZ += pull.z;
-                    victim.velocityChanged = true;
+                    EntityDestroyerArmor.shove(victim, pull.x, pull.y * 0.5D, pull.z);
                     if (caster.ticksExisted % 6 == 0) {
                         fx(caster.world, MsgTribunalFx.CHAOS_MAW, victim.getPositionVector().add(0D, 1D, 0D), mouth.x, mouth.y, mouth.z, 0, 8);
                     }
@@ -447,7 +445,8 @@ public final class MastersPowers {
     /** Everything living in a box, except the one wielding the power, and spectators. */
     private static List<EntityLivingBase> victims(EntityLivingBase caster, AxisAlignedBB box) {
         return caster.world.getEntitiesWithinAABB(EntityLivingBase.class, box, e -> e != null && e != caster && e.isEntityAlive()
-                && !(e instanceof EntityPlayer && ((EntityPlayer) e).isSpectator()));
+                && !(e instanceof EntityPlayer && ((EntityPlayer) e).isSpectator())
+                && !EntityDestroyerArmor.sheltered(e) && e != caster.getRidingEntity());
     }
 
     /** The living thing nearest the middle of the caster's view, within range. */

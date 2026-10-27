@@ -3,9 +3,13 @@ package com.matoon.eternity;
 import com.matoon.eternity.command.CommandEternity;
 import com.matoon.eternity.command.CommandTpDimension;
 import com.matoon.eternity.compat.InfinityTemples;
+import com.matoon.eternity.compat.StoneAbilities;
 import com.matoon.eternity.compat.Tickrate;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.compat.galacticraft.TamarataPlanet;
+import com.matoon.eternity.inventory.EternityGuis;
+import com.matoon.eternity.world.Armory;
+import net.minecraftforge.fml.common.network.NetworkRegistry;
 import com.matoon.eternity.world.ChampionDirector;
 import com.matoon.eternity.world.CometDirector;
 import com.matoon.eternity.world.Director;
@@ -45,6 +49,9 @@ public class Eternity {
     public static final String VERSION = "2.0.0";
     public static final Logger LOG = LogManager.getLogger(NAME);
 
+    @Mod.Instance(MODID)
+    public static Eternity instance;
+
     @SidedProxy(clientSide = "com.matoon.eternity.client.ClientProxy", serverSide = "com.matoon.eternity.CommonProxy")
     public static CommonProxy proxy;
 
@@ -65,6 +72,9 @@ public class Eternity {
         MinecraftForge.EVENT_BUS.register(ChampionDirector.INSTANCE);
         MinecraftForge.EVENT_BUS.register(TamarataBreaker.INSTANCE);
         MinecraftForge.EVENT_BUS.register(VaultDirector.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(Armory.INSTANCE);
+        StoneAbilities.register();
+        NetworkRegistry.INSTANCE.registerGuiHandler(this, new EternityGuis());
         StarChamber.register();
         Nexus.register();
         OdinsVault.register();

@@ -83,6 +83,49 @@ public class EternityConfig {
         @Config.Comment({"Whether the Casket of Ancient Winters changes the world it is opened on: water freezing, snow on",
                 "the ground, ice erupting from it. Never inside the vault itself."})
         public boolean casketChangesTerrain = true;
+
+        @Config.Comment("Chance that a fallen Einherjar leaves each piece of his armour behind (helm, cuirass, greaves, boots).")
+        @Config.RangeDouble(min = 0, max = 1)
+        public double einherjarArmourDrop = 0.5;
+
+        @Config.Comment("Chance that a fallen Einherjar leaves his spear, and separately his shield, behind.")
+        @Config.RangeDouble(min = 0, max = 1)
+        public double einherjarWeaponDrop = 1.0;
+
+        @Config.Comment("How much the Destroyer Armor can take before it goes down on its knees and needs mending with Uru (its base integrity, before upgrades).")
+        @Config.RangeDouble(min = 1, max = 100000)
+        public double armorHealth = 400.0;
+
+        @Config.Comment("Damage of a punch from the Destroyer Armor.")
+        @Config.RangeDouble(min = 0, max = 10000)
+        public double armorPunchDamage = 24.0;
+
+        @Config.Comment("Damage at the heart of the rings when the Destroyer Armor brings its fists down; less out toward their edge.")
+        @Config.RangeDouble(min = 0, max = 10000)
+        public double armorSlamDamage = 30.0;
+
+        @Config.Comment("Damage the Destroyer Armor's ray does, five times a second, to whatever stands in it.")
+        @Config.RangeDouble(min = 0, max = 10000)
+        public double armorRayDamage = 5.0;
+
+        @Config.Comment({"Whether the Destroyer Armor changes the world: its fists break soft blocks they land on, and its ray",
+                "sets fires where it strikes. Never inside the vault, and only where mobGriefing allows it."})
+        public boolean armorChangesTerrain = true;
+
+        @Config.Comment({"How hungry the Destroyer Armor's furnace is: 1 burns lava at the normal rate, 0.5 half as fast, 0 never.",
+                "A full furnace (8 buckets) lasts about ten minutes of walking."})
+        @Config.RangeDouble(min = 0, max = 100)
+        public double armorLavaBurn = 1.0;
+
+        @Config.Comment("How much integrity the Destroyer Armor has left when claimed from the fallen Destroyer, from 0 to 1.")
+        @Config.RangeDouble(min = 0.01, max = 1)
+        public double armorClaimedIntegrity = 0.1;
+
+        @Config.Comment({"How hard the mod's bosses hit the Destroyer Armor. Their blows take a share of a player's health; on someone",
+                "inside the armour they take the same share of this much of its integrity (its base integrity times this). At 1 the",
+                "armour is worth no more against them than its pilot; at 0.6 it lasts about two thirds longer."})
+        @Config.RangeDouble(min = 0, max = 10)
+        public double armorBossShare = 0.6;
     }
 
     public static class Champion {

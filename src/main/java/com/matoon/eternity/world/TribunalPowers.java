@@ -1,6 +1,7 @@
 package com.matoon.eternity.world;
 
 import com.matoon.eternity.EternitySounds;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EternityDamage;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.network.MsgTribunalFx;
@@ -252,10 +253,7 @@ public final class TribunalPowers {
             if (lift > 0D) {
                 Vec3d push = victim.getPositionVector().subtract(at);
                 push = push.lengthSquared() < 1.0E-4 ? Vec3d.ZERO : push.normalize();
-                victim.motionX += push.x * lift;
-                victim.motionY += lift * 0.8D;
-                victim.motionZ += push.z * lift;
-                victim.velocityChanged = true;
+                EntityDestroyerArmor.shove(victim, push.x * lift, lift * 0.8D, push.z * lift);
             }
         }
     }
@@ -263,7 +261,8 @@ public final class TribunalPowers {
     /** Everything living in a box, except the one wielding the power, and spectators. */
     private static List<EntityLivingBase> victims(EntityLivingBase caster, AxisAlignedBB box) {
         return caster.world.getEntitiesWithinAABB(EntityLivingBase.class, box, e -> e != null && e != caster && e.isEntityAlive()
-                && !(e instanceof EntityPlayer && ((EntityPlayer) e).isSpectator()));
+                && !(e instanceof EntityPlayer && ((EntityPlayer) e).isSpectator())
+                && !EntityDestroyerArmor.sheltered(e) && e != caster.getRidingEntity());
     }
 
     /** The living thing nearest the middle of the caster's view, within range. */

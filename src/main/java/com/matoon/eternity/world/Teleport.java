@@ -1,5 +1,6 @@
 package com.matoon.eternity.world;
 
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraftforge.common.util.ITeleporter;
 
@@ -16,7 +17,8 @@ public final class Teleport {
     public static void player(EntityPlayerMP player, int dimension, double x, double y, double z, boolean safe) {
         if (player.dimension == dimension) {
             double landY = safe ? Terrain.safeY(player.world, x, y, z) : y;
-            player.connection.setPlayerLocation(x, landY, z, player.rotationYaw, player.rotationPitch);
+            // Inside the Destroyer Armor, the armour goes, with them in it.
+            EntityDestroyerArmor.place(player, x, landY, z, player.rotationYaw, player.rotationPitch);
         } else {
             ITeleporter teleporter = (world, entity, yaw) -> {
                 double landY = safe ? Terrain.safeY(world, x, y, z) : y;

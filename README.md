@@ -529,21 +529,33 @@ came from.
   treasures stand in pools of light. A cold haze swallows the far end, where a wall of light glows
   through the gloom; pale shafts fall from the roof, dust turns slowly in them, and away from the
   lamps it is dark. Nothing in the vault can be built or broken.
-- **The treasures.** Down the right side: the Warlock's Eye, a milky orb in three gold claws that
-  turns to watch you; HeroesExpansion's Tesseract on a gold cradle; the Crown of Black Fire, Surtur's
-  black iron split with burning cracks, dark fire licking off it; and the Eternal Flame, burning in
+- **The treasures.** Down the right side: the Warlock's Eye, a living eye floating in a bronze frame
+  shaped like an eye (a carved mask below it, a double arch over it, rune-cut tabs), on a plinth lit
+  along its top, turning to watch you; HeroesExpansion's Tesseract on a gold cradle; the Crown of
+  Black Fire, Surtur's horned skull of black stone, two broad whorl-carved blades spreading from its
+  brow in a great V and long horns sweeping up from their ends; and the Eternal Flame, burning in
   the bronze Chalice of Muspelheim on the fluted Pillar of Privaldi. Down the left: the fake Infinity
   Gauntlet with all six stones; the Tuning Fork, its tines shivering as it rings; the Tablet of Life
   and Time, carved with a ring of runes that glows; and HeroesExpansion's Mjolnir, which only the
   worthy can lift. In the middle of the floor, on the frosted Pedestal of Fimbulvetr, the Casket of
-  Ancient Winters. Mjolnir and the Tesseract are set out the first time anyone comes (the Tesseract
+  Ancient Winters: panels of glowing blue glass veined with dark knotwork in a dark stone frame, its
+  corner posts flaring to points, a pointed oval ringing each end. Mjolnir and the Tesseract are set out the first time anyone comes (the Tesseract
   only while nobody has claimed one, and it follows the one-true-relic rules like a village's).
 - **The Einherjar.** Two of Asgard's palace guard stand at the head of the steps: blackened steel and
   gold, mustard cloaks, helms crowned with a ring of horns, round bronze shields and spears taller
   than they are. They challenge you and come at you from either side behind their shields: a thrust
   with their whole weight behind it, quick jabs, the shaft swept flat across, a shield bash, or a
   crouch behind the shield with the spear over it, answering any blow on the shield at once. Blows
-  from in front land on their shields unless an axe knocks them aside. They are only mortal.
+  from in front land on their shields unless an axe knocks them aside. They are only mortal, and
+  whoever brings one down can take up his arms where he falls: his spear and shield always, and each
+  piece of his armour half the time (`einherjarArmourDrop`, `einherjarWeaponDrop`; looting helps).
+- **The Einherjar's arms.** Their armour is harder than diamond (helm 4, cuirass 9, greaves 7,
+  boots 4, toughness 3.5), and each piece steadies you against being knocked about. Worn, it looks
+  just as it did on them: the ring of gold horns on the helm, the steel and gold over mail, the
+  tassets swinging from the belt, and the mustard cloak, which lifts behind you as you move. The
+  spear reaches five blocks, two further than a sword; hold use to draw it back and let go to
+  lunge, running through everything along its length. The shield blocks like any other and lasts
+  twice as long, and whoever strikes it from close in is thrown back off it. All of it mends with gold.
 - **The Destroyer.** About twenty seconds after you come in (`destroyerDelay`), or the moment anyone
   lifts the Casket, the Destroyer wakes in its niche at the far end: a shudder through every plate,
   fire kindling behind its face, its head coming round to you, and a first step. It punches and
@@ -553,9 +565,165 @@ came from.
   nothing hurts it: only someone wielding something worthy of it (the Power Stone, held or in a
   gauntlet in hand; Mjolnir or Stormbreaker, held or thrown; a charged Astral Regulator) gets through
   its armour; anything else lands a tenth as hard at most. Beaten, it falls to its knees and then on
-  its face, and the fire in it goes out; Odin's smiths have it standing in its niche again after
-  `destroyerRepairMinutes` (20). Every blow of its takes a share of your maximum health, through
+  its face, and the fire in it goes out, and its back splits open; Odin's smiths have another
+  standing in its niche after `destroyerRepairMinutes` (20). Every blow of its takes a share of your maximum health, through
   armour, but it cannot touch creative mode. Its music borrows a fight track for now.
+- **The Destroyer Armor.** Lay hands on the fallen Destroyer and something in it answers: it rises,
+  empty, its back standing open, and it is yours to climb into, much like Fallout's power armour.
+  - *Getting in*: use it. You step up into its back, it lifts you into its chest, the plates of its
+    back swing shut on you and the fire behind its face kindles. You see out through its face: the
+    slats of its face plates at the edges of your sight, its great fists in front of you, and along
+    the bottom how much more it can take and how hot its furnace runs.
+  - *Moving*: slow, enormous strides that shake the ground, a block and a half climbed in one step,
+    and it walks along the bottom of water as if it were not there. Sprint and it charges, throwing
+    aside whatever is in its way; jump and it leaps, and wherever it comes down the ground breaks in rings.
+  - *Fighting*: attack punches, one fist and then the other for as long as you keep swinging, and
+    its fists break soft stone, earth and wood they land on. Hold use and its face plates open and it
+    pours out the Destroyer's ray wherever you look, until you let go or the furnace overheats and
+    must vent. Its own key (R by default) brings both fists down together and rings of force race
+    across the ground. Its blows are worthy of the vault's Destroyer, if you want to try.
+  - *Getting out*: hold sneak. Its back opens and it sets you down behind it, and it stays standing
+    where you left it. Sneaking never tips you out by accident.
+  - Nothing touches you while you are inside: every blow lands on the armour (400 integrity,
+    `armorHealth`). Walk out of the vault's doors in it and it comes with you, as it does anywhere
+    you go to another dimension while inside it. Its fists breaking blocks and its ray setting fires
+    follow `mobGriefing`, never happen inside the vault, and can be turned off with `armorChangesTerrain`.
+  - *Against the bosses*: every boss and creature in the mod fights the armour, not around it. Their
+    blows take the same share of its integrity as they would of your health, tempered by its plate
+    (60% of its base integrity, `armorBossShare`, so forged Uru Plating is real protection). The Champion
+    hoists the whole armour overhead and throws it, with you in it; blows and blasts send it tumbling
+    out of your control until it lands; whatever pins, cages, scatters or teleports you moves the
+    armour instead; Slowness on you slows how you drive it; and the Nexus abyss swallows it like anything
+    else alive, spilling out whatever was inside it.
+  - *Its systems*: press your inventory key (E) inside it, or sneak and use it from outside, and its
+    systems menu opens. Its pages sit on a rail of tabs down its left side: **Status** (the armour, its
+    vital signs, each system, and what it needs next), **Supply** (its feed and Uru slots), **Forge**,
+    **Cradle**, **Overcharge** and **Paint**. The number keys 1 to 6, or the mouse wheel over the rail, page
+    through them too; a padlock marks a page whose upgrade is not yet forged. Its integrity, fuel, furnace
+    and core show along the top of every page.
+  - *Integrity*: claimed from the vault it is barely holding together (10%, `armorClaimedIntegrity`).
+    The lower its integrity, the worse it runs and the worse it looks. Strained (under 50%) it strides
+    15% slower; it is dented and gouged, and now and then sparks spurt from a wounded joint. Failing
+    (under 25%) it is 30% slower, its leaps lower and its ray sputtering. It is scorched and cracked,
+    with fire glowing in the deepest cracks; smoke pours from its wounds, molten metal drips, and loose
+    power crackles from one joint to another. It favours a leg, lists, and its head sags. Critical
+    (under 10%) it cannot charge, leap, slam or fire its ray at all. Its plate is burst open over the
+    fire, black smoke boils off it, and flames lick out of its wounds. Every few seconds something inside
+    it bursts, throwing sparks and shards of plate and jolting all of it. Every blow that hurts it throws
+    sparks and shards from where it landed, more the harder it hit; beaten to nothing it goes down on its
+    knees, puts you out, and smoulders. Only **Uru plate** (Lucraft Core's, hammered from an ingot) mends
+    it: each plate mends 10% of its base integrity. Put plates in its Uru slot and it works them in
+    itself, or use one on it from outside; once a quarter mended, a broken armour stands again.
+  - *Lava*: its furnace burns lava, 8 buckets of it (16 with the Deep Furnace): slowly standing,
+    faster walking and charging, fast pouring out the ray, slamming, leaping, gliding and flying.
+    Pour it in through the feed slot (buckets or any tank or container of lava; the empties come
+    out the other side), use a bucket on it from outside, or wade it into lava and it drinks.
+    Cold, it can barely walk, its punches are weak, and nothing else works. `armorLavaBurn` sets how
+    hungry it is.
+  - *Forge Energy*: forge the **Dynamo** and its furnace is torn out for a dynamo. From then on it runs
+    on Forge Energy rather than lava: 800k FE (1.6M with the Deep Furnace), burned as the lava would
+    have been, at 100 FE to the millibucket. It drinks from anything in its feed slot that holds Forge
+    Energy (batteries, capacitors, energy cells, blocks that keep their charge), setting each aside in
+    the slot beside it once drained. It also drinks from the Astral Regulator in its chest, which never
+    runs dry, and from every Infinity Stone set there, each giving what it would give an Infinity
+    Generator. Chargers that charge entities can fill it too.
+  - *Overcharge*: forged after the Dynamo, it drives the dynamo past what it was built for, into four
+    parts of it, each turned up on its own and with no top to it:
+
+    | Part | What each level does |
+    |---|---|
+    | Beam | +15% ray damage; the ray reaches further (up to x2.5) and its beam swells; Molten Heart's bursts grow |
+    | Jets | Faster jet flight, levelling off near x4 (a stone's own flight is never overcharged) |
+    | Fists | +15% punch and slam damage |
+    | Plating | Turns more of every blow (level 20 halves what gets through, level 100 lets a sixth through) |
+
+    Turn them on its **Overcharge** page (click - or + for one level, SHIFT for 10, CTRL for 100, or the
+    wheel over a part; right-click a level to turn it off), or from inside: Left and Right pick a part, Up
+    and Down turn it (hold them and it runs faster), and Backspace cuts everything. All five keys can be
+    rebound under Controls.
+
+    Every level costs something, every tick you are inside: a part at level L draws 20L + L² FE/t (level 10
+    draws 300, level 50 draws 3.5k, level 100 draws 12k), and the levels held across every part heat its
+    **core**, barely at first and then sharply. The core sheds some of its heat every tick (twice as fast
+    with the Bellows, faster with the Time Stone), so held steady it settles somewhere. Around 80 levels in
+    all, it settles past its limit. Held at **75% or hotter for more than 5 seconds**, the core starts tearing at its own frame: it loses 1% of its integrity every second at 75%, rising to 4% at its limit, until it is cooled below 75% (beaten to nothing this way, it goes down like any other wreck, to be mended with Uru). If its store runs dry while the overcharge draws more than it is fed, the
+    dynamo starves: everything goes offline and the core runs away fast. Held at its limit for **10
+    seconds**, the core **breaches** and the armour **implodes**. It throws you clear, falls in on itself
+    and pulls everything near into it, then bursts, hurting everything within 8 blocks. It is **gone for
+    good**: no wreck, nothing to mend, every upgrade with it. Whatever was in it is thrown out; the stones
+    and the Astral Regulator cannot be harmed and never fade.
+
+    You see it coming. The Overcharge page shows what it is fed against what it draws, how long its store
+    will last, its core, and where the core will settle. Along the bottom of your sight are each part's
+    level (the one your keys turn underlined), the draw, what feeds it, and the core. From outside, its
+    plate glows dull red, then orange, then white as the core heats, with smoke, flames, dripping metal and
+    sparks. Breaching, power arcs all over it and things burst inside it, and an alarm sounds. A panel high in
+    your sight shows the seconds left in large figures, a bar draining to nothing and the key that stops it,
+    while the edges of your sight close in with a steady dark red. Nothing on screen flashes.
+  - *Upgrades*: the Forge page is a tree of 19 upgrades in six lines, each step forged in order
+    out of what you carry (anything the ore dictionary calls Uru, iron, diamond and so on counts):
+
+    | Line | Upgrades, in order |
+    |---|---|
+    | Frame | **Uru Plating** (+30% integrity), **Banded Hull** (+30% more, harder armour, explosions quartered), **Odin's Wards** (mends itself from its lava) |
+    | Furnace | **Deep Furnace** (16 buckets), **Bellows** (a third less lava, cools twice as fast), **Disintegrator** (ray +60% damage, half again the reach, heats slower), **Molten Heart** (the ray bursts where it lands; vents in half the time) |
+    | Energy | **Dynamo** (runs on Forge Energy instead of lava), **Overcharge** (drive its beam, jets, fists and plating past what they were built for, at a price) |
+    | Actuators | **Hydraulic Pistons** (+25% stride, turns quicker), **Leap Jets** (higher leaps; hold jump in the air to glide), **Thunderstep** (faster, harder charge; landings break wider) |
+    | Fists | **Uru Knuckles** (+50% punch, breaks any stone short of obsidian), **Shockwave Slam** (wider, harder, cooler slam), **Hammerfall** (every punch bursts and burns) |
+    | Infinity | **Infinity Cradle** (hollows out its chest for the Regulator and the stones; needs six other upgrades), **Stone Conduits** (every stone's gift stronger; needs 2 stones), **Ascension** (it flies on its jets; needs 4 stones), **The Infinite Destroyer** (needs all six: it never burns fuel, mends itself, and strikes half again as hard) |
+
+  - *The Cradle*: forging it hollows out the armour's chest. Where its chest was whole there is now a
+    deep cavity framed in riveted plate, with the furnace glowing through ribs at the back of it. An
+    **Astral Regulator** set in it (the Cradle page) hangs there turning, lit by its own light, and six
+    sockets ringed in old gold arch over the top of the opening, one for each stone.
+  - *The Infinity Stones*: each stone set in its socket burns there in its colour. Each lends the
+    armour a gift of its own, always:
+
+    | Stone | Its gift to the armour (stronger with Stone Conduits) |
+    |---|---|
+    | Space | Its fists reach further |
+    | Soul | Every kill mends it 5% (10%) |
+    | Reality | Its blows ignore armour |
+    | Time | Its furnace cools faster |
+    | Power | Strikes half again as hard (twice) |
+    | Mind | Hostile creatures near it weaken |
+
+    Each also lends you, while you are inside, that stone's own powers from Lucraft Core and its addons:
+    the same abilities it would give you set in an Infinity Gauntlet, on your ability bar like any
+    other. Inside the suit, SHIFT is its own (sinking, and held, stepping out), so Lucraft's SHIFT + scroll
+    cannot reach the ability bar: **the mouse wheel alone pages through it** while you are inside (the
+    hotbar is no use in there). It says so beside the ability bar, and in the controls shown as you climb in.
+    The armour does them with you:
+    - *Flight* (the Mind Stone) flies the whole armour, rising clear of the ground as it starts and
+      landing when you bring it down, the same way it flies on its jets, but costing it nothing.
+    - *The force field* (the Space Stone) stands around the whole armour: its shape a little larger in
+      the field's blue, flaring where it is struck. Nothing gets through it.
+    - *Invisibility* (the Reality Stone) makes the armour unseen too. *Size changing*, where the
+      Reality Stone's config allows it, makes the armour smaller or larger with you.
+    - *Strength* and *punch* (the Power Stone) land with its fists and its slam, and *resistance*
+      plates it. *More life* (the Soul Stone) doubles its integrity while you are inside, and *healing*
+      mends it by the same share it mends you.
+    - *The grip and telekinesis* (Space and Mind) reach out past its face and never take hold of the
+      armour itself; swing to throw what you hold. *Energy blasts*, the *black hole* (Space beside
+      Power) and anything else you loose pass through the armour rather than bursting on it.
+    - *The snap* works with all six stones in its chest. If it turns on its maker, it is the armour's
+      stones that are spent.
+    - The rest work just as they do in a gauntlet: portals, locating, killing, stopping and speeding
+      time, saturation, choosing the snap.
+
+    Stones set in the armour count as carried by whoever is inside it.
+  - *Flight*: with Ascension forged, double-tap jump to take to the air on its jets. It flies where you look,
+    faster sprinting; jump climbs, sneak sinks, and sneaking onto the ground lands it. It cannot
+    let you out while it is in the air. It crouches and blasts off the ground on fire; hanging still,
+    it hovers on its jets, one knee bent and its palms to the ground; as it gathers speed it leans
+    into it until it flies flat out, arms swept back and fire streaming from its heels, banking
+    into its turns, and your view stretches with its speed.
+  - *Paint*: the last page of its systems menu. Nine finishes: Uru Gunmetal (its own), Asgardian
+    Gold, Burnished Steel, Royal Guard (blue picked out in gold), Jotunheim Frost, Muspelheim (burnt
+    black with molten cracks that glow with its furnace), Bifrost (banded in the rainbow from its
+    feet to its crown), Celestial (violet scattered with glowing gold stars) and Warpaint (crimson
+    war-stripes). Each is made once, out of dyes and materials from your pack, and then the
+    armour's to switch between whenever you like.
 - **The Casket of Ancient Winters** works. Right-click its pedestal to take it (and wake the
   Destroyer), or to put it back. Use it and a gale of ancient winter pours out ahead of you: whatever
   it catches is frozen in ice where it stands and can barely move for five seconds; water ices over,
@@ -705,6 +873,7 @@ one another, and past two their powers run on into a second column.
 | `/eternity vault guard <thrust\|jab\|sweep\|bash\|guard>` | The Einherjar do that next |
 | `/eternity vault wound <percent>` | Damages the Destroyer, for testing its fall |
 | `/eternity vault restore` | The Casket back on its pedestal, Mjolnir and the Tesseract back on their stands if they are gone, the Destroyer mended |
+| `/eternity vault armor [broken\|full\|forged]` | An empty Destroyer Armor stands in front of you, anywhere: as claimed from the vault, fit to run (the default), or with every upgrade forged (the Dynamo too, so it runs on Forge Energy) |
 | `/tpdimension <player> <dim> [x y z]` | Sends a player to another dimension: to its spawn on safe ground, or to exact coordinates (`~` is relative to the player) |
 
 ## Configuration
@@ -718,7 +887,8 @@ be to face them, how much they can take), the Champion (whether he is there and 
 Stone, Tamarata's dimension id and rocket tier, his health, damage and how much a blow can take of him,
 how fast his rage builds and cools, how far Planet Breaker reaches and how fast it erases), Odin's Vault (its
 dimension id, how soon the Destroyer wakes, its health and armour, how hard it hits, how long it takes to mend, the
-Einherjar's health and spears, and whether the Casket changes the world), and client options: presence strength, screen
+Einherjar's health and spears and how often they leave their arms behind, whether the Casket changes the world, and the
+Destroyer Armor's integrity, how hard it hits, how hungry it is for lava and whether it changes the world), and client options: presence strength, screen
 shake, reduced flashing, forced gaze and distortion shaders.
 
 ## Building

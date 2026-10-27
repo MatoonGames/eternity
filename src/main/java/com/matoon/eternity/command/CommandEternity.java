@@ -4,9 +4,11 @@ import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.compat.Galacticraft;
 import com.matoon.eternity.compat.InfinityStones;
 import com.matoon.eternity.compat.Relics;
+import com.matoon.eternity.entity.ArmorUpgrade;
 import com.matoon.eternity.entity.EntityAdamWarlock;
 import com.matoon.eternity.entity.EntityChampion;
 import com.matoon.eternity.entity.EntityDestroyer;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EntityEinherjar;
 import com.matoon.eternity.entity.EntityEternity;
 import com.matoon.eternity.network.EternityNetwork;
@@ -534,9 +536,27 @@ public class CommandEternity extends CommandBase {
                 director.restore(world);
                 reply(sender, "The Casket is back on its pedestal, the treasures are on their stands, and the Destroyer is mended.");
                 return;
+            case "armor": {
+                EntityPlayerMP player = getCommandSenderAsPlayer(sender);
+                Vec3d at = player.getPositionVector().add(Vec3d.fromPitchYaw(0F, player.rotationYaw).scale(3D));
+                EntityDestroyerArmor armor = new EntityDestroyerArmor(player.world);
+                armor.setLocationAndAngles(at.x, player.posY, at.z, player.rotationYaw + 180F, 0F);
+                armor.rotationYawHead = armor.renderYawOffset = player.rotationYaw + 180F;
+                // As claimed from the vault (broken), fit to run (the default), or with everything forged into it (forged).
+                String how = args.length > 2 ? args[2] : "full";
+                if ("forged".equals(how)) {
+                    armor.setForged((1 << ArmorUpgrade.values().length) - 1);
+                }
+                boolean broken = "broken".equals(how);
+                armor.setHealth(armor.getMaxHealth() * (broken ? (float) EternityConfig.vault.armorClaimedIntegrity : 1F));
+                armor.setLava(broken ? EntityDestroyerArmor.BUCKET : armor.lavaCapacity());
+                player.world.spawnEntity(armor);
+                reply(sender, "The Destroyer Armor stands in front of you, empty, its back open.");
+                return;
+            }
             default:
                 throw new WrongUsageException("/eternity vault <visit [player]|leave [player]|status|wake|guards|calm|fight|move <move>"
-                        + "|guard <move>|wound <percent>|restore>");
+                        + "|guard <move>|wound <percent>|restore|armor [broken|full|forged]>");
         }
     }
 
@@ -790,7 +810,10 @@ public class CommandEternity extends CommandBase {
             return getListOfStringsMatchingLastWord(args, server.getOnlinePlayerNames());
         }
         if (args.length == 2 && "vault".equals(args[0])) {
-            return getListOfStringsMatchingLastWord(args, "visit", "leave", "status", "wake", "guards", "calm", "fight", "move", "guard", "wound", "restore");
+            return getListOfStringsMatchingLastWord(args, "visit", "leave", "status", "wake", "guards", "calm", "fight", "move", "guard", "wound", "restore", "armor");
+        }
+        if (args.length == 3 && "vault".equals(args[0]) && "armor".equals(args[1])) {
+            return getListOfStringsMatchingLastWord(args, "broken", "full", "forged");
         }
         if (args.length == 3 && "vault".equals(args[0]) && "move".equals(args[1])) {
             return getListOfStringsMatchingLastWord(args, "punch", "backhand", "hammer", "stomp", "ray", "sweep");

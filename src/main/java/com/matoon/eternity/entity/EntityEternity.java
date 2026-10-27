@@ -582,7 +582,7 @@ public class EntityEternity extends EntityLiving {
                     AxisAlignedBB sweep = new AxisAlignedBB(strike.from.x, strike.from.y, strike.from.z, strike.to.x, strike.to.y, strike.to.z).grow(1.5D);
                     for (EntityLivingBase victim : world.getEntitiesWithinAABB(EntityLivingBase.class, sweep, this::isVictim)) {
                         if (victim.getEntityBoundingBox().grow(1.1D).calculateIntercept(strike.from, strike.to) != null) {
-                            victim.attackEntityFrom(EternityDamage.lance(this), victim.getMaxHealth() * (worthy(victim) ? 0.22F : 0.8F));
+                            victim.attackEntityFrom(EternityDamage.lance(this), EntityDestroyerArmor.health(victim) * (worthy(victim) ? 0.22F : 0.8F));
                         }
                     }
                     Terrain.carveLine(world, strike.from, strike.to, 1.6D, 500);
@@ -612,13 +612,10 @@ public class EntityEternity extends EntityLiving {
             if (d > radius) {
                 continue;
             }
-            victim.attackEntityFrom(source, victim.getMaxHealth() * (worthy(victim) ? worthyFraction : unworthyFraction));
+            victim.attackEntityFrom(source, EntityDestroyerArmor.health(victim) * (worthy(victim) ? worthyFraction : unworthyFraction));
             Vec3d push = victim.getPositionVector().subtract(at);
             push = push.lengthSquared() < 1.0E-4 ? Vec3d.ZERO : push.normalize().scale(1.2D);
-            victim.motionX += push.x;
-            victim.motionY += lift;
-            victim.motionZ += push.z;
-            victim.velocityChanged = true;
+            EntityDestroyerArmor.shove(victim, push.x, lift, push.z);
         }
     }
 
@@ -647,7 +644,8 @@ public class EntityEternity extends EntityLiving {
             gazeTicks = 0;
             target.addPotionEffect(new PotionEffect(MobEffects.BLINDNESS, 40, 0, false, false));
             target.addPotionEffect(new PotionEffect(MobEffects.SLOWNESS, 60, 1, false, false));
-            target.attackEntityFrom(EternityDamage.gaze(this), Math.max(2F, target.getMaxHealth() * 0.1F));
+            EntityLivingBase body = EntityDestroyerArmor.body(target);
+            body.attackEntityFrom(EternityDamage.gaze(this), Math.max(2F, EntityDestroyerArmor.health(body) * 0.1F));
             playSound(EternitySounds.ENTITY_VOICE, 5F, 0.7F);
         }
     }
@@ -671,14 +669,12 @@ public class EntityEternity extends EntityLiving {
     private void unmake(EntityLivingBase victim) {
         boolean worthy = worthy(victim);
         double fraction = worthy ? EternityConfig.combat.unmakeFraction : EternityConfig.combat.unmakeFractionUnworthy;
-        victim.attackEntityFrom(EternityDamage.unmake(this), (float) (victim.getMaxHealth() * fraction));
-        Vec3d at = victim.getPositionVector();
+        EntityLivingBase body = EntityDestroyerArmor.body(victim);
+        body.attackEntityFrom(EternityDamage.unmake(this), (float) (EntityDestroyerArmor.health(body) * fraction));
+        Vec3d at = body.getPositionVector();
         Vec3d push = at.subtract(getPositionVector());
         push = new Vec3d(push.x, 0, push.z).normalize().scale(2.2D);
-        victim.motionX += push.x;
-        victim.motionY += 0.8D;
-        victim.motionZ += push.z;
-        victim.velocityChanged = true;
+        EntityDestroyerArmor.shove(victim, push.x, 0.8D, push.z);
         hurtAround(at, 6D * sqrtScale(), EternityDamage.unmake(this), 0.1F, 0.4F, 0.9D);
         Director.INSTANCE.cue(this, new MsgCue(MsgCue.UNMAKE, getEntityId(), victim.posX, victim.posY + victim.height / 2, victim.posZ, 0, 0, 0));
         world.playSound(null, victim.posX, victim.posY, victim.posZ, EternitySounds.RIFT_IMPACT, SoundCategory.HOSTILE, 5F, 1.1F);
@@ -689,11 +685,15 @@ public class EntityEternity extends EntityLiving {
         if (entity == null || entity == this || !entity.isEntityAlive()) {
             return false;
         }
+        // Inside the Destroyer Armor they are reached through the armour, which is found on its own.
+        if (EntityDestroyerArmor.sheltered(entity)) {
+            return false;
+        }
         return !(entity instanceof EntityPlayer) || !((EntityPlayer) entity).isSpectator();
     }
 
     private static boolean worthy(Entity entity) {
-        return InfinityStones.scan(entity) == InfinityStones.ALL;
+        return InfinityStones.scan(EntityDestroyerArmor.soul(entity)) == InfinityStones.ALL;
     }
 
     private void updateBossBar(float health) {

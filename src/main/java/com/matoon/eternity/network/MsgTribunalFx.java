@@ -149,6 +149,18 @@ public class MsgTribunalFx implements IMessage {
     public static final byte CASKET_WINTER = 65;
     /** Entity {@link #id} is frozen in ice for time ticks. */
     public static final byte CASKET_FREEZE = 66;
+    /**
+     * The Infinity Stones in the Destroyer Armor. id = the stones, one bit each; time = {@link com.matoon.eternity.entity.ArmorPowers} FX kind.
+     * FX_RAY: their light along its ray from (x,y,z) to (a,b,c).
+     */
+    public static final byte DESTROYER_STONE = 67;
+    /**
+     * The Destroyer Armor (entity {@link #id}) hurt: a blow landing at (x,y,z), (a,b,c) the way its shards fly, time = how
+     * hard, in hundredths of a twentieth of its integrity.
+     */
+    public static final byte DESTROYER_WOUND = 68;
+    /** The Destroyer Armor imploding, its core breached: a = its size; id = the armour. */
+    public static final byte DESTROYER_IMPLODE = 69;
 
     public byte type;
     public double x, y, z;

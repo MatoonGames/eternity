@@ -20,6 +20,7 @@ import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EntityDamageSource;
+import net.minecraft.util.EnumHand;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -52,9 +53,10 @@ import java.util.UUID;
  * </ul>
  * Almost nothing hurts it. Only a blow from someone wielding something worthy of it (the Power
  * Stone, Mjolnir, a charged Astral Regulator) really bites; anything else barely scratches it.
- * Beaten, it falls to its knees and then on its face, and the fire in it goes out.
+ * Beaten, it falls to its knees and then on its face, and the fire in it goes out; whoever lays hands
+ * on it then can claim it, and it rises again as the {@link EntityDestroyerArmor}.
  */
-public class EntityDestroyer extends EntityLiving {
+public class EntityDestroyer extends EntityLiving implements DestroyerBody {
 
     public enum State {
         DORMANT, WAKE, STALK,
@@ -128,7 +130,7 @@ public class EntityDestroyer extends EntityLiving {
 
     public EntityDestroyer(World world) {
         super(world);
-        setSize(1.6F, 3.9F);
+        setSize(1.6F, 4.3F);
         stepHeight = 1.1F;
         isImmuneToFire = true;
         experienceValue = 200;
@@ -542,7 +544,7 @@ public class EntityDestroyer extends EntityLiving {
             sound(SoundEvents.ENTITY_GENERIC_EXPLODE, 2F, 0.7F);
             for (EntityPlayer player : world.playerEntities) {
                 double d = player.getDistance(at.x, posY, at.z);
-                if (isFair(player) && d < 4.5D && player.onGround) {
+                if (isFair(player) && d < 4.5D && EntityDestroyerArmor.mass(player).onGround) {
                     harm(player, 0.1F);
                     push(player, flat(player.getPositionVector().subtract(at)), 0.9D, 0.9D);
                 }
@@ -579,9 +581,24 @@ public class EntityDestroyer extends EntityLiving {
 
     // ------------------------------------------------------------------ the ray
 
-    /** Where its ray comes from: the furnace in its face. */
+    @Override
     public Vec3d face() {
-        return new Vec3d(posX, posY + 3.7D, posZ).add(facing().scale(0.55D));
+        return new Vec3d(posX, posY + 3.85D, posZ).add(facing().scale(0.6D));
+    }
+
+    @Override
+    public float heat(float partialTicks) {
+        return prevHeat + (heat - prevHeat) * partialTicks;
+    }
+
+    @Override
+    public float faceOpen(float partialTicks) {
+        return prevOpen + (open - prevOpen) * partialTicks;
+    }
+
+    @Override
+    public float backOpen(float partialTicks) {
+        return 0F;
     }
 
     /** Its face opens, the furnace gathers, and the ray pours out after you; then its face closes. */
@@ -716,26 +733,32 @@ public class EntityDestroyer extends EntityLiving {
 
     // ------------------------------------------------------------------ harm
 
-    /** A share of the victim's maximum health, through armour. It cannot touch creative mode. */
+    /**
+     * A share of the victim's maximum health, through armour. It cannot touch creative mode. Someone
+     * inside the Destroyer Armor is not touched at all: the blow takes its share of the armour instead.
+     */
     private void harm(EntityPlayer player, float share) {
         if (calm || !isFair(player)) {
             return;
         }
-        player.hurtResistantTime = 0;
-        float amount = player.getMaxHealth() * share * (float) EternityConfig.vault.destroyerDamageScale;
-        player.attackEntityFrom(new EntityDamageSource("eternity.destroyer", this).setDamageBypassesArmor(), amount);
+        EntityLivingBase body = player.getRidingEntity() instanceof EntityDestroyerArmor ? (EntityLivingBase) player.getRidingEntity() : player;
+        body.hurtResistantTime = 0;
+        float amount = body.getMaxHealth() * share * (float) EternityConfig.vault.destroyerDamageScale;
+        body.attackEntityFrom(new EntityDamageSource("eternity.destroyer", this).setDamageBypassesArmor(), amount);
     }
 
     private void push(EntityPlayer player, Vec3d direction, double strength, double lift) {
         if (player.isSpectator()) {
             return;
         }
-        double scale = calm ? 0.3D : 1D;
-        player.motionX += direction.x * strength * scale;
-        player.motionY = Math.max(player.motionY, 0D) + (direction.y * strength + lift) * scale;
-        player.motionZ += direction.z * strength * scale;
-        player.velocityChanged = true;
-        player.fallDistance = 0F;
+        // The armour is far heavier than anyone in it, and it is the armour that is thrown.
+        Entity body = player.getRidingEntity() instanceof EntityDestroyerArmor ? player.getRidingEntity() : player;
+        double scale = (calm ? 0.3D : 1D) * (body == player ? 1D : 0.45D);
+        body.motionX += direction.x * strength * scale;
+        body.motionY = Math.max(body.motionY, 0D) + (direction.y * strength + lift) * scale;
+        body.motionZ += direction.z * strength * scale;
+        body.velocityChanged = true;
+        body.fallDistance = 0F;
     }
 
     /**
@@ -776,6 +799,18 @@ public class EntityDestroyer extends EntityLiving {
         setHealth(left);
         if (worthy && dealt >= cap * 0.8F && (state == State.STALK || state == State.STOMP) && rand.nextInt(3) == 0) {
             setState(State.STAGGER);
+        }
+        return true;
+    }
+
+    /** Fallen and burnt out, it can be claimed: it rises again, empty, as the Destroyer Armor. */
+    @Override
+    protected boolean processInteract(EntityPlayer player, EnumHand hand) {
+        if (getState() != State.WRECK || hand != EnumHand.MAIN_HAND) {
+            return false;
+        }
+        if (!world.isRemote) {
+            VaultDirector.INSTANCE.claim(this, player);
         }
         return true;
     }
@@ -971,7 +1006,7 @@ public class EntityDestroyer extends EntityLiving {
 
     @Override
     public float getEyeHeight() {
-        return 3.6F;
+        return 3.85F;
     }
 
     @Override

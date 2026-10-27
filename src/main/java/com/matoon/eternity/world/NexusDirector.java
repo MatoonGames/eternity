@@ -1,5 +1,6 @@
 package com.matoon.eternity.world;
 
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EternityDamage;
 import lucraft.mods.lucraftcore.infinity.EntityItemIndestructible;
 import lucraft.mods.lucraftcore.infinity.items.ItemIndestructible;
@@ -97,7 +98,9 @@ public final class NexusDirector {
             }
             if (entity instanceof EntityLivingBase) {
                 EntityLivingBase living = (EntityLivingBase) entity;
-                if (living.getHealth() > 0F && living.isNonBoss() && !(living instanceof EntityPlayer && ((EntityPlayer) living).isSpectator())) {
+                // Whoever is inside the Destroyer Armor goes down with it; the armour sinks like anything alive.
+                if (living.getHealth() > 0F && (living.isNonBoss() || living instanceof EntityDestroyerArmor) && EntityDestroyerArmor.carrier(living) == null
+                        && !(living instanceof EntityPlayer && ((EntityPlayer) living).isSpectator())) {
                     sink(living);
                 }
             } else if (entity instanceof EntityItemIndestructible
@@ -117,7 +120,11 @@ public final class NexusDirector {
         living.getEntityData().setInteger(SINKING, ticks);
         living.fallDistance = 0F;
         float sunk = Nexus.sunk(living);
-        if (!(living instanceof EntityPlayer)) {
+        if (living instanceof EntityDestroyerArmor) {
+            // Its pilot steers it, so it is held and lowered, and cannot be walked out.
+            double y = ticks == 1 ? Math.max(living.posY, Nexus.ABYSS_Y - 0.3D) : living.posY - Nexus.sinkSpeed(sunk);
+            ((EntityDestroyerArmor) living).put(living.posX, y, living.posZ);
+        } else if (!(living instanceof EntityPlayer)) {
             if (ticks == 1 && living.posY < Nexus.ABYSS_Y - 0.3D) {
                 living.setPositionAndUpdate(living.posX, Nexus.ABYSS_Y - 0.3D, living.posZ);
             }
@@ -133,6 +140,10 @@ public final class NexusDirector {
 
     /** No armour, no totem, no creative mode and no Regulator saves anyone from it. */
     private static void devour(EntityLivingBase living) {
+        if (living instanceof EntityDestroyerArmor) {
+            ((EntityDestroyerArmor) living).swallowed();
+            return;
+        }
         DamageSource source = EternityDamage.abyss();
         living.attackEntityFrom(source, 1.0E9F);
         if (living.getHealth() > 0F) {

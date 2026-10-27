@@ -772,10 +772,14 @@ public class EntityAdamWarlock extends EntityLiving {
                 sound(EternitySounds.COMET_IMPACT, 4F, 1.2F);
                 sound(SoundEvents.ENTITY_GENERIC_EXPLODE, 2F, 1.1F);
                 harm(target, 0.20F);
-                target.motionX *= 0.2D;
-                target.motionZ *= 0.2D;
-                target.motionY = -2.4D;
-                target.velocityChanged = true;
+                if (EntityDestroyerArmor.carrier(target) != null) {
+                    EntityDestroyerArmor.fling(target, 0D, -2.4D, 0D);
+                } else {
+                    target.motionX *= 0.2D;
+                    target.motionZ *= 0.2D;
+                    target.motionY = -2.4D;
+                    target.velocityChanged = true;
+                }
                 hitStop = 3;
             } else {
                 sound(SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, 2F, 0.6F);
@@ -1160,8 +1164,7 @@ public class EntityAdamWarlock extends EntityLiving {
             return;
         }
         float scale = (float) EternityConfig.warlock.damageScale * (isEvolved() ? 1.25F : 1F);
-        player.hurtResistantTime = 0;
-        player.attackEntityFrom(EternityDamage.warlock(this), player.getMaxHealth() * fraction * scale);
+        EntityDestroyerArmor.strike(player, EternityDamage.warlock(this), fraction * scale);
     }
 
     /** Sends someone flying. Even pulled punches move the air around you. */
@@ -1170,6 +1173,10 @@ public class EntityAdamWarlock extends EntityLiving {
             return;
         }
         double scale = calm ? 0.25D : 1D;
+        if (EntityDestroyerArmor.carrier(player) != null) {
+            EntityDestroyerArmor.shove(player, direction.x * strength * scale, (direction.y * strength + lift) * scale, direction.z * strength * scale);
+            return;
+        }
         player.motionX += direction.x * strength * scale;
         player.motionY = Math.max(player.motionY, 0D) + (direction.y * strength + lift) * scale;
         player.motionZ += direction.z * strength * scale;
@@ -1266,7 +1273,9 @@ public class EntityAdamWarlock extends EntityLiving {
     }
 
     private static Vec3d chest(EntityPlayer player) {
-        return new Vec3d(player.posX, player.posY + player.height * 0.6D, player.posZ);
+        // Inside the Destroyer Armor, the armour's chest is what he has to reach.
+        Entity body = EntityDestroyerArmor.mass(player);
+        return new Vec3d(body.posX, body.posY + body.height * 0.6D, body.posZ);
     }
 
     /** Roughly where one of his palms is, thrust out in front of him. */

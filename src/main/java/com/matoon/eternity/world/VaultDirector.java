@@ -4,6 +4,7 @@ import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.compat.InfinityStones;
 import com.matoon.eternity.compat.Relics;
 import com.matoon.eternity.entity.EntityDestroyer;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EntityEinherjar;
 import com.matoon.eternity.item.EternityItems;
 import com.matoon.eternity.item.ItemAstralRegulator;
@@ -99,7 +100,10 @@ public final class VaultDirector {
         send(player);
     }
 
-    /** Back out through the doors to wherever they came from, or the overworld's spawn if nobody knows. */
+    /**
+     * Back out through the doors to wherever they came from, or the overworld's spawn if nobody knows.
+     * Anyone inside the Destroyer Armor takes it with them (see {@link Armory}).
+     */
     public void leave(EntityPlayerMP player) {
         NBTTagCompound tag = player.getEntityData().getCompoundTag(RETURN);
         player.getEntityData().removeTag(RETURN);
@@ -118,7 +122,10 @@ public final class VaultDirector {
             return;
         }
         EntityPlayerMP player = (EntityPlayerMP) event.player;
-        if (OdinsVault.atDoors(player.posX, player.posY, player.posZ) && !player.isSpectator()) {
+        // In the armour, it is the armour's front that reaches the doors.
+        Entity body = player.getRidingEntity() instanceof EntityDestroyerArmor ? player.getRidingEntity() : player;
+        double reach = body == player ? 0D : body.width * 0.5D + 0.1D;
+        if (OdinsVault.atDoors(body.posX, body.posY, body.posZ + reach) && !player.isSpectator()) {
             leave(player);
         }
     }
@@ -273,7 +280,26 @@ public final class VaultDirector {
         VaultData data = VaultData.get();
         data.destroyerBack = DimensionManager.getWorld(0).getTotalWorldTime() + EternityConfig.vault.destroyerRepairMinutes * 1200L;
         data.markDirty();
-        tell(destroyer.world, "The Destroyer has fallen. The fire in it is out.");
+        tell(destroyer.world, "The Destroyer has fallen. The fire in it is out, and its back has split open: there is room inside.");
+    }
+
+    /**
+     * Someone lays hands on the fallen Destroyer, and something in it answers: it rises, empty, its
+     * back open, the Destroyer Armor now. Odin's smiths make the vault another in its place.
+     */
+    public void claim(EntityDestroyer wreck, EntityPlayer player) {
+        EntityDestroyerArmor armor = new EntityDestroyerArmor(wreck.world);
+        armor.rise(wreck.posX, wreck.posY, wreck.posZ, wreck.rotationYaw, armor.getMaxHealth() * (float) EternityConfig.vault.armorClaimedIntegrity);
+        // Beaten as it was, it is barely holding together, and the fire in it all but out.
+        armor.setLava(EntityDestroyerArmor.BUCKET);
+        wreck.world.spawnEntity(armor);
+        wreck.setDead();
+        wreck.world.playSound(null, wreck.posX, wreck.posY + 1D, wreck.posZ, SoundEvents.BLOCK_PISTON_EXTEND, SoundCategory.HOSTILE, 2F, 0.3F);
+        TextComponentString text = new TextComponentString("Under your hand something in the Destroyer answers. It rises, empty, its back open to you. "
+                + "It will go where you take it, but it is barely holding together and its fire is all but out: it wants Uru and lava. "
+                + "Sneak and use it, or press your inventory key inside it, to see to its systems.");
+        text.getStyle().setColor(TextFormatting.GOLD).setItalic(true);
+        player.sendMessage(text);
     }
 
     public void setCalm(World world, boolean calm) {
@@ -404,11 +430,11 @@ public final class VaultDirector {
 
     /**
      * Whether a blow comes from something worthy of the Destroyer: the Power Stone in either hand,
-     * on its own or in a gauntlet; Mjolnir or Stormbreaker, held or thrown; or a charged Astral
-     * Regulator.
+     * on its own or in a gauntlet; Mjolnir or Stormbreaker, held or thrown; a charged Astral
+     * Regulator; or the fists of the Destroyer Armor, its own body turned against it.
      */
     public static boolean worthy(DamageSource source) {
-        if (source.getImmediateSource() instanceof EntityThrownThorWeapon) {
+        if (source.getImmediateSource() instanceof EntityThrownThorWeapon || source.getImmediateSource() instanceof EntityDestroyerArmor) {
             return true;
         }
         Entity attacker = source.getTrueSource();

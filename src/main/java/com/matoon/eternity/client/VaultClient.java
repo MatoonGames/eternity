@@ -4,8 +4,10 @@ import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.client.render.FxRenderer;
 import com.matoon.eternity.client.render.GlSnapshot;
 import com.matoon.eternity.client.render.VaultFx;
+import com.matoon.eternity.entity.ArmorPowers;
 import com.matoon.eternity.client.render.VaultTreasures;
 import com.matoon.eternity.entity.EntityDestroyer;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.item.EternityItems;
 import com.matoon.eternity.network.MsgTribunalFx;
 import com.matoon.eternity.world.OdinsVault;
@@ -127,9 +129,12 @@ public final class VaultClient {
                 if (lastRay != null) {
                     lastRay.replaced = true;
                 }
-                lastRay = new VaultFx.Ray(at, to, m.id, m.time);
+                // The ray's tick, and in its top byte how far its dynamo is overcharged, which swells it.
+                int phase = m.id & 0xFFFFFF, charge = m.id >>> 24;
+                lastRay = new VaultFx.Ray(at, to, phase, m.time);
+                lastRay.swell = 1F + 3F * (1F - (float) Math.exp(-charge / 40F));
                 effects.add(lastRay);
-                if (m.id % 2 == 0) {
+                if (phase % 2 == 0) {
                     effects.add(new VaultFx.Molten(to, 0.9D + rand.nextDouble() * 0.4D, 70));
                 }
                 for (int i = 0; i < 3; i++) {
@@ -181,6 +186,28 @@ public final class VaultClient {
             case MsgTribunalFx.CASKET_FREEZE:
                 effects.add(new VaultFx.Shell(m.id, m.a, m.b, m.time));
                 break;
+            case MsgTribunalFx.DESTROYER_WOUND: {
+                // The Destroyer Armor hurt: sparks and shards of its plate bursting from where the blow landed.
+                Entity hit = mc.world.getEntityByID(m.id);
+                if (!(hit instanceof EntityDestroyerArmor)) {
+                    break;
+                }
+                float severity = m.time / 100F;
+                ArmorWounds.burst((EntityDestroyerArmor) hit, at, to.normalize(), effects, rand, severity);
+                effects.add(new VaultFx.Impact(at, to, 0.25F + 0.2F * Math.min(severity, 2F), seed));
+                if (hit.isPassenger(mc.player)) {
+                    shake = Math.max(shake, 1.5F + 1.5F * Math.min(severity, 3F));
+                }
+                break;
+            }
+            case MsgTribunalFx.DESTROYER_IMPLODE:
+                // The Destroyer Armor falling in on itself, its core breached.
+                effects.add(new VaultFx.Implosion(at, m.a, EntityDestroyerArmor.IMPLODE_TICKS, m.time, seed));
+                shake = Math.max(shake, 3F * closeness(dist, 40D));
+                break;
+            case MsgTribunalFx.DESTROYER_STONE:
+                stones(m, at, to);
+                break;
             default:
                 break;
         }
@@ -200,6 +227,13 @@ public final class VaultClient {
         }
         shake *= 0.86F;
         frost();
+        // The Destroyer Armor coming apart, wherever it is, as it is beaten down.
+        for (Entity entity : mc.world.loadedEntityList) {
+            if (entity instanceof EntityDestroyerArmor && entity.getDistanceSq(mc.player) < 96D * 96D) {
+                ArmorWounds.tick((EntityDestroyerArmor) entity, effects, rand);
+                ArmorWounds.core((EntityDestroyerArmor) entity, effects, rand);
+            }
+        }
         if (!inVault()) {
             motes.clear();
             return;
@@ -250,13 +284,13 @@ public final class VaultClient {
                 mc.world.spawnParticle(EnumParticleTypes.LAVA, flame.x, flame.y + 0.1D, flame.z, 0D, 0D, 0D);
             }
         }
-        Vec3d crown = VaultTreasures.at(OdinsVault.Relic.CROWN, 15D);
+        Vec3d crown = VaultTreasures.at(OdinsVault.Relic.CROWN, 22D);
         if (rand.nextInt(4) == 0 && crown.squareDistanceTo(mc.player.getPositionVector()) < 40D * 40D) {
             mc.world.spawnParticle(EnumParticleTypes.SMOKE_NORMAL, crown.x + rand.nextGaussian() * 0.2D, crown.y + 0.3D, crown.z + rand.nextGaussian() * 0.2D,
                     0D, 0.02D, 0D);
         }
         if (casket && rand.nextInt(3) == 0) {
-            Vec3d c = VaultTreasures.at(OdinsVault.Relic.CASKET, 22D);
+            Vec3d c = VaultTreasures.at(OdinsVault.Relic.CASKET, 30D);
             mc.world.spawnParticle(EnumParticleTypes.END_ROD, c.x + rand.nextGaussian() * 0.25D, c.y, c.z + rand.nextGaussian() * 0.2D,
                     0D, -0.02D, 0D);
         }
@@ -474,6 +508,27 @@ public final class VaultClient {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /** The Infinity Stones in the Destroyer Armor: their light along its ray. */
+    private void stones(MsgTribunalFx m, Vec3d at, Vec3d to) {
+        if (m.time == ArmorPowers.FX_RAY) {
+            for (int stone = 0; stone < ArmorPowers.COUNT; stone++) {
+                if ((m.id & (1 << stone)) == 0) {
+                    continue;
+                }
+                float[] c = rgb(ArmorPowers.RGB[stone]);
+                for (int i = 0; i < 3; i++) {
+                    Vec3d p = at.add(to.subtract(at).scale(rand.nextDouble()));
+                    mc.world.spawnParticle(EnumParticleTypes.SPELL_MOB, p.x + rand.nextGaussian() * 0.25D, p.y + rand.nextGaussian() * 0.25D,
+                            p.z + rand.nextGaussian() * 0.25D, c[0], c[1], c[2]);
+                }
+            }
+        }
+    }
+
+    private static float[] rgb(int color) {
+        return new float[]{(color >> 16 & 255) / 255F, (color >> 8 & 255) / 255F, (color & 255) / 255F};
+    }
 
     private void sparks(Vec3d at, int count, double force) {
         for (int i = 0; i < count; i++) {

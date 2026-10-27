@@ -9,6 +9,7 @@ import com.matoon.eternity.world.Nexus;
 import com.matoon.eternity.world.OrderAndChaos;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.MoverType;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.player.EntityPlayer;
@@ -689,8 +690,7 @@ public class EntityOrderChaos extends EntityLiving {
             int j = MathHelper.floor((player.posZ - focus.z) / TILE + 2.5D);
             if (i >= 0 && i < 5 && j >= 0 && j < 5 && Math.abs(player.posY - focus.y) < 4D && (lit >> (i * 5 + j) & 1) != 0) {
                 judge(player, 0.18F);
-                player.motionY += 0.6D;
-                player.velocityChanged = true;
+                EntityDestroyerArmor.shove(player, 0D, 0.6D, 0D);
             }
         }
     }
@@ -720,9 +720,7 @@ public class EntityOrderChaos extends EntityLiving {
                 pull = new Vec3d(pull.x, 0D, pull.z);
                 if (pull.lengthSquared() > 0.04D && pull.length() < 22D) {
                     pull = pull.normalize().scale(0.075D);
-                    player.motionX += pull.x;
-                    player.motionZ += pull.z;
-                    player.velocityChanged = true;
+                    EntityDestroyerArmor.shove(player, pull.x, 0D, pull.z);
                 }
             }
         }
@@ -866,7 +864,8 @@ public class EntityOrderChaos extends EntityLiving {
             case 7:
                 OrderAndChaos.speak(false, "Oops. That was a heal. Forget you saw that.");
                 for (EntityPlayerMP player : players) {
-                    player.setHealth(Math.min(player.getMaxHealth(), player.getHealth() + player.getMaxHealth() * 0.25F));
+                    EntityLivingBase body = EntityDestroyerArmor.body(player);
+                    body.setHealth(Math.min(body.getMaxHealth(), body.getHealth() + EntityDestroyerArmor.health(body) * 0.25F));
                 }
                 break;
             case 8:
@@ -874,8 +873,7 @@ public class EntityOrderChaos extends EntityLiving {
                 OrderAndChaos.speak(false, "Up you go!");
                 for (EntityPlayerMP player : players) {
                     judge(player, 0.12F);
-                    player.motionY = 1.3D;
-                    player.velocityChanged = true;
+                    EntityDestroyerArmor.fling(player, 0D, 1.3D, 0D);
                     later(30, () -> {
                         Vec3d at = player.getPositionVector();
                         fx(MsgTribunalFx.CHAOS_BURST, at.x, at.y, at.z, 3D, 0, 0, 0, 1);
@@ -904,7 +902,7 @@ public class EntityOrderChaos extends EntityLiving {
         double a = rand.nextDouble() * Math.PI * 2D, r = 4D + rand.nextDouble() * 13D;
         double x = Nexus.JUNCTION_X + Math.cos(a) * r, z = Nexus.JUNCTION_Z + Math.sin(a) * r;
         fx(MsgTribunalFx.CHAOS_SCATTER, target.posX, target.posY, target.posZ, x, Nexus.JUNCTION_Y, z, 0, 20);
-        target.connection.setPlayerLocation(x, Nexus.JUNCTION_Y, z, target.rotationYaw + 180F, target.rotationPitch);
+        EntityDestroyerArmor.place(target, x, Nexus.JUNCTION_Y, z, target.rotationYaw + 180F, target.rotationPitch);
         world.playSound(null, x, Nexus.JUNCTION_Y, z, SoundEvents.ENTITY_ENDERMEN_TELEPORT, SoundCategory.HOSTILE, 2F, 0.5F);
         ItemStack[] hotbar = new ItemStack[9];
         for (int i = 0; i < 9; i++) {
@@ -943,20 +941,14 @@ public class EntityOrderChaos extends EntityLiving {
                     continue;
                 }
                 Vec3d pull = to.normalize().scale(0.1D * (1D - d / 30D));
-                player.motionX += pull.x;
-                player.motionY += pull.y * 0.5D;
-                player.motionZ += pull.z;
-                player.velocityChanged = true;
+                EntityDestroyerArmor.shove(player, pull.x, pull.y * 0.5D, pull.z);
                 if (stateTicks % 5 == 0) {
                     fx(MsgTribunalFx.CHAOS_MAW, player.posX, player.posY + 1D, player.posZ, mouth.x, mouth.y, mouth.z, 0, 8);
                 }
                 if (d < 4.5D && struck.add(player.getUniqueID())) {
                     world.playSound(null, mouth.x, mouth.y, mouth.z, EternitySounds.COMET_IMPACT, SoundCategory.HOSTILE, 6F, 1.2F);
                     judge(player, 0.25F);
-                    player.motionX = -pull.x * 15D;
-                    player.motionY = 0.9D;
-                    player.motionZ = -pull.z * 15D;
-                    player.velocityChanged = true;
+                    EntityDestroyerArmor.fling(player, -pull.x * 15D, 0.9D, -pull.z * 15D);
                 }
             }
         }
@@ -1002,10 +994,7 @@ public class EntityOrderChaos extends EntityLiving {
                     if (hit == null || ticksExisted - hit >= 10) {
                         punished.put(player.getUniqueID(), ticksExisted);
                         judge(player, 0.1F);
-                        player.motionX += w[3] * 3D;
-                        player.motionY += 0.5D;
-                        player.motionZ += w[4] * 3D;
-                        player.velocityChanged = true;
+                        EntityDestroyerArmor.shove(player, w[3] * 3D, 0.5D, w[4] * 3D);
                     }
                 }
             }
@@ -1169,8 +1158,7 @@ public class EntityOrderChaos extends EntityLiving {
             if (player.getDistance(at.x, at.y, at.z) < radius) {
                 judge(player, fraction);
                 if (lift > 0D) {
-                    player.motionY += lift;
-                    player.velocityChanged = true;
+                    EntityDestroyerArmor.shove(player, 0D, lift, 0D);
                 }
             }
         }
@@ -1181,8 +1169,7 @@ public class EntityOrderChaos extends EntityLiving {
         if (player.isSpectator() || fraction <= 0F) {
             return;
         }
-        player.hurtResistantTime = 0;
-        player.attackEntityFrom(EternityDamage.orderAndChaos(this), player.getMaxHealth() * fraction * might());
+        EntityDestroyerArmor.strike(player, EternityDamage.orderAndChaos(this), fraction * might());
     }
 
     private void fx(byte type, double x, double y, double z, double a, double b, double c, int id, int time) {

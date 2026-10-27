@@ -1,0 +1,16 @@
+{
+    "parent": "builtin/entity",
+    "textures": {
+        "particle": "blocks/planks_big_oak"
+    },
+    "display": {
+        "gui": { "rotation": [ 0, 0, -45 ], "translation": [ 0, 0, 0 ], "scale": [ 0.26, 0.26, 0.26 ] },
+        "ground": { "rotation": [ 90, 0, 0 ], "translation": [ 0, 1, 0 ], "scale": [ 0.3, 0.3, 0.3 ] },
+        "fixed": { "rotation": [ 0, 0, -45 ], "translation": [ 0, 0, 0 ], "scale": [ 0.26, 0.26, 0.26 ] },
+        "head": { "rotation": [ 0, 0, 0 ], "translation": [ 0, 13, 0 ], "scale": [ 0.5, 0.5, 0.5 ] },
+        "thirdperson_righthand": { "rotation": [ 80, 0, 0 ], "translation": [ 0, 0, 0 ], "scale": [ 0.65, 0.65, 0.65 ] },
+        "thirdperson_lefthand": { "rotation": [ 80, 0, 0 ], "translation": [ 0, 0, 0 ], "scale": [ 0.65, 0.65, 0.65 ] },
+        "firstperson_righthand": { "rotation": [ -75, 0, 0 ], "translation": [ 1, 0, -3 ], "scale": [ 0.5, 0.5, 0.5 ] },
+        "firstperson_lefthand": { "rotation": [ -75, 0, 0 ], "translation": [ -1, 0, -3 ], "scale": [ 0.5, 0.5, 0.5 ] }
+    }
+}

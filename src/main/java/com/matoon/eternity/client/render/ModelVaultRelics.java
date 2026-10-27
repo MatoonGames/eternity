@@ -14,7 +14,6 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 @SideOnly(Side.CLIENT)
 public class ModelVaultRelics extends ModelBase {
 
-    private static final float PI = (float) Math.PI;
 
     private final VaultBoxes.Sheet sheet = VaultBoxes.RELICS;
     public final ModelRenderer gauntlet, flame, fork, tablet, eye, crown, pedestal, casket, plinth, cradle;
@@ -71,36 +70,30 @@ public class ModelVaultRelics extends ModelBase {
         part("lSlabR", slab, 0F, 0F, 0F);
         part("lSlabL", slab, 0F, 0F, 0F);
 
-        // The Warlock's Eye, cradled in three claws, free to turn.
-        eye = part("eStand", null, 0F, 0F, 0F);
-        for (int i = 0; i < 3; i++) {
-            float a = PI * 2F * i / 3F + PI / 6F;
-            ModelRenderer claw = part("eClaw" + i, eye, MathHelper.sin(a) * 1.5F, -11F, -MathHelper.cos(a) * 1.5F);
-            // Leaning out from the stem, along the direction it stands on.
-            claw.rotateAngleY = -a;
-            claw.rotateAngleX = 0.55F;
-            ModelRenderer tip = part("eClawTip" + i, claw, 0F, -6F, 0F);
-            tip.rotateAngleX = -0.95F;
-        }
-        orb = part("eOrb", eye, 0F, -16.5F, 0F);
+        // The Warlock's Eye: the eye free to turn in its frame, the frame on its plinth.
+        eye = part("ePlinth", null, 0F, 0F, 0F);
+        ModelRenderer frame = part("eMask", eye, 0F, -21.5F, 0F);
+        arch(frame, "eArchOuter", VaultBoxes.ARCH_OUTER, 14F, 9F, -0.5F);
+        arch(frame, "eArchInner", VaultBoxes.ARCH_INNER, 10.5F, 5.5F, 1F);
+        part("eTabR", frame, -11.5F, -5.5F, 0F).rotateAngleZ = 0.35F;
+        part("eTabL", frame, 11.5F, -5.5F, 0F).rotateAngleZ = -0.35F;
+        orb = part("eOrb", frame, 0F, 0F, 0F);
 
-        // The Crown of Black Fire on its tripod: points round its brow, horns sweeping up and back.
+        // The Crown of Black Fire: the skull on its slab, the blades spreading from its brow, the horns rising from them.
         crown = part("cStand", null, 0F, 0F, 0F);
-        ModelRenderer band = part("cBand", crown, 0F, -10F, 0F);
-        for (int i = 0; i < 5; i++) {
-            float a = (float) Math.toRadians(-64D + i * 32D);
-            ModelRenderer point = part("cPoint" + i, band, MathHelper.sin(a) * 6F, -4F, -MathHelper.cos(a) * 6F);
-            point.rotateAngleX = 0.25F * MathHelper.cos(a);
-            point.rotateAngleZ = 0.25F * MathHelper.sin(a);
-        }
+        ModelRenderer skull = part("cSkull", crown, 0F, -2F, 0F);
+        part("cSkullR", skull, 0F, 0F, 0F);
+        part("cSkullL", skull, 0F, 0F, 0F);
+        int[] hornLength = {7, 7, 6, 6, 5};
         for (int side = -1; side <= 1; side += 2) {
             String s = side < 0 ? "R" : "L";
-            ModelRenderer parent = band;
-            for (int i = 0; i < 5; i++) {
-                ModelRenderer horn = part("cHorn" + i + s, parent, i == 0 ? side * 6F : 0F, i == 0 ? -2.5F : -3.6F, 0F);
-                // Out from the band, then sweeping up and back like a bull's.
-                horn.rotateAngleZ = i == 0 ? side * 0.75F : -side * 0.36F;
-                horn.rotateAngleX = i == 0 ? 0F : -0.14F;
+            ModelRenderer wing = part("cWing" + s, skull, side * 2F, -15F, -0.5F);
+            wing.rotateAngleZ = -side * 0.5F;
+            ModelRenderer parent = wing;
+            for (int i = 0; i < VaultBoxes.CROWN_HORN; i++) {
+                ModelRenderer horn = part("cHorn" + i + s, parent, i == 0 ? side * 21.2F : 0F, i == 0 ? -0.5F : -hornLength[i - 1], 0F);
+                // Straight up from the blade's end, leaning out a little, then curving slowly in.
+                horn.rotateAngleZ = i == 0 ? side * 0.6F : -side * 0.17F;
                 parent = horn;
             }
         }
@@ -112,8 +105,27 @@ public class ModelVaultRelics extends ModelBase {
         casket = part("casket", null, 0F, 0F, 0F);
         part("casketR", casket, 0F, 0F, 0F);
         part("casketL", casket, 0F, 0F, 0F);
-        part("handleR", casket, 0F, 0F, 0F);
-        part("handleL", casket, 0F, 0F, 0F);
+        for (int i = 0; i < 4; i++) {
+            float sx = i % 2 == 0 ? -1F : 1F, sz = i < 2 ? -1F : 1F;
+            part("kPost", casket, sx * 8F, 0F, sz * 5F);
+            // The panels pinch in at their sides, where the posts swell into them.
+            part("kBulge", casket, sx * 6.6F, 0F, sz * 5.3F);
+        }
+        part("kCrest", casket, 0F, -12.8F, -5.6F);
+        part("kCrest", casket, 0F, -12.8F, 5.6F);
+        // A pointed oval round each end.
+        for (int side = -1; side <= 1; side += 2) {
+            int n = VaultBoxes.CASKET_RING;
+            for (int i = 0; i < n; i++) {
+                double a = Math.PI * 2D * (i + 0.5D) / n;
+                double z = 3.3D * Math.cos(a) * (0.75D + 0.25D * Math.abs(Math.cos(a)));
+                double y = -6.3D + 4.8D * Math.sin(a);
+                double dz = -3.3D * Math.sin(a), dy = 4.8D * Math.cos(a);
+                ModelRenderer seg = part("kRing", casket, side * 8.6F, (float) y, (float) z);
+                seg.rotateAngleX = (float) Math.atan2(dz, dy);
+            }
+        }
+
 
         // The stands Mjolnir and the Tesseract rest on.
         plinth = part("plinth", null, 0F, 0F, 0F);
@@ -128,6 +140,15 @@ public class ModelVaultRelics extends ModelBase {
 
     private ModelRenderer part(String name, ModelRenderer parent, float x, float y, float z) {
         return VaultParts.part(this, sheet, name, parent, x, y, z);
+    }
+
+    /** An arch of n segments over the top half of an ellipse, rx across and ry high, its ends at height cy. */
+    private void arch(ModelRenderer parent, String name, int n, float rx, float ry, float cy) {
+        for (int i = 0; i < n; i++) {
+            double a = Math.PI * (i + 0.5D) / n;
+            ModelRenderer seg = part(name, parent, (float) (rx * Math.cos(a)), (float) (cy - ry * Math.sin(a)), 0F);
+            seg.rotateAngleZ = (float) Math.atan2(-ry * Math.cos(a), -rx * Math.sin(a));
+        }
     }
 
     /** The Tuning Fork's tines, shivering as it rings. */

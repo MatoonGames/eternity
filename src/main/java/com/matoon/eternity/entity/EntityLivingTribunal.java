@@ -527,9 +527,7 @@ public class EntityLivingTribunal extends EntityLiving {
                 double d = Math.sqrt(dx * dx + dz * dz);
                 if (d < 7D && d > 3.5D) {
                     // The bars hold: pressing against them only pushes you back in.
-                    player.motionX -= dx / d * 0.4D;
-                    player.motionZ -= dz / d * 0.4D;
-                    player.velocityChanged = true;
+                    EntityDestroyerArmor.shove(player, -dx / d * 0.4D, 0D, -dz / d * 0.4D);
                 }
                 if (d < 7D) {
                     player.addPotionEffect(new PotionEffect(MobEffects.SLOWNESS, 10, 3, false, false));
@@ -557,9 +555,7 @@ public class EntityLivingTribunal extends EntityLiving {
                 double d = off.length();
                 if (d < 16D && d > 0.5D) {
                     Vec3d pull = off.scale(0.06D * (1D - d / 16D) * might() / d * 4D);
-                    player.motionX += pull.x;
-                    player.motionZ += pull.z;
-                    player.velocityChanged = true;
+                    EntityDestroyerArmor.shove(player, pull.x, 0D, pull.z);
                 }
                 if (d < 6D && stateTicks % 10 == 0) {
                     judge(player, 0.08F);
@@ -631,10 +627,9 @@ public class EntityLivingTribunal extends EntityLiving {
                 double dz = player.posZ - focus.z;
                 double d = Math.sqrt(dx * dx + dz * dz);
                 // Only those standing on the floor are caught; those who leapt it pass over.
-                if (Math.abs(d - r) < 1.8D && player.onGround && struck.add(player.getUniqueID())) {
+                if (Math.abs(d - r) < 1.8D && EntityDestroyerArmor.mass(player).onGround && struck.add(player.getUniqueID())) {
                     judge(player, 0.3F);
-                    player.motionY += 1D;
-                    player.velocityChanged = true;
+                    EntityDestroyerArmor.shove(player, 0D, 1D, 0D);
                 }
             }
         }
@@ -653,10 +648,14 @@ public class EntityLivingTribunal extends EntityLiving {
         if (focus != null && stateTicks < 60) {
             for (EntityPlayer player : world.playerEntities) {
                 if (player.getDistance(focus.x, player.posY, focus.z) < 24D) {
-                    player.motionY = Math.min(player.motionY, -0.8D);
-                    player.motionX *= 0.5D;
-                    player.motionZ *= 0.5D;
-                    player.velocityChanged = true;
+                    if (EntityDestroyerArmor.carrier(player) != null) {
+                        EntityDestroyerArmor.fling(player, 0D, -0.8D, 0D);
+                    } else {
+                        player.motionY = Math.min(player.motionY, -0.8D);
+                        player.motionX *= 0.5D;
+                        player.motionZ *= 0.5D;
+                        player.velocityChanged = true;
+                    }
                     player.addPotionEffect(new PotionEffect(MobEffects.SLOWNESS, 10, 4, false, false));
                     if (stateTicks % 10 == 0) {
                         judge(player, 0.04F);
@@ -692,9 +691,7 @@ public class EntityLivingTribunal extends EntityLiving {
                 if (Math.abs(player.posZ - wall) < 1.6D && Math.abs(player.posX - gapX) > 4.5D
                         && player.posY < StarChamber.FLOOR_Y + 23D && struck.add(player.getUniqueID())) {
                     judge(player, 0.4F);
-                    player.motionZ += 2D;
-                    player.motionY += 0.6D;
-                    player.velocityChanged = true;
+                    EntityDestroyerArmor.shove(player, 0D, 0.6D, 2D);
                 }
             }
         }
@@ -738,10 +735,7 @@ public class EntityLivingTribunal extends EntityLiving {
                 judge(player, fraction * (float) (1D - d / (radius * 1.4D)));
                 Vec3d push = player.getPositionVector().subtract(at);
                 push = push.lengthSquared() < 1.0E-4 ? Vec3d.ZERO : push.normalize();
-                player.motionX += push.x * 2D;
-                player.motionY += 1.2D;
-                player.motionZ += push.z * 2D;
-                player.velocityChanged = true;
+                EntityDestroyerArmor.shove(player, push.x * 2D, 1.2D, push.z * 2D);
             }
         }
     }
@@ -780,8 +774,7 @@ public class EntityLivingTribunal extends EntityLiving {
             if (player.getDistance(at.x, at.y, at.z) < radius) {
                 judge(player, fraction);
                 if (lift > 0D) {
-                    player.motionY += lift;
-                    player.velocityChanged = true;
+                    EntityDestroyerArmor.shove(player, 0D, lift, 0D);
                 }
             }
         }
@@ -792,8 +785,7 @@ public class EntityLivingTribunal extends EntityLiving {
         if (player.isSpectator() || fraction <= 0F) {
             return;
         }
-        player.hurtResistantTime = 0;
-        player.attackEntityFrom(EternityDamage.tribunal(this), player.getMaxHealth() * fraction * might());
+        EntityDestroyerArmor.strike(player, EternityDamage.tribunal(this), fraction * might());
     }
 
     private static Vec3d floor(double x, double z) {

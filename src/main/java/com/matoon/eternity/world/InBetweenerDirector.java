@@ -4,6 +4,7 @@ import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.EternitySounds;
 import com.matoon.eternity.compat.InfinityStones;
 import com.matoon.eternity.compat.Relics;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EntityInBetweener;
 import com.matoon.eternity.entity.EntityOrderChaos;
 import com.matoon.eternity.entity.EternityDamage;
@@ -976,7 +977,7 @@ public final class InBetweenerDirector {
         Vec3d away = new Vec3d(player.posX - centre.x, 0D, player.posZ - centre.z);
         away = away.lengthSquared() < 1.0E-4 ? new Vec3d(0D, 0D, 1D) : away.normalize();
         Vec3d at = centre.add(away.scale(3.5D)).add(0D, -1D, 0D);
-        player.connection.setPlayerLocation(at.x, at.y, at.z, player.rotationYaw, player.rotationPitch);
+        EntityDestroyerArmor.place(player, at.x, at.y, at.z, player.rotationYaw, player.rotationPitch);
         player.world.playSound(null, centre.x, centre.y, centre.z, EternitySounds.RIFT_OPEN, SoundCategory.HOSTILE, 4F, 0.6F);
         player.world.playSound(null, centre.x, centre.y, centre.z, SoundEvents.BLOCK_GLASS_BREAK, SoundCategory.HOSTILE, 2F, 0.4F);
     }
@@ -1151,7 +1152,7 @@ public final class InBetweenerDirector {
         away = away.lengthSquared() < 1.0E-4 ? new Vec3d(0D, 0D, 1D) : away.normalize();
         Vec3d out = new Vec3d(centre.x, Nexus.JUNCTION_Y, centre.z).add(away.scale(Nexus.BUBBLE_RADIUS + 2.5D));
         inside = false;
-        player.connection.setPlayerLocation(out.x, out.y, out.z, player.rotationYaw, player.rotationPitch);
+        EntityDestroyerArmor.place(player, out.x, out.y, out.z, player.rotationYaw, player.rotationPitch);
         player.world.playSound(null, out.x, out.y, out.z, EternitySounds.RIFT_CLOSE, SoundCategory.HOSTILE, 3F, 1.4F);
         EternityNetwork.send(new MsgInBetweener(MsgInBetweener.CAST_OUT, 0), player);
         finish(player);
@@ -1495,7 +1496,7 @@ public final class InBetweenerDirector {
                 // Here and there: everywhere in the glass at once, and so are you.
                 if (t % 30 == 0) {
                     Vec3d at = centre.add(randomInside(BATTLE_RADIUS - 4D));
-                    player.connection.setPlayerLocation(at.x, at.y, at.z, player.rotationYaw, player.rotationPitch);
+                    EntityDestroyerArmor.place(player, at.x, at.y, at.z, player.rotationYaw, player.rotationPitch);
                     Vec3d opposite = centre.add(centre.subtract(at).scale(0.6D));
                     entity.setPosition(opposite.x, opposite.y - 0.9D, opposite.z);
                     player.world.playSound(null, at.x, at.y, at.z, SoundEvents.ENTITY_ENDERMEN_TELEPORT, SoundCategory.HOSTILE, 1.5F, 0.6F);
@@ -1505,18 +1506,18 @@ public final class InBetweenerDirector {
             case 3:
                 // Before and after: time stops for you, and not for him.
                 if (frozenAt == null) {
-                    frozenAt = player.getPositionVector();
+                    frozenAt = EntityDestroyerArmor.mass(player).getPositionVector();
                 }
                 player.motionX = player.motionY = player.motionZ = 0D;
                 if (t % 2 == 0) {
-                    player.connection.setPlayerLocation(frozenAt.x, frozenAt.y, frozenAt.z, player.rotationYaw, player.rotationPitch);
+                    EntityDestroyerArmor.place(player, frozenAt.x, frozenAt.y, frozenAt.z, player.rotationYaw, player.rotationPitch);
                 }
                 entity.glide(new Vec3d(player.posX, player.posY + 0.1D, player.posZ).add(player.getLookVec().scale(1.6D)), 0.03D);
                 break;
             default:
                 // Being and nothing: a touch on the brow.
                 if (frozenAt != null && t % 2 == 0) {
-                    player.connection.setPlayerLocation(frozenAt.x, frozenAt.y, frozenAt.z, player.rotationYaw, player.rotationPitch);
+                    EntityDestroyerArmor.place(player, frozenAt.x, frozenAt.y, frozenAt.z, player.rotationYaw, player.rotationPitch);
                 }
                 entity.glide(new Vec3d(player.posX, player.posY + 0.1D, player.posZ).add(player.getLookVec().scale(1.1D)), 0.08D);
                 if (t >= PHASES[PHASES.length - 1]) {
@@ -1539,10 +1540,14 @@ public final class InBetweenerDirector {
 
     /** Keeps someone inside a sphere, gently. */
     private static void confine(EntityPlayerMP player, Vec3d centre, double radius) {
-        Vec3d off = player.getPositionVector().add(0D, 0.9D, 0D).subtract(centre);
-        if (off.length() > radius) {
-            Vec3d back = centre.add(off.normalize().scale(radius - 0.5D)).add(0D, -0.9D, 0D);
-            player.connection.setPlayerLocation(back.x, back.y, back.z, player.rotationYaw, player.rotationPitch);
+        // Inside the Destroyer Armor, it is the armour that has to stay in.
+        Entity body = EntityDestroyerArmor.mass(player);
+        double half = body.height / 2D;
+        Vec3d off = body.getPositionVector().add(0D, half, 0D).subtract(centre);
+        double room = Math.max(1D, radius - (body == player ? 0D : half));
+        if (off.length() > room) {
+            Vec3d back = centre.add(off.normalize().scale(room - 0.5D)).add(0D, -half, 0D);
+            EntityDestroyerArmor.place(player, back.x, back.y, back.z, player.rotationYaw, player.rotationPitch);
         }
     }
 
@@ -1551,7 +1556,8 @@ public final class InBetweenerDirector {
         if (player.isSpectator()) {
             return;
         }
-        player.setHealth(Math.max(1F, player.getHealth() - player.getMaxHealth() * fraction));
+        // Inside the Destroyer Armor, it is the armour he wears away.
+        EntityDestroyerArmor.wound(player, fraction);
         player.world.setEntityState(player, (byte) 2);
         player.world.playSound(null, player.posX, player.posY, player.posZ, SoundEvents.ENTITY_PLAYER_HURT, SoundCategory.HOSTILE, 1F, 0.8F);
     }
@@ -1607,7 +1613,8 @@ public final class InBetweenerDirector {
                 centre.x + radius + 3D, centre.y + radius + 3D, centre.z + radius + 3D);
         for (Entity entityIn : nexus.getEntitiesWithinAABB(Entity.class, box)) {
             if (entityIn == entity || entityIn.isDead || entityIn instanceof EntityOrderChaos
-                    || (stage == Stage.BATTLE || inside) && entityIn.getUniqueID().equals(visitor)) {
+                    || (stage == Stage.BATTLE || inside) && EntityDestroyerArmor.soul(entityIn).getUniqueID().equals(visitor)
+                    || EntityDestroyerArmor.carrier(entityIn) != null) {
                 continue;
             }
             if (entityIn instanceof EntityPlayer && ((EntityPlayer) entityIn).isSpectator()) {
@@ -1626,7 +1633,9 @@ public final class InBetweenerDirector {
             }
             Vec3d dir = d < 1.0E-3 ? new Vec3d(1D, 0D, 0D) : off.scale(1D / d);
             Vec3d out = centre.add(dir.scale(radius + 0.6D)).add(0D, -entityIn.height / 2D, 0D);
-            if (entityIn instanceof EntityPlayerMP) {
+            if (entityIn instanceof EntityDestroyerArmor) {
+                ((EntityDestroyerArmor) entityIn).put(out.x, out.y, out.z);
+            } else if (entityIn instanceof EntityPlayerMP) {
                 ((EntityPlayerMP) entityIn).connection.setPlayerLocation(out.x, out.y, out.z, entityIn.rotationYaw, entityIn.rotationPitch);
             } else {
                 entityIn.setPositionAndUpdate(out.x, out.y, out.z);
@@ -1713,7 +1722,7 @@ public final class InBetweenerDirector {
     public static void visit(EntityPlayerMP player) {
         double x = Nexus.JUNCTION_X - 13.5D, z = Nexus.JUNCTION_Z + 13.5D;
         Teleport.player(player, Nexus.dimension(), x, Nexus.JUNCTION_Y, z, false);
-        player.connection.setPlayerLocation(x, Nexus.JUNCTION_Y, z, -135F, -5F);
+        EntityDestroyerArmor.place(player, x, Nexus.JUNCTION_Y, z, -135F, -5F);
     }
 
     /** Ends the wait for Order and Chaos now. For operators. */

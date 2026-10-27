@@ -15,8 +15,8 @@ public class CasketItemRenderer extends TileEntityItemStackRenderer {
     public void renderByItem(ItemStack stack, float partialTicks) {
         float time = (Minecraft.getSystemTime() % 3600000L) / 50F;
         GlStateManager.pushMatrix();
-        GlStateManager.translate(0.5F, 0.27F, 0.5F);
-        GlStateManager.scale(-0.85F, -0.85F, 0.85F);
+        GlStateManager.translate(0.5F, 0.16F, 0.5F);
+        GlStateManager.scale(-0.7F, -0.7F, 0.7F);
         VaultTreasures.casket(time);
         GlStateManager.popMatrix();
     }

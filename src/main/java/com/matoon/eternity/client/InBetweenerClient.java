@@ -7,6 +7,7 @@ import com.matoon.eternity.client.render.InBetweenerFx;
 import com.matoon.eternity.client.render.RenderInBetweener;
 import com.matoon.eternity.client.render.RenderOrderChaos;
 import com.matoon.eternity.client.sound.SoundFx;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EntityInBetweener;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.network.MsgInBetweener;
@@ -316,7 +317,11 @@ public final class InBetweenerClient {
                 break;
             case 1:
                 // Up and down change places: you fall toward the top of the glass.
-                if (!player.capabilities.isFlying) {
+                if (EntityDestroyerArmor.carrier(player) != null) {
+                    // The Destroyer Armor falls upward too, with them in it.
+                    Entity armor = EntityDestroyerArmor.carrier(player);
+                    armor.motionY = Math.min(0.6D, armor.motionY + 0.13D);
+                } else if (!player.capabilities.isFlying) {
                     player.motionY = Math.min(0.6D, player.motionY + 0.13D);
                 }
                 break;

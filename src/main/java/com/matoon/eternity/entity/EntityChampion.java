@@ -1002,7 +1002,11 @@ public class EntityChampion extends EntityLiving {
     private void hold(EntityLivingBase victim, Vec3d at) {
         victim.fallDistance = 0F;
         victim.motionX = victim.motionY = victim.motionZ = 0D;
-        if (victim instanceof EntityPlayerMP) {
+        EntityDestroyerArmor armor = EntityDestroyerArmor.carrier(victim);
+        if (armor != null) {
+            // Inside the Destroyer Armor, he hoists the whole armour, by its middle, with them in it.
+            armor.put(at.x, at.y - armor.height * 0.45D, at.z);
+        } else if (victim instanceof EntityPlayerMP) {
             ((EntityPlayerMP) victim).connection.setPlayerLocation(at.x, at.y, at.z, victim.rotationYaw, victim.rotationPitch);
         } else {
             victim.setPositionAndUpdate(at.x, at.y, at.z);
@@ -1339,9 +1343,11 @@ public class EntityChampion extends EntityLiving {
         Vec3d f = facing();
         boolean hit = false;
         for (EntityLivingBase victim : victims(reach + 1D)) {
-            Vec3d to = flat(victim.getPositionVector().subtract(getPositionVector()));
-            if (horizontal(victim) <= reach + victim.width * 0.5D && f.dotProduct(to) > 0.35D
-                    && Math.abs(victim.posY - posY) < 3.4D) {
+            // Inside the Destroyer Armor, the armour is what stands in reach of him.
+            Entity body = EntityDestroyerArmor.mass(victim);
+            Vec3d to = flat(body.getPositionVector().subtract(getPositionVector()));
+            if (horizontal(body) <= reach + body.width * 0.5D && f.dotProduct(to) > 0.35D
+                    && Math.abs(body.posY - posY) < 3.4D) {
                 land(victim, fraction, drive, knock, lift, kind);
                 hit = true;
             }
@@ -1386,8 +1392,10 @@ public class EntityChampion extends EntityLiving {
     /** The ground he struck throws everyone standing on it, harder the closer they are. */
     private void quake(double radius, float fraction, double strength, boolean groundedOnly) {
         for (EntityLivingBase victim : victims(radius)) {
-            double d = victim.getDistance(posX, posY, posZ);
-            if (d > radius || groundedOnly && !victim.onGround && victim.posY - floor(victim.posX, victim.posY + 0.5D, victim.posZ) > 1.2D) {
+            // Inside the Destroyer Armor, it is the armour standing on the ground that the ground throws.
+            Entity feet = EntityDestroyerArmor.mass(victim);
+            double d = feet.getDistance(posX, posY, posZ);
+            if (d > radius || groundedOnly && !feet.onGround && feet.posY - floor(feet.posX, feet.posY + 0.5D, feet.posZ) > 1.2D) {
                 continue;
             }
             float near = (float) (1D - d / radius);
@@ -1431,8 +1439,7 @@ public class EntityChampion extends EntityLiving {
             return;
         }
         float scale = (float) EternityConfig.champion.damageScale * (stageOf(rage) >= 3 ? 1.5F : 1F);
-        victim.hurtResistantTime = 0;
-        victim.attackEntityFrom(EternityDamage.champion(this), victim.getMaxHealth() * fraction * scale);
+        EntityDestroyerArmor.strike(victim, EternityDamage.champion(this), fraction * scale);
     }
 
     private void push(EntityLivingBase victim, Vec3d direction, double strength, double lift) {
@@ -1440,6 +1447,10 @@ public class EntityChampion extends EntityLiving {
             return;
         }
         double scale = calm ? 0.25D : 1D;
+        if (EntityDestroyerArmor.carrier(victim) != null) {
+            EntityDestroyerArmor.shove(victim, direction.x * strength * scale, (direction.y * strength + lift) * scale, direction.z * strength * scale);
+            return;
+        }
         victim.motionX += direction.x * strength * scale;
         victim.motionY = Math.max(victim.motionY, 0D) + (direction.y * strength + lift) * scale;
         victim.motionZ += direction.z * strength * scale;

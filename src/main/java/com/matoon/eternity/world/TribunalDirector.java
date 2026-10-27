@@ -1,6 +1,7 @@
 package com.matoon.eternity.world;
 
 import com.matoon.eternity.EternityConfig;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EntityLivingTribunal;
 import com.matoon.eternity.item.ItemAstralRegulator;
 import com.matoon.eternity.network.EternityNetwork;
@@ -255,7 +256,7 @@ public final class TribunalDirector {
         player.motionX = player.motionY = player.motionZ = 0D;
         player.fallDistance = 0F;
         if (anchor != null && stageTicks % 2 == 0) {
-            player.connection.setPlayerLocation(anchor.x, anchor.y, anchor.z, player.rotationYaw, player.rotationPitch);
+            EntityDestroyerArmor.place(player, anchor.x, anchor.y, anchor.z, player.rotationYaw, player.rotationPitch);
         }
     }
 
@@ -284,7 +285,7 @@ public final class TribunalDirector {
         if (player.dimension != StarChamber.dimension()) {
             moveTo(player, StarChamber.dimension(), StarChamber.DAIS_X, StarChamber.DAIS_Y, StarChamber.DAIS_Z);
         } else if (!StarChamber.inside(player.posX, player.posY, player.posZ)) {
-            player.connection.setPlayerLocation(StarChamber.DAIS_X, StarChamber.DAIS_Y, StarChamber.DAIS_Z, player.rotationYaw, player.rotationPitch);
+            EntityDestroyerArmor.place(player, StarChamber.DAIS_X, StarChamber.DAIS_Y, StarChamber.DAIS_Z, player.rotationYaw, player.rotationPitch);
         }
     }
 

@@ -6,6 +6,7 @@ import com.matoon.eternity.EternitySounds;
 import com.matoon.eternity.compat.Relics;
 import com.matoon.eternity.compat.galacticraft.GcRockets;
 import com.matoon.eternity.entity.EntityChampion;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.network.MsgTribunalFx;
 import net.minecraft.entity.Entity;
@@ -695,8 +696,9 @@ public final class ChampionDirector {
         for (EntityPlayer player : world.playerEntities) {
             player.fallDistance = 0F;
             if (player instanceof EntityPlayerMP && player.posY < 12D && !player.isSpectator()) {
-                ((EntityPlayerMP) player).connection.setPlayerLocation(Tamarata.LANDING_X + 0.5D, Tamarata.LANDING_Y + 2D,
-                        Tamarata.LANDING_Z + 5.5D, player.rotationYaw, player.rotationPitch);
+                // Inside the Destroyer Armor, the armour drifts back too, with them in it.
+                EntityDestroyerArmor.place(player, Tamarata.LANDING_X + 0.5D, Tamarata.LANDING_Y + 2D, Tamarata.LANDING_Z + 5.5D,
+                        player.rotationYaw, player.rotationPitch);
                 player.motionX = player.motionY = player.motionZ = 0D;
                 status((EntityPlayerMP) player, "You drift back to the island where your journey began.", TextFormatting.GRAY);
             }

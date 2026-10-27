@@ -15,10 +15,15 @@ final class VaultParts {
 
     /** One part, every box of that name on the sheet, pivoting at (x, y, z) in its parent. */
     static ModelRenderer part(ModelBase model, VaultBoxes.Sheet sheet, String name, ModelRenderer parent, float x, float y, float z) {
+        return part(model, sheet, name, parent, x, y, z, 0F);
+    }
+
+    /** The same, every box swollen by grow more than the sheet says: worn over a body, it must stand clear of the skin. */
+    static ModelRenderer part(ModelBase model, VaultBoxes.Sheet sheet, String name, ModelRenderer parent, float x, float y, float z, float grow) {
         ModelRenderer part = new ModelRenderer(model, name);
         part.setTextureSize(sheet.width, sheet.height);
         for (VaultBoxes.Box b : sheet.of(name)) {
-            part.cubeList.add(new ModelBox(part, b.u, b.v, b.x, b.y, b.z, b.w, b.h, b.d, b.delta, false));
+            part.cubeList.add(new ModelBox(part, b.u, b.v, b.x, b.y, b.z, b.w, b.h, b.d, b.delta + grow, false));
         }
         part.setRotationPoint(x, y, z);
         if (parent != null) {

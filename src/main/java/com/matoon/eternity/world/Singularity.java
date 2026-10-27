@@ -4,6 +4,7 @@ import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.EternitySounds;
 import com.matoon.eternity.compat.InfinityStones;
 import com.matoon.eternity.compat.Relics;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EntityEternity;
 import com.matoon.eternity.entity.EternityDamage;
 import com.matoon.eternity.network.EternityNetwork;
@@ -52,7 +53,8 @@ public final class Singularity {
 
     /** Eternity, the one who opened it, and spectators are untouched. */
     private boolean immune(Entity entity) {
-        return entity instanceof EntityEternity || entity == source.get()
+        // Whoever is inside the Destroyer Armor goes where the armour goes, and is hurt through it.
+        return entity instanceof EntityEternity || entity == source.get() || EntityDestroyerArmor.carrier(entity) != null
                 || entity instanceof EntityPlayer && ((EntityPlayer) entity).isSpectator();
     }
 
@@ -104,17 +106,14 @@ public final class Singularity {
             }
             double strength = 0.06D + 0.4D * (1D - d / reach) * (1D - d / reach);
             Vec3d pull = to.scale(strength / d);
-            entity.motionX += pull.x;
-            entity.motionY += pull.y + 0.03D;
-            entity.motionZ += pull.z;
-            entity.velocityChanged = true;
+            EntityDestroyerArmor.shove(entity, pull.x, pull.y + 0.03D, pull.z);
             entity.fallDistance = 0F;
             if (d < r) {
                 if (entity instanceof EntityLivingBase) {
                     if (age % 10 == 0) {
                         EntityLivingBase living = (EntityLivingBase) entity;
-                        float fraction = InfinityStones.scan(living) == InfinityStones.ALL ? 0.08F : 0.35F;
-                        living.attackEntityFrom(damage, living.getMaxHealth() * fraction);
+                        float fraction = InfinityStones.scan(EntityDestroyerArmor.soul(living)) == InfinityStones.ALL ? 0.08F : 0.35F;
+                        living.attackEntityFrom(damage, EntityDestroyerArmor.health(living) * fraction);
                     }
                 } else if (d < r * 0.6D && !Relics.protects(entity)) {
                     // It swallows whatever is not alive, but never a stone or a Regulator.
@@ -184,14 +183,11 @@ public final class Singularity {
                 continue;
             }
             Vec3d push = away.scale((3.5D * (1D - d / reach)) / d);
-            entity.motionX += push.x;
-            entity.motionY += push.y + 1.2D * (1D - d / reach);
-            entity.motionZ += push.z;
-            entity.velocityChanged = true;
+            EntityDestroyerArmor.shove(entity, push.x, push.y + 1.2D * (1D - d / reach), push.z);
             if (entity instanceof EntityLivingBase && d < r * 1.5D) {
                 EntityLivingBase living = (EntityLivingBase) entity;
-                float fraction = InfinityStones.scan(living) == InfinityStones.ALL ? 0.25F : 1F;
-                living.attackEntityFrom(damage, living.getMaxHealth() * fraction);
+                float fraction = InfinityStones.scan(EntityDestroyerArmor.soul(living)) == InfinityStones.ALL ? 0.25F : 1F;
+                living.attackEntityFrom(damage, EntityDestroyerArmor.health(living) * fraction);
             }
         }
         for (EntityFallingBlock block : debris) {

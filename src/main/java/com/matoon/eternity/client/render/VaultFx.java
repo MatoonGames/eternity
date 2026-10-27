@@ -1,14 +1,18 @@
 package com.matoon.eternity.client.render;
 
-import com.matoon.eternity.entity.EntityDestroyer;
+import com.matoon.eternity.entity.DestroyerBody;
+import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.Entity;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.lwjgl.opengl.GL11;
@@ -42,6 +46,9 @@ public final class VaultFx {
     static final float[] DEEP = {0.2F, 0.45F, 1F};
     // The Einherjar's gold.
     static final float[] GOLD = {1F, 0.84F, 0.45F};
+    // Loose power arcing across the Destroyer Armor's wounds.
+    static final float[] BOLT = {0.85F, 0.93F, 1F};
+    static final float[] BLUE = {0.35F, 0.55F, 1F};
 
     private static final Vec3d UP = new Vec3d(0D, 1D, 0D);
 
@@ -55,6 +62,8 @@ public final class VaultFx {
         final Vec3d from, to;
         final int phase;
         public boolean replaced;
+        /** How much fatter and brighter than as built: an overcharged dynamo behind it. */
+        public float swell = 1F;
 
         public Ray(Vec3d from, Vec3d to, int phase, int ticks) {
             super(ticks);
@@ -74,7 +83,7 @@ public final class VaultFx {
             float fade = 1F - Math.max(0F, p - 0.5F) * 2F;
             Vec3d a = from.subtract(camera), b = to.subtract(camera);
             float time = phase + age + partialTicks;
-            float pulse = 0.88F + 0.12F * MathHelper.sin(time * 2.3F);
+            float pulse = (0.88F + 0.12F * MathHelper.sin(time * 2.3F)) * swell;
             Vec3d axis = b.subtract(a);
             double length = axis.length();
             Vec3d d = axis.normalize();
@@ -145,11 +154,11 @@ public final class VaultFx {
         @Override
         void render(Vec3d camera, float partialTicks) {
             Entity entity = Minecraft.getMinecraft().world.getEntityByID(id);
-            if (!(entity instanceof EntityDestroyer)) {
+            if (!(entity instanceof DestroyerBody)) {
                 return;
             }
             float p = progress(partialTicks);
-            EntityDestroyer d = (EntityDestroyer) entity;
+            DestroyerBody d = (DestroyerBody) entity;
             Vec3d c = d.face().add(entity.posX - entity.lastTickPosX, 0D, entity.posZ - entity.lastTickPosZ).subtract(camera);
             float time = age + partialTicks;
             Random rand = new Random(seed);
@@ -164,6 +173,63 @@ public final class VaultFx {
             glow(c, 0.5D + 1.6D * p, YELLOW, 0.3F + 0.5F * p);
             glow(c, 0.3D + 0.6D * p, WHITE, 0.4F + 0.6F * p);
             star(c, 0.2D, 0.8D + 1.6D * p, 12, seed + age / 2, time * 0.15F, ORANGE, 0.5F * p);
+        }
+    }
+
+    /**
+     * The Destroyer Armor imploding, its core breached: light and fire streaming into its chest from all round as a
+     * shell of heat closes in on it; then a white flash where it was, and rings of force racing out.
+     */
+    public static class Implosion extends FxRenderer.Fx {
+        final Vec3d at;
+        final double size;
+        final long seed;
+        /** The share of its life spent falling in, before the flash. */
+        final float collapse;
+
+        public Implosion(Vec3d at, double size, int collapseTicks, int ticks, long seed) {
+            super(ticks);
+            this.at = at;
+            this.size = Math.max(0.2D, size);
+            this.seed = seed;
+            this.collapse = collapseTicks / (float) ticks;
+        }
+
+        @Override
+        void render(Vec3d camera, float partialTicks) {
+            float p = progress(partialTicks);
+            Vec3d c = at.subtract(camera);
+            float time = age + partialTicks;
+            Random rand = new Random(seed);
+            if (p < collapse) {
+                float q = p / collapse;
+                for (int i = 0; i < 48; i++) {
+                    Vec3d dir = new Vec3d(rand.nextGaussian(), rand.nextGaussian(), rand.nextGaussian()).normalize();
+                    float local = (time * (0.06F + rand.nextFloat() * 0.05F) + rand.nextFloat()) % 1F;
+                    double r = 9D * size * (1D - local) * (1D - 0.5D * q);
+                    Vec3d head = c.add(dir.scale(r));
+                    Vec3d tail = c.add(dir.scale(r + 1.2D * size));
+                    strip(tail, head, 0.05D, 0.1D, i % 3 == 0 ? RED : ORANGE, i % 2 == 0 ? WHITE : YELLOW, 0F, 0.9F * local * (0.4F + 0.6F * q));
+                }
+                // The shell of heat closing in, brighter as it tightens.
+                double shell = 6D * size * (1D - q) + 0.4D * size;
+                ring(c, UP, shell, 0.3D * size, ORANGE, 0.5F * q);
+                ring(c, new Vec3d(1D, 0D, 0D), shell, 0.3D * size, YELLOW, 0.4F * q);
+                ring(c, new Vec3d(0D, 0D, 1D), shell, 0.3D * size, RED, 0.4F * q);
+                glow(c, shell * 0.9D, ORANGE, 0.15F + 0.35F * q);
+                glow(c, (0.4D + 1.2D * q) * size, WHITE, 0.3F + 0.7F * q);
+                star(c, 0.2D * size, (1D + 3D * q) * size, 14, seed + age / 2, time * 0.2F, YELLOW, 0.6F * q);
+            } else {
+                float q = (p - collapse) / (1F - collapse);
+                float flash = 1F - MathHelper.clamp(q * 5F, 0F, 1F), fade = (1F - q) * (1F - q);
+                glow(c, (2D + 10D * flash) * size, WHITE, 0.9F * flash);
+                glow(c, (1D + 5D * q) * size, ORANGE, 0.6F * fade);
+                double grow = 1D - Math.pow(1D - q, 2.5D);
+                ring(c, UP, 16D * size * grow, (0.6D + 1.5D * grow) * size, WHITE, 0.8F * fade);
+                ring(c, UP, 13D * size * grow, 1.2D * size, ORANGE, 0.5F * fade);
+                ring(c, new Vec3d(rand.nextGaussian(), 3D, rand.nextGaussian()).normalize(), 9D * size * grow, 0.8D * size, YELLOW, 0.5F * fade);
+                star(c, 0.3D * size, (2D + 8D * grow) * size, 18, seed, 0F, YELLOW, 0.7F * fade);
+            }
         }
     }
 
@@ -397,6 +463,151 @@ public final class VaultFx {
             glow(c, 0.5D + 0.6D * p, WHITE, 0.7F * fade);
             star(c, 0.08D, 0.6D + 0.8D * p, 10, seed, 0F, GOLD, 0.8F * fade);
             ring(c, dir, 0.2D + 0.9D * p, 0.12D, GOLD, 0.5F * fade);
+        }
+    }
+
+    // ------------------------------------------------------------------ the Destroyer Armor, wounded
+
+    /**
+     * Sparks thrown off its plate: each a white-hot streak that arcs down, cooling through yellow and orange to a dull
+     * red as it goes, and skips once off whatever it lands on.
+     */
+    public static class Sparks extends FxRenderer.Fx {
+        /** Each spark: where it is, where it was a tick ago, how it is going. */
+        final double[][] sparks;
+        final int[] lives;
+        final double floor;
+
+        public Sparks(Vec3d at, Vec3d dir, int count, double force, long seed) {
+            super(28);
+            Random rand = new Random(seed);
+            Vec3d d = dir.lengthSquared() < 1.0E-6 ? UP : dir.normalize();
+            sparks = new double[count][9];
+            lives = new int[count];
+            for (int i = 0; i < count; i++) {
+                double speed = force * (0.35D + rand.nextDouble() * 0.9D);
+                Vec3d v = d.scale(speed).add(rand.nextGaussian() * force * 0.45D, rand.nextDouble() * force * 0.5D, rand.nextGaussian() * force * 0.45D);
+                double[] s = sparks[i];
+                s[0] = s[3] = at.x;
+                s[1] = s[4] = at.y;
+                s[2] = s[5] = at.z;
+                s[6] = v.x;
+                s[7] = v.y;
+                s[8] = v.z;
+                lives[i] = 10 + rand.nextInt(18);
+            }
+            floor = ground(at);
+        }
+
+        /** The top of the first solid thing under a point, for the sparks to skip off. */
+        private static double ground(Vec3d at) {
+            World world = Minecraft.getMinecraft().world;
+            for (int down = 0; world != null && down < 12; down++) {
+                BlockPos pos = new BlockPos(at.x, at.y - down, at.z);
+                AxisAlignedBB box = world.getBlockState(pos).getCollisionBoundingBox(world, pos);
+                if (box != null && box != Block.NULL_AABB) {
+                    return pos.getY() + box.maxY;
+                }
+            }
+            return at.y - 12D;
+        }
+
+        @Override
+        void tick() {
+            for (double[] s : sparks) {
+                s[3] = s[0];
+                s[4] = s[1];
+                s[5] = s[2];
+                s[7] -= 0.045D;
+                s[6] *= 0.95D;
+                s[7] *= 0.97D;
+                s[8] *= 0.95D;
+                s[0] += s[6];
+                s[1] += s[7];
+                s[2] += s[8];
+                if (s[1] < floor && s[7] < 0D) {
+                    s[1] = floor + 0.02D;
+                    s[7] *= -0.3D;
+                    s[6] *= 0.55D;
+                    s[8] *= 0.55D;
+                }
+            }
+        }
+
+        @Override
+        void render(Vec3d camera, float partialTicks) {
+            for (int i = 0; i < sparks.length; i++) {
+                double[] s = sparks[i];
+                float heat = 1F - (age + partialTicks) / lives[i];
+                if (heat <= 0F) {
+                    continue;
+                }
+                Vec3d head = new Vec3d(s[3] + (s[0] - s[3]) * partialTicks, s[4] + (s[1] - s[4]) * partialTicks, s[5] + (s[2] - s[5]) * partialTicks)
+                        .subtract(camera);
+                Vec3d tail = head.subtract(s[6] * 1.8D, s[7] * 1.8D, s[8] * 1.8D);
+                float[] col = heat > 0.66F ? WHITE : heat > 0.33F ? YELLOW : heat > 0.15F ? ORANGE : RED;
+                strip(head, tail, 0.045D, 0.01D, col, col, Math.min(1F, heat * 1.6F), 0F);
+                glow(head, 0.09D + 0.06D * heat, col, 0.6F * heat);
+            }
+        }
+    }
+
+    /**
+     * A crackle of loose power across its plate, from one wounded joint to another: a jagged blue-white bolt that
+     * jumps to a new path every tick, riding along with it as it moves.
+     */
+    public static class Arc extends FxRenderer.Fx {
+        final Entity body;
+        /** Its two ends, on the body: how far to its side, how high, how far forward. */
+        final Vec3d a, b;
+        final long seed;
+
+        public Arc(Entity body, Vec3d a, Vec3d b, int ticks, long seed) {
+            super(ticks);
+            this.body = body;
+            this.a = a;
+            this.b = b;
+            this.seed = seed;
+        }
+
+        private Vec3d onBody(Vec3d local, float partialTicks) {
+            float yaw = (float) Math.toRadians(body.prevRotationYaw + MathHelper.wrapDegrees(body.rotationYaw - body.prevRotationYaw) * partialTicks);
+            double fx = -MathHelper.sin(yaw), fz = MathHelper.cos(yaw);
+            double x = body.prevPosX + (body.posX - body.prevPosX) * partialTicks, y = body.prevPosY + (body.posY - body.prevPosY) * partialTicks;
+            double z = body.prevPosZ + (body.posZ - body.prevPosZ) * partialTicks;
+            return new Vec3d(x - fz * local.x + fx * local.z, y + local.y, z + fx * local.x + fz * local.z);
+        }
+
+        @Override
+        void render(Vec3d camera, float partialTicks) {
+            if (body.isDead) {
+                return;
+            }
+            Vec3d from = onBody(a, partialTicks).subtract(camera), to = onBody(b, partialTicks).subtract(camera);
+            Random rand = new Random(seed + age * 7919L);
+            Vec3d d = to.subtract(from);
+            double length = d.length();
+            Vec3d[] axes = basis(d.normalize());
+            int pieces = 7;
+            Vec3d last = from;
+            float flicker = rand.nextFloat() < 0.25F ? 0.4F : 1F;
+            for (int i = 1; i <= pieces; i++) {
+                double t = i / (double) pieces;
+                double sway = i == pieces ? 0D : length * 0.18D * Math.sin(Math.PI * t);
+                Vec3d next = from.add(d.scale(t)).add(axes[0].scale(rand.nextGaussian() * sway)).add(axes[1].scale(rand.nextGaussian() * sway));
+                strip(last, next, 0.16D, BLUE, 0.3F * flicker);
+                strip(last, next, 0.04D, BOLT, 0.95F * flicker);
+                // Now and then a fork off it, going nowhere.
+                if (rand.nextFloat() < 0.25F) {
+                    Vec3d fork = next.add(axes[0].scale(rand.nextGaussian() * length * 0.25D)).add(axes[1].scale(rand.nextGaussian() * length * 0.25D));
+                    strip(next, fork, 0.025D, BOLT, 0.6F * flicker);
+                }
+                last = next;
+            }
+            glow(from, 0.35D, BLUE, 0.7F * flicker);
+            glow(to, 0.35D, BLUE, 0.7F * flicker);
+            glow(from, 0.12D, BOLT, 0.9F * flicker);
+            glow(to, 0.12D, BOLT, 0.9F * flicker);
         }
     }
 }

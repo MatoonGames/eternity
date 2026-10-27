@@ -76,5 +76,11 @@ public final class EternityEntities {
                 .name(Eternity.MODID + ".destroyer")
                 .tracker(200, 1, true)
                 .build());
+        event.getRegistry().register(EntityEntryBuilder.create()
+                .entity(EntityDestroyerArmor.class)
+                .id(new ResourceLocation(Eternity.MODID, "destroyer_armor"), 10)
+                .name(Eternity.MODID + ".destroyer_armor")
+                .tracker(200, 1, true)
+                .build());
     }
 }

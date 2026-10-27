@@ -3,6 +3,7 @@ package com.matoon.eternity.world;
 import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.EternitySounds;
 import com.matoon.eternity.entity.EntityCosmicComet;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EternityDamage;
 import com.matoon.eternity.item.EternityItems;
 import com.matoon.eternity.network.EternityNetwork;
@@ -350,15 +351,19 @@ public final class CometDirector {
 
     private static float heatPerSecond(CometData d, EntityLivingBase victim) {
         double scale = d.space ? 1D : EternityConfig.comet.overworldHeatScale;
-        return (float) ((EternityConfig.comet.heatDamage + EternityConfig.comet.heatMaxHealthShare * victim.getMaxHealth()) * scale);
+        return (float) ((EternityConfig.comet.heatDamage + EternityConfig.comet.heatMaxHealthShare * EntityDestroyerArmor.health(victim)) * scale);
     }
 
-    /** Creative and spectating players watch; everything else burns. */
+    /**
+     * Creative and spectating players watch; everything else burns. The Destroyer Armor burns in place of whoever is
+     * inside it, unless they are only watching.
+     */
     private static boolean burnable(@Nullable EntityLivingBase entity) {
-        if (entity == null || entity instanceof EntityCosmicComet || !entity.isEntityAlive()) {
+        if (entity == null || entity instanceof EntityCosmicComet || !entity.isEntityAlive() || EntityDestroyerArmor.sheltered(entity)) {
             return false;
         }
-        return !(entity instanceof EntityPlayer) || !((EntityPlayer) entity).isSpectator() && !((EntityPlayer) entity).isCreative();
+        Entity who = EntityDestroyerArmor.soul(entity);
+        return !(who instanceof EntityPlayer) || !((EntityPlayer) who).isSpectator() && !((EntityPlayer) who).isCreative();
     }
 
     // ------------------------------------------------------------------ blows
@@ -447,7 +452,7 @@ public final class CometDirector {
         double reach = radius(d) + heatRange(d) * 0.5D;
         AxisAlignedBB box = new AxisAlignedBB(c.x - reach, c.y - reach, c.z - reach, c.x + reach, c.y + reach, c.z + reach);
         for (EntityLivingBase victim : world.getEntitiesWithinAABB(EntityLivingBase.class, box,
-                e -> e != null && !(e instanceof EntityCosmicComet) && !(e instanceof EntityPlayer && ((EntityPlayer) e).isSpectator()))) {
+                e -> e != null && !(e instanceof EntityCosmicComet) && !(e instanceof EntityPlayer && ((EntityPlayer) e).isSpectator()) && !EntityDestroyerArmor.sheltered(e))) {
             Vec3d off = entityCentre(victim).subtract(c);
             double dist = off.length();
             if (dist > reach) {
@@ -460,10 +465,7 @@ public final class CometDirector {
             }
             Vec3d push = dist < 1.0E-3 ? new Vec3d(0, 1, 0) : off.scale(1D / dist);
             double strength = 1.5D + 3D * k;
-            victim.motionX += push.x * strength;
-            victim.motionY += push.y * strength + 0.4D * k;
-            victim.motionZ += push.z * strength;
-            victim.velocityChanged = true;
+            EntityDestroyerArmor.shove(victim, push.x * strength, push.y * strength + 0.4D * k, push.z * strength);
         }
         EternityNetwork.sendToDimension(MsgComet.event(MsgComet.FLARE, d.space, c.x, c.y, c.z, (float) reach), d.dimension);
     }
@@ -492,7 +494,7 @@ public final class CometDirector {
         vanish();
         AxisAlignedBB box = new AxisAlignedBB(c.x - blast, c.y - blast, c.z - blast, c.x + blast, c.y + blast, c.z + blast);
         for (EntityLivingBase victim : world.getEntitiesWithinAABB(EntityLivingBase.class, box,
-                e -> e != null && !(e instanceof EntityPlayer && ((EntityPlayer) e).isSpectator()))) {
+                e -> e != null && !(e instanceof EntityPlayer && ((EntityPlayer) e).isSpectator()) && !EntityDestroyerArmor.sheltered(e))) {
             Vec3d off = entityCentre(victim).subtract(c);
             double dist = off.length();
             double k = 1D - dist / blast;
@@ -501,14 +503,11 @@ public final class CometDirector {
             }
             if (burnable(victim)) {
                 victim.hurtResistantTime = 0;
-                victim.attackEntityFrom(EternityDamage.cometBlast(), (float) ((victim.getMaxHealth() * 0.6D + 20D) * k));
+                victim.attackEntityFrom(EternityDamage.cometBlast(), (float) ((EntityDestroyerArmor.health(victim) * 0.6D + 20D) * k));
             }
             Vec3d push = dist < 1.0E-3 ? new Vec3d(0, 1, 0) : off.scale(1D / dist);
             double strength = 2D + 5D * k;
-            victim.motionX += push.x * strength;
-            victim.motionY += push.y * strength + 0.6D * k;
-            victim.motionZ += push.z * strength;
-            victim.velocityChanged = true;
+            EntityDestroyerArmor.shove(victim, push.x * strength, push.y * strength + 0.6D * k, push.z * strength);
         }
         Entity relic = reveal(world, c);
         d.relic = relic.getUniqueID();

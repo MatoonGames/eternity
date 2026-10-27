@@ -15,4 +15,9 @@ public class CommonProxy {
     public boolean tamarataBroken() {
         return false;
     }
+
+    /** The Destroyer Armor's systems menu, on the client. */
+    public Object armorMenu(net.minecraft.entity.player.EntityPlayer player, com.matoon.eternity.entity.EntityDestroyerArmor armor) {
+        return null;
+    }
 }

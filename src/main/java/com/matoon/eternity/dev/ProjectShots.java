@@ -77,8 +77,12 @@ import java.util.Random;
  * use [sneak]                            right-click with the main hand, sneaking or not
  * click                                  right-click the block in view
  * look YAW PITCH                         turn the player (not the camera)
+ * press KEY TICKS                        hold a key for the game (forward, jump, sneak, attack, use, or the end of a
+ *                                        key binding's name, e.g. armor_slam)
+ * view N                                 vanilla's view (0 first person, 1 behind, 2 in front), camera free only
+ * harm on|off                            let blows reach the player (still healed every tick), to test what reacts to them
  * ents [RADIUS]                          log nearby entities
- * shot NAME                              screenshot to run/shots/out/NAME.png
+ * shot NAME [+gui]                       screenshot to run/shots/out/NAME.png; +gui keeps the HUD and hand
  * matte NAME [PAD] [-client...] [+terrain] [@id]  transparent screenshot (NAME.png full frame, NAME_crop.png
  *                                        tight); terrain is hidden unless +terrain, and -nexus etc. silences
  *                                        that client's world renderer (NexusClient) for the matte
@@ -141,6 +145,10 @@ public final class ProjectShots {
     private static int outW = 1920, outH = 1080;
     private static int savedW, savedH;
     private static boolean studio;
+    /** Whether blows reach the camera player (it is still healed to full every tick). */
+    private static boolean harm;
+    /** Keys held down for the game, by name, and for how many more ticks. */
+    private static final java.util.Map<String, Integer> held = new java.util.HashMap<>();
     private static float studioShade;
 
     private ProjectShots() {
@@ -166,17 +174,24 @@ public final class ProjectShots {
         Minecraft mc = Minecraft.getMinecraft();
         if (event.phase == TickEvent.Phase.START) {
             applyCamera(mc, 1F, true);
+            holdKeys(mc);
             return;
         }
         if (locked && mc.currentScreen instanceof GuiIngameMenu) {
             mc.displayGuiScreen(null);
         }
-        if (locked && mc.world != null && mc.player != null && mc.currentScreen != null && !(mc.currentScreen instanceof GuiMainMenu)) {
+        if (locked && mc.world != null && mc.player != null && mc.currentScreen != null && !(mc.currentScreen instanceof GuiMainMenu)
+                && !(mc.currentScreen instanceof com.matoon.eternity.client.gui.GuiDestroyerArmor)) {
             // Dialogue screens and the like would block the view.
             log("closed screen " + mc.currentScreen.getClass().getSimpleName());
             mc.displayGuiScreen(null);
         }
         syncServerPlayer(mc);
+        // Vanilla only lets the player steer while it is the view entity; the spy camera takes that, so steer for it.
+        if (spyTarget != null && mc.player != null) {
+            mc.player.moveForward = mc.player.movementInput.moveForward;
+            mc.player.moveStrafing = mc.player.movementInput.moveStrafe;
+        }
         readQueue();
         if (pending != null) {
             return;
@@ -333,6 +348,21 @@ public final class ProjectShots {
                         mc.objectMouseOver.hitVec, net.minecraft.util.EnumHand.MAIN_HAND);
                 return true;
             }
+            case "press":
+                // Holds a key down for the game for some ticks, as if the player held it.
+                if (key(mc, p[0]) == null) {
+                    log("no key " + p[0]);
+                    return true;
+                }
+                held.put(p[0], Integer.parseInt(p[1]));
+                return true;
+            case "harm":
+                harm = "on".equals(p[0]);
+                return true;
+            case "view":
+                // Vanilla's view: 0 first person, 1 from behind, 2 from in front. Only while the camera is free.
+                mc.gameSettings.thirdPersonView = Integer.parseInt(p[0]);
+                return true;
             case "look":
                 // Turns the player (not the camera) to a yaw and pitch, for aiming what they use.
                 mc.player.rotationYaw = mc.player.rotationYawHead = Float.parseFloat(p[0]);
@@ -361,23 +391,27 @@ public final class ProjectShots {
                     return false;
                 }
                 pending = p[0];
+                log("screen " + mc.currentScreen);
                 pendingMatte = "matte".equals(cmd);
                 pendingPad = 24;
                 pendingHide.clear();
                 pendingTerrain = false;
                 pendingOnly = -1;
+                boolean gui = false;
                 for (int i = 1; i < p.length; i++) {
                     if (p[i].startsWith("-")) {
                         pendingHide.add(p[i].substring(1));
                     } else if (p[i].startsWith("@")) {
                         pendingOnly = Integer.parseInt(p[i].substring(1));
+                    } else if ("+gui".equals(p[i])) {
+                        gui = true;
                     } else if ("+terrain".equals(p[i])) {
                         pendingTerrain = true;
                     } else {
                         pendingPad = Integer.parseInt(p[i]);
                     }
                 }
-                mc.gameSettings.hideGUI = true;
+                mc.gameSettings.hideGUI = !gui;
                 savedW = mc.displayWidth;
                 savedH = mc.displayHeight;
                 resize(mc, outW * 2, outH * 2);
@@ -398,6 +432,82 @@ public final class ProjectShots {
                 });
                 return true;
             }
+            case "spy":
+                // Watches an entity from beside it without moving the player: spy <sel> <dist> <yaw off its facing> <pitch> [height frac] | spy off.
+                if ("off".equals(p[0])) {
+                    spyTarget = null;
+                    mc.setRenderViewEntity(mc.player);
+                    return true;
+                }
+                spyTarget = select(mc, p[0]);
+                spyDist = Double.parseDouble(p[1]);
+                spyYaw = Float.parseFloat(p[2]);
+                spyPitch = Float.parseFloat(p[3]);
+                spyH = p.length > 4 ? Double.parseDouble(p[4]) : 0.5D;
+                if (spyCam == null || spyCam.world != mc.world) {
+                    spyCam = new net.minecraft.entity.item.EntityArmorStand(mc.world);
+                    spyCam.setInvisible(true);
+                }
+                return true;
+            case "close":
+                if (mc.player != null) {
+                    mc.player.closeScreen();
+                }
+                return true;
+            case "tab":
+                // The Destroyer Armor's systems menu: which page is open.
+                com.matoon.eternity.client.gui.GuiDestroyerArmor.tab = Integer.parseInt(p[0]);
+                if (mc.currentScreen != null) {
+                    mc.currentScreen.initGui();
+                }
+                return true;
+            case "armorslot": {
+                // Puts an item straight into a slot of the nearest Destroyer Armor: armorslot <slot> <item> [count].
+                if (mc.getIntegratedServer() == null) {
+                    return false;
+                }
+                mc.getIntegratedServer().addScheduledTask(() -> {
+                    EntityPlayerMP player = mc.getIntegratedServer().getPlayerList().getPlayers().get(0);
+                    Entity armor = serverEntity(player, "destroyerarmor");
+                    net.minecraft.item.Item item = net.minecraft.item.Item.getByNameOrId(p[1]);
+                    if (!(armor instanceof com.matoon.eternity.entity.EntityDestroyerArmor) || item == null) {
+                        log("armorslot: no armor or no item " + p[1]);
+                        return;
+                    }
+                    ((com.matoon.eternity.entity.EntityDestroyerArmor) armor).getInventory().setInventorySlotContents(Integer.parseInt(p[0]),
+                            new net.minecraft.item.ItemStack(item, p.length > 2 ? Integer.parseInt(p[2]) : 1));
+                });
+                return true;
+            }
+            case "ability": {
+                // Presses or lets go of one of the pilot's stone powers, as its key on Lucraft's ability bar would: ability <key> press|release.
+                if (mc.getIntegratedServer() == null) {
+                    return false;
+                }
+                mc.getIntegratedServer().addScheduledTask(() -> {
+                    EntityPlayerMP player = mc.getIntegratedServer().getPlayerList().getPlayers().get(0);
+                    lucraft.mods.lucraftcore.superpowers.abilities.supplier.AbilityContainer container =
+                            lucraft.mods.lucraftcore.superpowers.abilities.Ability.getAbilityContainer(com.matoon.eternity.compat.StoneAbilities.CONTEXT, player);
+                    lucraft.mods.lucraftcore.superpowers.abilities.Ability ability = container == null ? null : container.getAbility(p[0]);
+                    if (ability == null) {
+                        StringBuilder keys = new StringBuilder();
+                        if (container != null) {
+                            for (lucraft.mods.lucraftcore.superpowers.abilities.Ability each : container.getAbilities()) {
+                                keys.append(' ').append(container.getKeyForAbility(each));
+                            }
+                        }
+                        log("ability: no " + p[0] + "; has" + keys);
+                        return;
+                    }
+                    if ("release".equals(p[1])) {
+                        ability.onKeyReleased();
+                    } else {
+                        ability.onKeyPressed();
+                    }
+                    log("ability " + p[0] + " " + p[1] + " enabled=" + ability.isEnabled());
+                });
+                return true;
+            }
             case "quit":
                 mc.shutdown();
                 return true;
@@ -415,6 +525,7 @@ public final class ProjectShots {
         Minecraft mc = Minecraft.getMinecraft();
         if (event.phase == TickEvent.Phase.START) {
             applyCamera(mc, event.renderTickTime, false);
+            spy(mc, event.renderTickTime);
             return;
         }
         if (pending == null || mc.world == null) {
@@ -592,14 +703,14 @@ public final class ProjectShots {
     /** The camera player takes no harm from anything. */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void attack(LivingAttackEvent event) {
-        if (active() && event.getEntityLiving() instanceof EntityPlayer) {
+        if (active() && !harm && event.getEntityLiving() instanceof EntityPlayer) {
             event.setCanceled(true);
         }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void hurt(LivingHurtEvent event) {
-        if (active() && event.getEntityLiving() instanceof EntityPlayer) {
+        if (active() && !harm && event.getEntityLiving() instanceof EntityPlayer) {
             event.setCanceled(true);
         }
     }
@@ -616,7 +727,8 @@ public final class ProjectShots {
     /** The mod's dialogue screens would turn and block the camera. */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void gui(GuiOpenEvent event) {
-        if (active() && event.getGui() != null && event.getGui().getClass().getName().startsWith("com.matoon.eternity")) {
+        if (active() && event.getGui() != null && event.getGui().getClass().getName().startsWith("com.matoon.eternity")
+                && !(event.getGui() instanceof com.matoon.eternity.client.gui.GuiDestroyerArmor)) {
             log("blocked screen " + event.getGui().getClass().getSimpleName());
             event.setCanceled(true);
         }
@@ -691,6 +803,53 @@ public final class ProjectShots {
         }
     }
 
+    /** Keeps every held key down for the game until its ticks run out, then lets it go. */
+    private static void holdKeys(Minecraft mc) {
+        java.util.Iterator<java.util.Map.Entry<String, Integer>> it = held.entrySet().iterator();
+        while (it.hasNext()) {
+            java.util.Map.Entry<String, Integer> e = it.next();
+            net.minecraft.client.settings.KeyBinding key = key(mc, e.getKey());
+            int left = e.getValue() - 1;
+            net.minecraft.client.settings.KeyBinding.setKeyBindState(key.getKeyCode(), left > 0);
+            if (left > 0) {
+                e.setValue(left);
+            } else {
+                it.remove();
+            }
+        }
+    }
+
+    private static net.minecraft.client.settings.KeyBinding key(Minecraft mc, String name) {
+        net.minecraft.client.settings.GameSettings gs = mc.gameSettings;
+        switch (name) {
+            case "forward":
+                return gs.keyBindForward;
+            case "back":
+                return gs.keyBindBack;
+            case "left":
+                return gs.keyBindLeft;
+            case "right":
+                return gs.keyBindRight;
+            case "jump":
+                return gs.keyBindJump;
+            case "sprint":
+                return gs.keyBindSprint;
+            case "sneak":
+                return gs.keyBindSneak;
+            case "attack":
+                return gs.keyBindAttack;
+            case "use":
+                return gs.keyBindUseItem;
+            default:
+                for (net.minecraft.client.settings.KeyBinding k : gs.keyBindings) {
+                    if (k.getKeyDescription().endsWith(name)) {
+                        return k;
+                    }
+                }
+                return null;
+        }
+    }
+
     private static Field field(Class<?> cls, String name) throws NoSuchFieldException {
         for (Class<?> c = cls; c != null; c = c.getSuperclass()) {
             try {
@@ -748,6 +907,41 @@ public final class ProjectShots {
 
     // ---- camera ----
 
+
+    private static Entity spyTarget, spyCam;
+    private static double spyDist, spyH;
+    private static float spyYaw, spyPitch;
+
+    /** Puts the spy camera beside its target, facing it, and renders from there. */
+    private static void spy(Minecraft mc, float partial) {
+        if (spyTarget == null || spyCam == null || mc.world == null) {
+            return;
+        }
+        if (spyTarget.isDead) {
+            spyTarget = null;
+            mc.setRenderViewEntity(mc.player);
+            return;
+        }
+        Entity t = spyTarget;
+        double tx = t.lastTickPosX + (t.posX - t.lastTickPosX) * partial;
+        double ty = t.lastTickPosY + (t.posY - t.lastTickPosY) * partial + t.height * spyH;
+        double tz = t.lastTickPosZ + (t.posZ - t.lastTickPosZ) * partial;
+        float yaw = t.rotationYaw + spyYaw;
+        Vec3d dir = Vec3d.fromPitchYaw(spyPitch, yaw);
+        double cx = tx + dir.x * spyDist, cy = ty - dir.y * spyDist, cz = tz + dir.z * spyDist;
+        float camYaw = yaw + 180F;
+        cy -= spyCam.getEyeHeight();
+        spyCam.setLocationAndAngles(cx, cy, cz, camYaw, spyPitch);
+        spyCam.prevPosX = spyCam.lastTickPosX = cx;
+        spyCam.prevPosY = spyCam.lastTickPosY = cy;
+        spyCam.prevPosZ = spyCam.lastTickPosZ = cz;
+        spyCam.prevRotationYaw = camYaw;
+        spyCam.prevRotationPitch = spyPitch;
+        mc.gameSettings.thirdPersonView = 0;
+        if (mc.getRenderViewEntity() != spyCam) {
+            mc.setRenderViewEntity(spyCam);
+        }
+    }
     private static void applyCamera(Minecraft mc, float partial, boolean forTick) {
         if (!locked || mc.player == null) {
             return;

@@ -3,6 +3,7 @@ package com.matoon.eternity.world;
 import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.EternitySounds;
 import com.matoon.eternity.ability.AbilityRiftGate;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EternityDamage;
 import com.matoon.eternity.network.MsgCue;
 import lucraft.mods.lucraftcore.superpowers.abilities.Ability;
@@ -116,10 +117,7 @@ public final class CosmicPowers {
         }
         victim.attackEntityFrom(EternityDamage.wielded("unmade", caster), 40F);
         Vec3d push = victim.getPositionVector().subtract(caster.getPositionVector()).normalize().scale(2.4D);
-        victim.motionX += push.x;
-        victim.motionY += 0.9D;
-        victim.motionZ += push.z;
-        victim.velocityChanged = true;
+        EntityDestroyerArmor.shove(victim, push.x, 0.9D, push.z);
         hurtAround(caster, victim.getPositionVector(), 5D, EternityDamage.wielded("unmade", caster), 10F, 0.9D);
         Director.INSTANCE.cue(caster, new MsgCue(MsgCue.UNMAKE, caster.getEntityId(), victim.posX, victim.posY + victim.height / 2, victim.posZ, 0, 0, 0));
         caster.world.playSound(null, victim.posX, victim.posY, victim.posZ, EternitySounds.RIFT_IMPACT, SoundCategory.PLAYERS, 3F, 1.1F);
@@ -311,16 +309,14 @@ public final class CosmicPowers {
             victim.attackEntityFrom(source, damage);
             Vec3d push = victim.getPositionVector().subtract(at);
             push = push.lengthSquared() < 1.0E-4 ? Vec3d.ZERO : push.normalize().scale(1.1D);
-            victim.motionX += push.x;
-            victim.motionY += lift;
-            victim.motionZ += push.z;
-            victim.velocityChanged = true;
+            EntityDestroyerArmor.shove(victim, push.x, lift, push.z);
         }
     }
 
     private static boolean isVictim(EntityLivingBase caster, EntityLivingBase entity) {
         return entity != null && entity != caster && entity.isEntityAlive()
-                && !(entity instanceof EntityPlayer && ((EntityPlayer) entity).isSpectator());
+                && !(entity instanceof EntityPlayer && ((EntityPlayer) entity).isSpectator())
+                && !EntityDestroyerArmor.sheltered(entity) && entity != caster.getRidingEntity();
     }
 
     /** The living thing nearest the centre of the caster's view, within range. */

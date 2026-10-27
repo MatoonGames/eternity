@@ -1,5 +1,7 @@
 package com.matoon.eternity.compat;
 
+import com.matoon.eternity.entity.ArmorPowers;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import lucraft.mods.lucraftcore.infinity.EnumInfinityStone;
 import lucraft.mods.lucraftcore.infinity.items.InventoryInfinityGauntlet;
 import lucraft.mods.lucraftcore.infinity.items.ItemInfinityGauntlet;
@@ -46,6 +48,13 @@ public final class InfinityStones {
         }
         for (ItemStack stack : player.inventory.offHandInventory) {
             mask |= of(stack, remote);
+        }
+        // Stones set in the chest of the Destroyer Armor they are inside are as good as carried.
+        if (player.getRidingEntity() instanceof EntityDestroyerArmor) {
+            EntityDestroyerArmor armor = (EntityDestroyerArmor) player.getRidingEntity();
+            for (int i = 0; i < ArmorPowers.COUNT; i++) {
+                mask |= of(armor.getInventory().getStackInSlot(EntityDestroyerArmor.SLOT_STONES + i), remote);
+            }
         }
         return mask | of(player.inventory.getItemStack(), remote);
     }

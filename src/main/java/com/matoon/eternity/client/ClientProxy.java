@@ -2,7 +2,9 @@ package com.matoon.eternity.client;
 
 import com.matoon.eternity.CommonProxy;
 import com.matoon.eternity.Eternity;
+import com.matoon.eternity.client.gui.GuiDestroyerArmor;
 import com.matoon.eternity.client.render.CasketItemRenderer;
+import com.matoon.eternity.client.render.EinherjarItemRenderer;
 import com.matoon.eternity.client.render.RegulatorItemRenderer;
 import com.matoon.eternity.client.render.RenderDestroyer;
 import com.matoon.eternity.client.render.RenderEinherjar;
@@ -20,6 +22,7 @@ import com.matoon.eternity.entity.EntityAstralRegulator;
 import com.matoon.eternity.entity.EntityChampion;
 import com.matoon.eternity.entity.EntityCosmicComet;
 import com.matoon.eternity.entity.EntityDestroyer;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EntityEinherjar;
 import com.matoon.eternity.entity.EntityEternity;
 import com.matoon.eternity.entity.EntityInBetweener;
@@ -32,7 +35,9 @@ import com.matoon.eternity.network.MsgTribunal;
 import com.matoon.eternity.network.MsgTribunalFx;
 import lucraft.mods.heroesexpansion.items.HEItems;
 import net.minecraft.client.Minecraft;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
+import net.minecraft.item.Item;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.ModelRegistryEvent;
 import net.minecraftforge.client.model.ModelLoader;
@@ -59,8 +64,13 @@ public class ClientProxy extends CommonProxy {
         RenderingRegistry.registerEntityRenderingHandler(EntityChampion.class, RenderChampion::new);
         RenderingRegistry.registerEntityRenderingHandler(EntityEinherjar.class, RenderEinherjar::new);
         RenderingRegistry.registerEntityRenderingHandler(EntityDestroyer.class, RenderDestroyer::new);
+        RenderingRegistry.registerEntityRenderingHandler(EntityDestroyerArmor.class, RenderDestroyer::new);
         EternityItems.ASTRAL_REGULATOR.setTileEntityItemStackRenderer(new RegulatorItemRenderer());
         EternityItems.CASKET.setTileEntityItemStackRenderer(new CasketItemRenderer());
+        EinherjarItemRenderer gear = new EinherjarItemRenderer();
+        for (Item item : EternityItems.EINHERJAR_GEAR) {
+            item.setTileEntityItemStackRenderer(gear);
+        }
         MinecraftForge.EVENT_BUS.register(EternityClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(RegulatorTooltip.INSTANCE);
         MinecraftForge.EVENT_BUS.register(CometClient.INSTANCE);
@@ -73,6 +83,8 @@ public class ClientProxy extends CommonProxy {
         MinecraftForge.EVENT_BUS.register(WarlockClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(ChampionClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(VaultClient.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(ArmorClient.INSTANCE);
+        ArmorClient.INSTANCE.register();
         EternityItems.RELIC_TRACKER.addPropertyOverride(new ResourceLocation("angle"), new RelicTrackerAngle());
     }
 
@@ -84,6 +96,9 @@ public class ClientProxy extends CommonProxy {
                 new ModelResourceLocation(EternityItems.ASTRAL_REGULATOR.getRegistryName(), "inventory"));
         ModelLoader.setCustomModelResourceLocation(EternityItems.CASKET, 0,
                 new ModelResourceLocation(EternityItems.CASKET.getRegistryName(), "inventory"));
+        for (Item item : EternityItems.EINHERJAR_GEAR) {
+            ModelLoader.setCustomModelResourceLocation(item, 0, new ModelResourceLocation(item.getRegistryName(), "inventory"));
+        }
     }
 
     /**
@@ -122,5 +137,10 @@ public class ClientProxy extends CommonProxy {
     @Override
     public boolean tamarataBroken() {
         return ChampionClient.INSTANCE.broken();
+    }
+
+    @Override
+    public Object armorMenu(EntityPlayer player, EntityDestroyerArmor armor) {
+        return new GuiDestroyerArmor(player.inventory, armor);
     }
 }

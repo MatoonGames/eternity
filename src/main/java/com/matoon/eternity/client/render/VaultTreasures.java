@@ -26,10 +26,10 @@ import java.util.Random;
 /**
  * The treasures of Odin's Vault, drawn where {@link OdinsVault.Relic} stands them, lit by the
  * vault's own lamps. What burns or shines in them is drawn again over the top at full brightness:
- * the stones of the fake gauntlet, the embers in the chalice, the runes of the Tablet, the eye in
- * the orb, the fire in the Crown's cracks, the cold heart of the Casket. And above them what they
- * give off: the Eternal Flame, the Crown's black fire, the Casket's freezing mist, the shimmer of
- * the Tuning Fork as it rings. The Warlock's Eye turns to watch you.
+ * the stones of the fake gauntlet, the embers in the chalice, the runes of the Tablet, the Warlock's
+ * Eye, the light in its plinth, the Casket's glass. And above them what they give off: the Eternal
+ * Flame, the Casket's freezing mist, the shimmer of the Tuning Fork as it rings. The Warlock's Eye
+ * turns in its frame to watch you.
  */
 @SideOnly(Side.CLIENT)
 public final class VaultTreasures {
@@ -52,18 +52,19 @@ public final class VaultTreasures {
         if (viewer == null) {
             return;
         }
-        Vec3d orb = at(Relic.WARLOCKS_EYE, 16.5D);
+        Vec3d orb = at(Relic.WARLOCKS_EYE, 21.5D);
         Vec3d to = viewer.getPositionEyes(1F).subtract(orb);
         double theta = Math.toRadians(Relic.WARLOCKS_EYE.yaw());
         double lx = to.x * Math.cos(theta) - to.z * Math.sin(theta);
         double lz = to.x * Math.sin(theta) + to.z * Math.cos(theta);
         double mx = -lx, my = -to.y, mz = lz;
-        float wantYaw = (float) Math.atan2(-mx, -mz);
+        // Held in its frame, it can only roll so far toward you.
+        float wantYaw = MathHelper.clamp((float) Math.atan2(-mx, -mz), -0.65F, 0.65F);
         float wantPitch = (float) Math.atan2(my, Math.sqrt(mx * mx + mz * mz));
         boolean near = to.length() < 28D;
         // It is in no hurry. It knows you are there.
         eyeYaw += MathHelper.wrapDegrees((float) Math.toDegrees((near ? wantYaw : 0F) - eyeYaw)) * 0.017453292F * 0.06F;
-        eyePitch += ((near ? MathHelper.clamp(wantPitch, -0.7F, 0.7F) : 0F) - eyePitch) * 0.06F;
+        eyePitch += ((near ? MathHelper.clamp(wantPitch, -0.5F, 0.5F) : 0F) - eyePitch) * 0.06F;
     }
 
     public static void render(World world, Vec3d camera, float partialTicks, boolean casket) {
@@ -118,18 +119,18 @@ public final class VaultTreasures {
         GlStateManager.shadeModel(GL11.GL_SMOOTH);
         Vec3d flame = at(Relic.ETERNAL_FLAME, 34.5D).subtract(camera);
         flame(flame, age);
-        Vec3d crown = at(Relic.CROWN, 15D).subtract(camera);
-        blackFire(crown, age);
         Vec3d fork = at(Relic.TUNING_FORK, 27D).subtract(camera);
         WarlockFx.glow(fork, 1.1D, new float[]{1F, 0.85F, 0.5F}, 0.06F + 0.04F * MathHelper.sin(age * 0.21F));
-        Vec3d orb = at(Relic.WARLOCKS_EYE, 16.5D).subtract(camera);
-        WarlockFx.glow(orb, 0.7D, new float[]{0.75F, 0.55F, 1F}, 0.12F + 0.05F * MathHelper.sin(age * 0.07F));
+        Vec3d orb = at(Relic.WARLOCKS_EYE, 21.5D).subtract(camera);
+        WarlockFx.glow(orb, 0.6D, new float[]{0.85F, 1F, 0.8F}, 0.1F + 0.04F * MathHelper.sin(age * 0.07F));
+        // The light of the plinth, showing through the notch under the mask.
+        WarlockFx.glow(at(Relic.WARLOCKS_EYE, 12.5D).subtract(camera), 0.32D, new float[]{1F, 0.95F, 0.85F}, 0.45F);
         Vec3d gauntlet = at(Relic.GAUNTLET, 19D).subtract(camera);
         WarlockFx.glow(gauntlet, 0.9D, new float[]{1F, 0.85F, 0.55F}, 0.08F);
         if (casket) {
-            Vec3d heart = at(Relic.CASKET, 20.5D).subtract(camera);
-            WarlockFx.glow(heart, 1.4D, VaultFx.ICE, 0.22F + 0.06F * MathHelper.sin(age * 0.09F));
-            WarlockFx.glow(heart, 0.6D, VaultFx.FROST, 0.3F);
+            Vec3d heart = at(Relic.CASKET, 23.5D).subtract(camera);
+            WarlockFx.glow(heart, 0.8D, VaultFx.ICE, 0.1F + 0.04F * MathHelper.sin(age * 0.09F));
+            WarlockFx.glow(heart, 0.4D, VaultFx.FROST, 0.15F);
             mist(heart, age);
         }
 
@@ -147,13 +148,13 @@ public final class VaultTreasures {
             case TABLET:
                 return 1.6F;
             case WARLOCKS_EYE:
-                return 1.5F;
+                return 1F;
             case CROWN:
-                return 1.45F;
+                return 0.95F;
             case TUNING_FORK:
                 return 1.35F;
             case CASKET:
-                return 1.25F;
+                return 1F;
             default:
                 return 1F;
         }
@@ -270,36 +271,6 @@ public final class VaultTreasures {
         }
         WarlockFx.glow(c.add(0D, 0.3D, 0D), 0.9D, VaultFx.ORANGE, 0.14F + 0.04F * MathHelper.sin(age * 0.6F));
         WarlockFx.glow(c.add(0D, 0.15D, 0D), 0.45D, VaultFx.YELLOW, 0.25F);
-    }
-
-    /** The Crown's black fire: dark tongues that eat the light around them, red glinting at their roots. */
-    private static void blackFire(Vec3d c, float age) {
-        Vec3d toCamera = c.scale(-1D);
-        Vec3d side = new Vec3d(toCamera.z, 0D, -toCamera.x);
-        side = side.lengthSquared() < 1.0E-6 ? new Vec3d(1D, 0D, 0D) : side.normalize();
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder buffer = tessellator.getBuffer();
-        Random rand = new Random(13L);
-        // A sullen red light behind them, so the dark of them shows against it.
-        WarlockFx.glow(c.add(0D, 0.25D, 0D), 0.6D, VaultFx.RED, 0.2F + 0.06F * MathHelper.sin(age * 0.31F));
-        WarlockFx.glow(c.add(0D, 0.1D, 0D), 0.35D, VaultFx.ORANGE, 0.16F);
-        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-        buffer.begin(GL11.GL_TRIANGLES, DefaultVertexFormats.POSITION_COLOR);
-        for (int i = 0; i < 12; i++) {
-            double offset = (i - 5.5D) / 5.5D * 0.42D;
-            float phase = rand.nextFloat() * 10F;
-            double height = (0.35D + 0.4D * rand.nextDouble()) * (0.85D + 0.3D * Math.sin(age * 0.29F + phase)) * (1D - Math.abs(offset));
-            double width = 0.09D;
-            double sway = Math.sin(age * 0.17F + phase) * 0.12D * height;
-            Vec3d base = c.add(side.scale(offset));
-            Vec3d tip = base.add(side.scale(sway)).add(0D, height, 0D);
-            buffer.pos(base.x - side.x * width, base.y, base.z - side.z * width).color(0.06F, 0.02F, 0.05F, 0.75F).endVertex();
-            buffer.pos(base.x + side.x * width, base.y, base.z + side.z * width).color(0.06F, 0.02F, 0.05F, 0.75F).endVertex();
-            buffer.pos(tip.x, tip.y, tip.z).color(0.02F, 0F, 0.02F, 0F).endVertex();
-        }
-        tessellator.draw();
-        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
-        WarlockFx.glow(c.add(0D, -0.05D, 0D), 0.8D, VaultFx.RED, 0.18F + 0.08F * MathHelper.sin(age * 0.43F));
     }
 
     /** Cold mist spilling over the Casket's sides and down the pedestal. */

@@ -1,6 +1,7 @@
 package com.matoon.eternity.entity;
 
 import com.matoon.eternity.EternityConfig;
+import com.matoon.eternity.item.EternityItems;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.network.MsgTribunalFx;
 import net.minecraft.entity.Entity;
@@ -8,10 +9,13 @@ import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.MoverType;
 import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.SoundEvents;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemAxe;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
@@ -44,7 +48,8 @@ import java.util.UUID;
  * and the spear comes straight back at you.</li>
  * </ul>
  * Blows from in front of him land on the shield whenever it is up, unless an axe knocks it aside.
- * Unlike the vault's other guardian, he is only mortal.
+ * Unlike the vault's other guardian, he is only mortal; whoever brings him down may take up his spear
+ * and shield, and with luck some of his armour.
  */
 public class EntityEinherjar extends EntityLiving {
 
@@ -94,6 +99,8 @@ public class EntityEinherjar extends EntityLiving {
     private double postX, postY, postZ;
     private float postYaw;
     private boolean hasPost;
+    /** The looting he fell to, once someone has won his arms; -1 until then. */
+    private int spoils = -1;
 
     // ------------------------------------------------------------------ client state
     /** Client: ticks since the synced state last changed. */
@@ -443,8 +450,10 @@ public class EntityEinherjar extends EntityLiving {
             Vec3d f = facing();
             Vec3d across = new Vec3d(f.z, 0D, -f.x).scale(flank);
             for (EntityLivingBase victim : world.getEntitiesWithinAABB(EntityPlayer.class, getEntityBoundingBox().grow(3.5D, 1.5D, 3.5D))) {
-                Vec3d to = victim.getPositionVector().subtract(getPositionVector());
-                if (victim instanceof EntityPlayer && isFair((EntityPlayer) victim) && to.length() < 3.5D && flat(to).dotProduct(f) > -0.1D) {
+                // Inside the Destroyer Armor, the armour is what stands in the way of the blade.
+                Entity body = EntityDestroyerArmor.mass(victim);
+                Vec3d to = body.getPositionVector().subtract(getPositionVector());
+                if (victim instanceof EntityPlayer && isFair((EntityPlayer) victim) && to.length() < 3.5D + body.width * 0.5D - 0.3D && flat(to).dotProduct(f) > -0.1D) {
                     land(victim, 0.75F, across.add(f.scale(0.4D)), 1.1D, 0.35D);
                 }
             }
@@ -464,7 +473,8 @@ public class EntityEinherjar extends EntityLiving {
             step(0.6D);
         }
         if (t == BASH_HIT && target != null) {
-            if (horizontal(target) < 2.3D && flat(target.getPositionVector().subtract(getPositionVector())).dotProduct(facing()) > 0.3D) {
+            Entity body = EntityDestroyerArmor.mass(target);
+            if (horizontal(body) < 2.3D + body.width * 0.5D - 0.3D && flat(body.getPositionVector().subtract(getPositionVector())).dotProduct(facing()) > 0.3D) {
                 land(target, 0.45F, facing(), 1.4D, 0.4D);
                 sound(SoundEvents.ITEM_SHIELD_BLOCK, 1.5F, 0.6F);
             }
@@ -490,8 +500,9 @@ public class EntityEinherjar extends EntityLiving {
             return;
         }
         Vec3d f = facing();
-        Vec3d to = target.getPositionVector().subtract(getPositionVector());
-        if (flat(to).dotProduct(f) > 0.55D && horizontal(target) < reach + target.width * 0.5D && Math.abs(target.posY - posY) < 2.2D) {
+        Entity body = EntityDestroyerArmor.mass(target);
+        Vec3d to = body.getPositionVector().subtract(getPositionVector());
+        if (flat(to).dotProduct(f) > 0.55D && horizontal(body) < reach + body.width * 0.5D && Math.abs(body.posY - posY) < 2.2D) {
             land(target, weight, f, knock, 0.2D);
         }
     }
@@ -504,8 +515,15 @@ public class EntityEinherjar extends EntityLiving {
         if (calm) {
             return;
         }
-        victim.hurtResistantTime = 0;
-        victim.attackEntityFrom(new EntityDamageSource("eternity.einherjar", this), (float) EternityConfig.vault.einherjarDamage * weight);
+        // Inside the Destroyer Armor, the blow takes as much of the armour as it would have taken of them.
+        EntityLivingBase body = EntityDestroyerArmor.body(victim);
+        float scale = body == victim ? 1F : EntityDestroyerArmor.health(body) / 20F;
+        body.hurtResistantTime = 0;
+        body.attackEntityFrom(new EntityDamageSource("eternity.einherjar", this), (float) EternityConfig.vault.einherjarDamage * weight * scale);
+        if (EntityDestroyerArmor.carrier(victim) != null) {
+            EntityDestroyerArmor.shove(victim, drive.x * knock, lift, drive.z * knock);
+            return;
+        }
         victim.motionX += drive.x * knock;
         victim.motionY = Math.max(victim.motionY, 0D) + lift;
         victim.motionZ += drive.z * knock;
@@ -575,12 +593,54 @@ public class EntityEinherjar extends EntityLiving {
         }
     }
 
-    /** He goes down to his knees, then falls; no vanilla tipping over. */
+    /** He goes down to his knees, then falls; no vanilla tipping over. What he carried is left where he lies. */
     @Override
     protected void onDeathUpdate() {
         deathTime++;
         if (deathTime >= FALL_TICKS && !world.isRemote) {
+            if (spoils >= 0) {
+                leave(spoils);
+            }
             setDead();
+        }
+    }
+
+    /** Only someone who fought him wins his arms, and only once he is down; looting raises the odds of each piece. */
+    @Override
+    protected void dropFewItems(boolean wasRecentlyHit, int looting) {
+        if (wasRecentlyHit) {
+            spoils = looting;
+        }
+    }
+
+    private void leave(int looting) {
+        double armour = Math.min(1D, EternityConfig.vault.einherjarArmourDrop * (1D + 0.25D * looting));
+        double weapons = EternityConfig.vault.einherjarWeaponDrop;
+        for (Item piece : new Item[]{EternityItems.EINHERJAR_HELM, EternityItems.EINHERJAR_CUIRASS, EternityItems.EINHERJAR_GREAVES,
+                EternityItems.EINHERJAR_BOOTS}) {
+            if (rand.nextDouble() < armour) {
+                worn(piece);
+            }
+        }
+        if (rand.nextDouble() < weapons) {
+            worn(EternityItems.EINHERJAR_SPEAR);
+        }
+        if (rand.nextDouble() < weapons) {
+            worn(EternityItems.EINHERJAR_SHIELD);
+        }
+    }
+
+    /** One of his things, scarred from the fight. */
+    private void worn(Item item) {
+        ItemStack stack = new ItemStack(item);
+        if (stack.isItemStackDamageable()) {
+            stack.setItemDamage(rand.nextInt(Math.max(1, stack.getMaxDamage() / 4)));
+        }
+        EntityItem drop = entityDropItem(stack, 0.6F);
+        if (drop != null) {
+            drop.motionX = rand.nextGaussian() * 0.08D;
+            drop.motionY = 0.2D;
+            drop.motionZ = rand.nextGaussian() * 0.08D;
         }
     }
 

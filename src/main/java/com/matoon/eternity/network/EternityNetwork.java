@@ -13,8 +13,9 @@ import net.minecraftforge.fml.relauncher.Side;
  * Packets flow server to client, with a few exceptions: {@link MsgTearRift}, where a
  * player asks for a Rift Gate, {@link MsgStrikeComet} and {@link MsgStrikeTribunal},
  * swings at things too big for vanilla's reach, {@link MsgTribunalAnswer}, an answer to
- * the Living Tribunal, and {@link MsgInBetweenerAct}, whatever a visitor says or does in
- * front of the In-Betweener. The server re-checks
+ * the Living Tribunal, {@link MsgInBetweenerAct}, whatever a visitor says or does in
+ * front of the In-Betweener, {@link MsgArmorCommand}, whatever the pilot of the Destroyer Armor
+ * asks of it, and {@link MsgSpearStrike}, a spear thrust beyond a sword's reach. The server re-checks
  * every part of those requests, so a modified client cannot forge its way to
  * anything it could not do legitimately.
  */
@@ -44,6 +45,9 @@ public final class EternityNetwork {
         CHANNEL.registerMessage(new MsgStrikeTribunal.Handler(), MsgStrikeTribunal.class, id++, Side.SERVER);
         CHANNEL.registerMessage(handler, MsgInBetweener.class, id++, Side.CLIENT);
         CHANNEL.registerMessage(new MsgInBetweenerAct.Handler(), MsgInBetweenerAct.class, id++, Side.SERVER);
+        CHANNEL.registerMessage(new MsgArmorCommand.Handler(), MsgArmorCommand.class, id++, Side.SERVER);
+        CHANNEL.registerMessage(new MsgSpearStrike.Handler(), MsgSpearStrike.class, id++, Side.SERVER);
+        CHANNEL.registerMessage(new MsgArmorButton.Handler(), MsgArmorButton.class, id++, Side.SERVER);
     }
 
     public static void sendToServer(IMessage message) {
