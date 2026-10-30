@@ -160,7 +160,12 @@ key.eternity.armor_overcharge_down=Destroyer Armor: Overcharge - Turn Down
 key.eternity.armor_overcharge_next=Destroyer Armor: Overcharge - Next Part
 key.eternity.armor_overcharge_prev=Destroyer Armor: Overcharge - Previous Part
 key.eternity.armor_overcharge_cut=Destroyer Armor: Overcharge - Cut All
+key.eternity.armor_absorb=Destroyer Armor: Absorb with the Regulator
 eternity.abilities.destroyer_grip.name=Grab
 eternity.abilities.destroyer_grip.desc=Takes hold of whatever is in front of the Destroyer Armor's face.
 eternity.abilities.destroyer_snap.name=Snap
 eternity.abilities.destroyer_snap.desc=The snap, with all six stones in the Destroyer Armor's chest.
+
+entity.eternity.grandmaster.name=The Grandmaster
+tile.eternity.board.name=The Grandmaster's Board
+eternity.subtitle.grandmaster_frustrated=The Grandmaster groans

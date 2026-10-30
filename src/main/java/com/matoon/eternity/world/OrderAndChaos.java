@@ -385,10 +385,7 @@ public final class OrderAndChaos {
 
     /** One of them is inside the Regulator now, and never comes again. */
     public void absorbed(EntityOrderChaos head, EntityPlayerMP player, EnumHand hand) {
-        ItemStack stack = player.getHeldItem(hand);
-        if (!(stack.getItem() instanceof ItemAstralRegulator)) {
-            stack = player.getHeldItem(hand == EnumHand.MAIN_HAND ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND);
-        }
+        ItemStack stack = ItemAstralRegulator.raised(player, hand);
         boolean isOrder = head.isOrder();
         if (stack.getItem() instanceof ItemAstralRegulator) {
             ItemAstralRegulator.absorb(stack, isOrder ? ItemAstralRegulator.ORDER : ItemAstralRegulator.CHAOS);
@@ -465,15 +462,9 @@ public final class OrderAndChaos {
 
     // ------------------------------------------------------------------ the Astral Regulator
 
-    /** A held Regulator, if this player has one in either hand. */
+    /** A Regulator this player wields, in either hand or in the chest of the armour they pilot. */
     private static ItemStack regulatorOf(EntityPlayer player) {
-        for (EnumHand hand : EnumHand.values()) {
-            ItemStack stack = player.getHeldItem(hand);
-            if (stack.getItem() instanceof ItemAstralRegulator) {
-                return stack;
-            }
-        }
-        return ItemStack.EMPTY;
+        return ItemAstralRegulator.raised(player, EnumHand.MAIN_HAND);
     }
 
     /** Whether this player is carrying a Regulator where they can see it. */

@@ -1,0 +1,8 @@
+{
+    "parent": "block/cube_bottom_top",
+    "textures": {
+        "top": "eternity:blocks/board_gold",
+        "bottom": "eternity:blocks/board_side",
+        "side": "eternity:blocks/board_side"
+    }
+}

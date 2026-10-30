@@ -676,6 +676,15 @@ came from.
     deep cavity framed in riveted plate, with the furnace glowing through ribs at the back of it. An
     **Astral Regulator** set in it (the Cradle page) hangs there turning, lit by its own light, and six
     sockets ringed in old gold arch over the top of the opening, one for each stone.
+  - *The Astral Regulator, set in it*: it counts as held by whoever is inside, just as if it were in their
+    hand. Its Lucraft powers (Eternity's, the Living Tribunal's, Master Order's, Lord Chaos's and the
+    In-Betweener's, whichever it holds) join the stones' on your ability bar. Holding Eternity, his health is
+    added to yours and no single blow takes more than a sliver of the armour's integrity either. The
+    cosmic beings treat you as its bearer. It keeps everything you carry that runs on Forge Energy full, and
+    it feeds the dynamo. Press **G** (rebindable) to raise it at whatever you look at, as you would raise it
+    in your hand: it drinks in a beaten Living Tribunal, Master Order or Lord Chaos, or a fallen
+    In-Betweener, and a prompt under your crosshair says when one is in reach. Rift Step carries the armour
+    with you.
   - *The Infinity Stones*: each stone set in its socket burns there in its colour. Each lends the
     armour a gift of its own, always:
 
@@ -731,6 +740,68 @@ came from.
   use it and winter bursts out all round you instead. Held, it freezes the water under your feet. It
   never changes the world inside the vault, the Star Chamber or the Nexus, nor anywhere with
   `casketChangesTerrain` off, and like the stones it cannot be destroyed.
+
+## The Grandmaster
+
+The last Elder of the Universe with a stone, and the last stone. He comes to you: hold five
+stones (`grandmaster.stonesToCome`) and the next time you wake, or at the next dawn, his board
+rises out of the ground around you in rings, gold and blue, the corners full of stars. Whatever
+it covers is kept, and put back exactly when he is done: walls, chests and their contents.
+
+- **He looks the part.** A tall blue man with white eyes and silver hair swept back off a high
+  forehead, a high flared gold collar and breastplate over a dark suit, an engraved pauldron,
+  coils of gold up one forearm, keys swinging at his belt and long coat tails. He is never still:
+  he strolls the board with his hands clasped behind him, shuffles a waterfall of cards from hand
+  to hand without looking, points, laughs with his head thrown back, claps slowly, props his chin
+  in his hand to think, and moves pieces without touching them, gold threads running from his
+  fingertip. He steps out of a storm of cards.
+- **The stone stays in play.** The Mind Stone leaps from square to square of his board after
+  every move, and a faint ring shows where it goes next. It cannot be caught.
+- **Adam Warlock plays against you.** He has been promised the stone, for Mother, if he wins.
+- **The stakes.** His life is on his side of the table. Lay yours on the pedestal at the board's
+  edge: every stone you carry, or the Astral Regulator. Your stake turns in the air over it for
+  the rest of the game. If he takes your king, it is his.
+- **The game: the king's table.** His own hnefatafl, played with pieces taller than you on the
+  board itself. You hold the king and his four guards; eight raiders hunt them. Right-click one
+  of your pieces to take it up (the squares it can reach light up), then a square to send it
+  there. Every piece moves like a rook; close an enemy between two of yours to take it; the
+  corners, the empty throne and the Mind Stone's square count against everyone, and nothing
+  crosses the stone. Get the king to a corner to win.
+- **He shows you how.** When he explains the rules the view leaves your eyes for a camera that
+  flies over and among the pieces while the board plays out each rule as he says it: a guard down
+  its row, a raider closed in and taken, the king running for his corner, the stone leaping. Hold
+  jump to skip it. It ends by gliding back into your own eyes, and he gives you the rules in a book.
+- **His music.** His theme (from Marvel Super Heroes) as he arrives, talks and teaches; Handel's Sarabande
+  in D minor or All the King's Men while Warlock plays you; Saint-Saëns' Danse Macabre once Warlock has walked
+  off and the Grandmaster plays you himself; and silence as his board breaks. Strike the board and you
+  will hear it hurt him.
+- **Who is speaking.** Everything he and Warlock say appears in a panel at the foot of the screen
+  with a live portrait of the speaker, their name and title, the words typed out as they speak.
+  Nothing pauses for it.
+- **He cheats.** Whenever your king has an open road to a corner, the board shifts: a raider
+  slides into the way under his hand, or rises out of the square. While Warlock plays, the king
+  is never taken either: he steps aside on his own. Warlock notices.
+- **The way out is not on the board, it is the board.** Strike its squares. They crack, the stone
+  stutters, he flinches. A square struck three times falls in, with whatever stands on it, and a
+  blow on the stone's own square counts four times (`grandmaster.boardStrength`, 16 by default).
+  Break enough of it and the whole board gives way, and him with it. Your stake comes back, and
+  the Mind Stone lies still where its square was, the true relic.
+
+## Commands for the Grandmaster
+
+| Command | Effect |
+| --- | --- |
+| `/eternity grandmaster begin [player]` | He lays his board out around a player now |
+| `/eternity grandmaster status` | Where his board is, how the game stands (drawn as text), cheats, Warlock, the pot |
+| `/eternity grandmaster skip` | Straight to the game, nothing staked |
+| `/eternity grandmaster rules` | He walks you through the rules again, cutscene and all |
+| `/eternity grandmaster move <fx> <fy> <tx> <ty>` | Plays a move for the player (squares 0 to 6) |
+| `/eternity grandmaster cheat` | He cheats now |
+| `/eternity grandmaster strike <x> <y> [n]` | Strikes a square of his board, as a player would |
+| `/eternity grandmaster end` | Packs the board away, puts back what it covered and returns the pot. Nothing is decided |
+| `/eternity grandmaster forget` | As end, and forgets he ever came, so he can come again |
+| `/eternity grandmaster showcase [player]` | A Grandmaster with no board, running through his gestures |
+| `/eternity grandmaster act <state> [ticks]` | Makes any Grandmaster nearby perform a gesture |
 
 ## The Astral Regulator
 

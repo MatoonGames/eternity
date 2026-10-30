@@ -291,6 +291,15 @@ public class ModelAdamWarlock extends ModelBase {
             case RETREAT:
                 retreat(p, t, age);
                 break;
+            case CARRY:
+                carry(p, age);
+                break;
+            case STAND:
+                stand(p, age);
+                break;
+            case WALK:
+                walk(p, age);
+                break;
         }
     }
 
@@ -770,6 +779,66 @@ public class ModelAdamWarlock extends ModelBase {
         p[L_KNEE] = 0.4F;
         p[DROP] = heave * 0.4F;
         p[LOOK] = 1F;
+    }
+
+    /** Over a piece, holding it up from above: bent forward at the hips, both hands down on it, legs trailing. */
+    private static void carry(float[] p, float age) {
+        float breath = MathHelper.sin(age * 0.12F);
+        p[LEAN] = 0.32F;
+        p[WAIST_X] = 0.3F;
+        p[DROP] = breath * 0.3F;
+        p[RA_X] = -0.55F + breath * 0.03F;
+        p[RA_Y] = -0.1F;
+        p[RA_Z] = 0.18F;
+        p[R_ELBOW] = -0.3F;
+        p[LA_X] = -0.55F - breath * 0.03F;
+        p[LA_Y] = 0.1F;
+        p[LA_Z] = -0.18F;
+        p[L_ELBOW] = -0.3F;
+        p[HEAD_X] = 0.55F;
+        p[RL_X] = 0.35F;
+        p[R_KNEE] = 0.7F;
+        p[LL_X] = 0.55F;
+        p[L_KNEE] = 0.9F;
+        p[LOOK] = 0.2F;
+    }
+
+    /** On his own two feet for once, arms folded, weight on one leg, watching. */
+    private static void stand(float[] p, float age) {
+        float breath = MathHelper.sin(age * 0.08F);
+        p[CHEST_X] = breath * 0.025F;
+        p[RA_X] = -0.4F;
+        p[RA_Y] = -0.9F;
+        p[R_ELBOW] = -1.25F;
+        p[LA_X] = -0.5F;
+        p[LA_Y] = 0.85F;
+        p[L_ELBOW] = -1.15F;
+        p[HEAD_X] = 0.08F;
+        p[TILT] = 0.03F;
+        p[RL_Z] = 0.05F;
+        p[LL_X] = -0.1F;
+        p[L_KNEE] = 0.18F;
+        p[LL_Z] = -0.04F;
+        p[LOOK] = 1F;
+    }
+
+    /** Walking, which he never does: slowly, head down, hands loose. */
+    private static void walk(float[] p, float age) {
+        float s = MathHelper.sin(age * 0.42F), c = MathHelper.cos(age * 0.42F);
+        p[RL_X] = s * 0.55F;
+        p[LL_X] = -s * 0.55F;
+        p[R_KNEE] = Math.max(0F, -c) * 0.7F + 0.05F;
+        p[L_KNEE] = Math.max(0F, c) * 0.7F + 0.05F;
+        p[RA_X] = -s * 0.32F;
+        p[LA_X] = s * 0.32F;
+        p[RA_Z] = 0.06F;
+        p[LA_Z] = -0.06F;
+        p[R_ELBOW] = -0.2F;
+        p[L_ELBOW] = -0.2F;
+        p[DROP] = Math.abs(c) * -0.35F;
+        p[CHEST_Y] = s * 0.06F;
+        p[HEAD_X] = 0.3F;
+        p[LOOK] = 0.3F;
     }
 
     // ------------------------------------------------------------------ easing

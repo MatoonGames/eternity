@@ -39,6 +39,9 @@ public class EternityConfig {
     @Config.Comment("Odin's Treasure Room, the vault under Asgard's palace: its guards, the Destroyer, and the Casket of Ancient Winters.")
     public static Vault vault = new Vault();
 
+    @Config.Comment("The Grandmaster, the last Elder with a stone, and his board.")
+    public static GrandmasterSettings grandmaster = new GrandmasterSettings();
+
     @Config.Comment("Client-side presentation. Each player can change these.")
     public static Client client = new Client();
 
@@ -177,6 +180,29 @@ public class EternityConfig {
                 "Lower it if the server struggles; the breaking only takes longer."})
         @Config.RangeInt(min = 1, max = 256)
         public int chunksPerTick = 24;
+    }
+
+    public static class GrandmasterSettings {
+        @Config.Comment("Master switch. When false he never comes for anyone, though an operator can still call him.")
+        public boolean enabled = true;
+
+        @Config.Comment({"How many stones someone must hold before he comes to them. He lays his board out around them when",
+                "they next wake, or at the next dawn."})
+        @Config.RangeInt(min = 1, max = 6)
+        public int stonesToCome = 5;
+
+        @Config.Comment({"Blows his board takes before it breaks, and him with it. A blow on the square the Mind Stone is on",
+                "counts four times."})
+        @Config.RangeInt(min = 1, max = 200)
+        public int boardStrength = 16;
+
+        @Config.Comment("Moves Adam Warlock looks ahead when he plays the raiders. More is stronger and slower.")
+        @Config.RangeInt(min = 1, max = 5)
+        public int warlockDepth = 3;
+
+        @Config.Comment("Moves the Grandmaster looks ahead when he plays the raiders himself.")
+        @Config.RangeInt(min = 1, max = 5)
+        public int grandmasterDepth = 4;
     }
 
     public static class Warlock {

@@ -46,5 +46,11 @@
   "music.masters":            { "sounds": [ { "name": "eternity:music/clubbed_to_death", "stream": true, "volume": 0.54 } ] },
   "music.champion":           { "sounds": [ { "name": "eternity:music/living_tribunal_umvc3", "stream": true, "volume": 0.62 } ] },
   "music.destroyer":          { "sounds": [ { "name": "eternity:music/final_boss_theme", "stream": true, "volume": 0.7 } ] },
-  "music.void":               { "sounds": [ { "name": "eternity:music/title_screen_waiting", "stream": true } ] }
+  "music.grandmaster":        { "sounds": [ { "name": "eternity:music/grandmaster_theme", "stream": true } ] },
+  "music.grandmaster_game":   { "sounds": [ { "name": "eternity:music/handel_sarabande", "stream": true },
+                                            { "name": "eternity:music/all_the_kings_men", "stream": true, "volume": 0.79 } ] },
+  "music.grandmaster_alone":  { "sounds": [ { "name": "eternity:music/danse_macabre", "stream": true } ] },
+  "music.void":               { "sounds": [ { "name": "eternity:music/title_screen_waiting", "stream": true } ] },
+
+  "entity.grandmaster.frustrated": { "subtitle": "eternity.subtitle.grandmaster_frustrated", "sounds": [ "eternity:entity/grandmaster_frustrated" ] }
 }

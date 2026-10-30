@@ -193,7 +193,10 @@ public final class CosmicPowers {
         Vec3d land = target.add(back);
         double y = Terrain.safeY(caster.world, land.x, land.y, land.z);
         Vec3d from = caster.getPositionVector();
-        if (caster instanceof EntityPlayerMP) {
+        if (EntityDestroyerArmor.carrier(caster) != null) {
+            // Inside the Destroyer Armor, the armour steps through with them.
+            EntityDestroyerArmor.place(caster, land.x, y, land.z, caster.rotationYaw, caster.rotationPitch);
+        } else if (caster instanceof EntityPlayerMP) {
             ((EntityPlayerMP) caster).connection.setPlayerLocation(land.x, y, land.z, caster.rotationYaw, caster.rotationPitch);
         } else {
             caster.setPositionAndUpdate(land.x, y, land.z);

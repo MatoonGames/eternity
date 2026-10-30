@@ -19,6 +19,7 @@ import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import com.matoon.eternity.entity.EntityDestroyerArmor;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.EnumRarity;
@@ -107,13 +108,31 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
         stack.setTagCompound(tag);
     }
 
-    /** Whether this entity holds a charged Regulator in either hand. */
+    /**
+     * The Regulator set in the chest of the Destroyer Armor this entity pilots, or nothing: it counts as held, so
+     * its powers, its endurance and its reach are theirs while they are inside.
+     */
+    public static ItemStack slotted(@Nullable Entity entity) {
+        EntityDestroyerArmor armor = EntityDestroyerArmor.carrier(entity);
+        return armor == null ? ItemStack.EMPTY : armor.lentRegulator(entity);
+    }
+
+    /** The Regulator to raise for someone: the one in this hand, else the other, else the one in their armour's chest. */
+    public static ItemStack raised(EntityPlayer player, EnumHand hand) {
+        ItemStack stack = player.getHeldItem(hand);
+        if (!(stack.getItem() instanceof ItemAstralRegulator)) {
+            stack = player.getHeldItem(hand == EnumHand.MAIN_HAND ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND);
+        }
+        return stack.getItem() instanceof ItemAstralRegulator ? stack : slotted(player);
+    }
+
+    /** Whether this entity holds a charged Regulator in either hand, or in the chest of the armour they pilot. */
     public static boolean holdsCharged(@Nullable Entity entity) {
         if (!(entity instanceof EntityLivingBase)) {
             return false;
         }
         EntityLivingBase living = (EntityLivingBase) entity;
-        return isChargedRegulator(living.getHeldItemMainhand()) || isChargedRegulator(living.getHeldItemOffhand());
+        return isChargedRegulator(living.getHeldItemMainhand()) || isChargedRegulator(living.getHeldItemOffhand()) || isChargedRegulator(slotted(entity));
     }
 
     private static boolean isChargedRegulator(ItemStack stack) {
@@ -127,7 +146,7 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
         }
         EntityLivingBase living = (EntityLivingBase) entity;
         return living.getHeldItemMainhand().getItem() instanceof ItemAstralRegulator
-                || living.getHeldItemOffhand().getItem() instanceof ItemAstralRegulator;
+                || living.getHeldItemOffhand().getItem() instanceof ItemAstralRegulator || !slotted(entity).isEmpty();
     }
 
     /** Whether this entity holds, in either hand, a Regulator with this being inside. */
@@ -136,10 +155,10 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
             return false;
         }
         EntityLivingBase living = (EntityLivingBase) entity;
-        return holdsIn(living.getHeldItemMainhand(), id) || holdsIn(living.getHeldItemOffhand(), id);
+        return holdsIn(living.getHeldItemMainhand(), id) || holdsIn(living.getHeldItemOffhand(), id) || holdsIn(slotted(entity), id);
     }
 
-    private static boolean holdsIn(ItemStack stack, String id) {
+    public static boolean holdsIn(ItemStack stack, String id) {
         return stack.getItem() instanceof ItemAstralRegulator && absorbed(stack).contains(id);
     }
 
@@ -219,17 +238,23 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
      * In-Betweener while he lies fallen outside his glass.
      */
     private static EnumActionResult release(World world, EntityPlayer player, ItemStack stack, EnumHand hand) {
-        List<String> held = absorbed(stack);
         if (world.isRemote) {
+            List<String> held = absorbed(stack);
             boolean any = !held.contains(ETERNITY)
                     || !held.contains(TRIBUNAL) && EntityLivingTribunal.downedNear(player) || EntityOrderChaos.downedNear(player)
                     || !held.contains(INBETWEENER) && EntityInBetweener.fallenNear(player) || EntityOrderChaos.standingBefore(player);
             return any ? EnumActionResult.SUCCESS : EnumActionResult.PASS;
         }
-        if (!(player instanceof EntityPlayerMP)) {
-            return EnumActionResult.PASS;
-        }
-        EntityPlayerMP mp = (EntityPlayerMP) player;
+        return player instanceof EntityPlayerMP ? raise((EntityPlayerMP) player, stack, hand) : EnumActionResult.PASS;
+    }
+
+    /**
+     * The Regulator raised, on the server: from a hand, or from the chest of the Destroyer Armor its pilot is inside
+     * (see {@link #slotted}); it drinks in whichever being it can.
+     */
+    public static EnumActionResult raise(EntityPlayerMP mp, ItemStack stack, EnumHand hand) {
+        EntityPlayer player = mp;
+        List<String> held = absorbed(stack);
         // Eternity it takes by flying into his heart; it comes back holding him and everything it held before.
         if (!held.contains(ETERNITY) && Director.INSTANCE.tryContain(mp, held)) {
             if (!player.capabilities.isCreativeMode) {

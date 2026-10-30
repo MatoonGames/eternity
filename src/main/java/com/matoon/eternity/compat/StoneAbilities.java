@@ -3,6 +3,10 @@ package com.matoon.eternity.compat;
 import anvil.infinity.abilities.AbilitySnap;
 import anvil.infinity.snap.SnapHelper;
 import com.matoon.eternity.Eternity;
+import com.matoon.eternity.ability.EternityAbilities;
+import com.matoon.eternity.ability.MastersAbilities;
+import com.matoon.eternity.ability.TribunalAbilities;
+import com.matoon.eternity.item.ItemAstralRegulator;
 import com.matoon.eternity.entity.ArmorPowers;
 import com.matoon.eternity.entity.EntityDestroyerArmor;
 import lucraft.mods.heroesexpansion.abilities.AbilityBlackHole;
@@ -93,16 +97,27 @@ public final class StoneAbilities {
         if (armor == null || !(entity instanceof EntityPlayer)) {
             return null;
         }
-        String kinds = armor.stoneKinds();
-        return kinds.isEmpty() ? null : SETS.computeIfAbsent(kinds, Gifts::new);
+        // The stones, and whatever the Astral Regulator among them has drunk in: one provider for each such set.
+        String kinds = armor.stoneKinds(), held = armor.regulatorKinds();
+        return kinds.isEmpty() && held.isEmpty() ? null : SETS.computeIfAbsent(kinds + "|" + held, Gifts::new);
     }
 
-    /** What a set of stones lends, by their items' registry names in socket order. */
+    /**
+     * What a set of stones lends, by their items' registry names in socket order; and after a bar, what the Regulator
+     * in its chest lends, by the beings it holds: the same powers it lends held in a hand.
+     */
     private static final class Gifts implements IAbilityProvider {
         private final List<ItemInfinityStone> stones = new ArrayList<>();
+        private final List<String> held = new ArrayList<>();
 
-        Gifts(String kinds) {
-            for (String name : kinds.split(",")) {
+        Gifts(String key) {
+            String[] parts = key.split("[|]", -1);
+            for (String id : parts.length > 1 ? parts[1].split(",") : new String[0]) {
+                if (!id.isEmpty()) {
+                    held.add(id);
+                }
+            }
+            for (String name : parts[0].split(",")) {
                 Item item = name.isEmpty() ? null : Item.REGISTRY.getObject(new ResourceLocation(name));
                 if (item instanceof ItemInfinityStone) {
                     stones.add((ItemInfinityStone) item);
@@ -122,6 +137,21 @@ public final class StoneAbilities {
             // hands; here both are in the chest.
             if (space && power && Ability.getAbilitiesFromClass(new ArrayList<>(abilities.values()), AbilityBlackHole.class).isEmpty()) {
                 abilities.put("black_hole", new AbilityBlackHole(entity).setDataValue(Ability.BAR_COLOR, EnumAbilityBarColor.LIGHT_BLUE).setMaxCooldown(6000));
+            }
+            if (held.contains(ItemAstralRegulator.ETERNITY)) {
+                EternityAbilities.grantEternity(entity, abilities);
+            }
+            if (held.contains(ItemAstralRegulator.TRIBUNAL)) {
+                TribunalAbilities.grant(entity, abilities);
+            }
+            if (held.contains(ItemAstralRegulator.ORDER)) {
+                MastersAbilities.grantOrder(entity, abilities);
+            }
+            if (held.contains(ItemAstralRegulator.CHAOS)) {
+                MastersAbilities.grantChaos(entity, abilities);
+            }
+            if (held.contains(ItemAstralRegulator.INBETWEENER)) {
+                MastersAbilities.grantInBetweener(entity, abilities);
             }
             for (String key : new ArrayList<>(abilities.keySet())) {
                 Ability ability = abilities.get(key);

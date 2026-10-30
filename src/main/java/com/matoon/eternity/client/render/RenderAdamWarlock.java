@@ -39,6 +39,9 @@ public class RenderAdamWarlock extends RenderLiving<EntityAdamWarlock> {
     /** How many ticks back his trail of fire reaches. */
     private static final int TRAIL_POINTS = 11;
 
+    /** Set while he is drawn in a portrait, not the world: his trail and corona are left out. */
+    public static boolean portrait;
+
     private float partial;
 
     public RenderAdamWarlock(RenderManager manager) {
@@ -71,7 +74,7 @@ public class RenderAdamWarlock extends RenderLiving<EntityAdamWarlock> {
     public void doRender(EntityAdamWarlock entity, double x, double y, double z, float entityYaw, float partialTicks) {
         partial = partialTicks;
         super.doRender(entity, x, y, z, entityYaw, partialTicks);
-        if (entity.isInvisible()) {
+        if (entity.isInvisible() || portrait) {
             return;
         }
         float power = entity.prevPower + (entity.power - entity.prevPower) * partialTicks;

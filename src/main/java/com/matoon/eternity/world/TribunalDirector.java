@@ -490,7 +490,7 @@ public final class TribunalDirector {
 
     /** He is inside the Regulator now. Whoever holds it holds the court itself. */
     public void absorbed(EntityPlayerMP player, EnumHand hand) {
-        ItemStack stack = player.getHeldItem(hand);
+        ItemStack stack = ItemAstralRegulator.raised(player, hand);
         if (!(stack.getItem() instanceof ItemAstralRegulator)) {
             stack = ItemStack.EMPTY;
             for (ItemStack candidate : player.inventory.mainInventory) {

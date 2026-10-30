@@ -11,6 +11,7 @@ import com.matoon.eternity.entity.EntityDestroyer;
 import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EntityEinherjar;
 import com.matoon.eternity.entity.EntityEternity;
+import com.matoon.eternity.entity.EntityGrandmaster;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.network.MsgOmen;
 import com.matoon.eternity.world.ChampionData;
@@ -18,6 +19,8 @@ import com.matoon.eternity.world.ChampionDirector;
 import com.matoon.eternity.world.CometData;
 import com.matoon.eternity.world.CometDirector;
 import com.matoon.eternity.world.Director;
+import com.matoon.eternity.world.GrandmasterDirector;
+import com.matoon.eternity.world.Kingstable;
 import com.matoon.eternity.world.InBetweenerData;
 import com.matoon.eternity.world.InBetweenerDirector;
 import com.matoon.eternity.world.Nexus;
@@ -54,7 +57,7 @@ import java.util.UUID;
 /** Operator tools for testing and running servers. Eternity himself never speaks in chat. */
 public class CommandEternity extends CommandBase {
 
-    private static final String[] SUBCOMMANDS = {"status", "summon", "travel", "hunt", "release", "omen", "stones", "relics", "wound", "slay", "doom", "restore", "reset", "comet", "tribunal", "nexus", "inbetweener", "warlock", "champion", "vault"};
+    private static final String[] SUBCOMMANDS = {"status", "summon", "travel", "hunt", "release", "omen", "stones", "relics", "wound", "slay", "doom", "restore", "reset", "comet", "tribunal", "nexus", "inbetweener", "warlock", "champion", "vault", "grandmaster"};
 
     @Override
     public String getName() {
@@ -63,7 +66,7 @@ public class CommandEternity extends CommandBase {
 
     @Override
     public String getUsage(ICommandSender sender) {
-        return "/eternity <status|summon|travel <dim>|hunt [player]|release|omen <1-6> [player]|stones [player]|relics [release <kind>]|wound <percent>|slay|doom [0-1]|restore|reset|comet ...|tribunal ...|nexus [player]|inbetweener ...|warlock ...|champion ...|vault ...>";
+        return "/eternity <status|summon|travel <dim>|hunt [player]|release|omen <1-6> [player]|stones [player]|relics [release <kind>]|wound <percent>|slay|doom [0-1]|restore|reset|comet ...|tribunal ...|nexus [player]|inbetweener ...|warlock ...|champion ...|vault ...|grandmaster ...>";
     }
 
     @Override
@@ -205,6 +208,9 @@ public class CommandEternity extends CommandBase {
                 break;
             case "vault":
                 vault(server, sender, args);
+                break;
+            case "grandmaster":
+                grandmaster(server, sender, args);
                 break;
             case "nexus": {
                 EntityPlayerMP player = args.length > 1 ? getPlayer(server, sender, args[1]) : getCommandSenderAsPlayer(sender);
@@ -597,6 +603,94 @@ public class CommandEternity extends CommandBase {
         return warlock;
     }
 
+    private static void grandmaster(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+        GrandmasterDirector director = GrandmasterDirector.INSTANCE;
+        String action = args.length > 1 ? args[1] : "status";
+        switch (action) {
+            case "status":
+                for (String line : director.describe().split("\n")) {
+                    reply(sender, line);
+                }
+                break;
+            case "begin": {
+                EntityPlayerMP player = args.length > 2 ? getPlayer(server, sender, args[2]) : getCommandSenderAsPlayer(sender);
+                String why = director.begin(player);
+                reply(sender, why != null ? why : "The Grandmaster lays his board out around " + player.getName() + ".");
+                break;
+            }
+            case "end":
+                reply(sender, director.end());
+                break;
+            case "forget":
+                reply(sender, director.forget());
+                break;
+            case "skip":
+                reply(sender, director.skipToGame());
+                break;
+            case "cheat":
+                reply(sender, director.cheatNow());
+                break;
+            case "rules":
+                reply(sender, director.rulesNow());
+                break;
+            case "move": {
+                if (args.length < 6) {
+                    throw new WrongUsageException("/eternity grandmaster move <fromX> <fromY> <toX> <toY>");
+                }
+                int from = Kingstable.at(parseInt(args[2], 0, 6), parseInt(args[3], 0, 6));
+                int to = Kingstable.at(parseInt(args[4], 0, 6), parseInt(args[5], 0, 6));
+                reply(sender, director.force(from, to));
+                break;
+            }
+            case "strike": {
+                if (args.length < 4) {
+                    throw new WrongUsageException("/eternity grandmaster strike <x> <y> [times]");
+                }
+                EntityPlayerMP player = getCommandSenderAsPlayer(sender);
+                int square = Kingstable.at(parseInt(args[2], 0, 6), parseInt(args[3], 0, 6));
+                reply(sender, director.strikeFor(player, square, args.length > 4 ? parseInt(args[4], 1, 200) : 1));
+                break;
+            }
+            case "showcase": {
+                EntityPlayerMP player = args.length > 2 ? getPlayer(server, sender, args[2]) : getCommandSenderAsPlayer(sender);
+                EntityGrandmaster gm = new EntityGrandmaster(player.world);
+                Vec3d look = player.getLookVec();
+                gm.setPosition(player.posX + look.x * 5D, player.posY, player.posZ + look.z * 5D);
+                gm.rotationYaw = player.rotationYaw + 180F;
+                gm.setShowcase(true);
+                player.world.spawnEntity(gm);
+                gm.act(EntityGrandmaster.State.ARRIVE);
+                reply(sender, "The Grandmaster shows " + player.getName() + " his repertoire.");
+                break;
+            }
+            case "act": {
+                if (args.length < 3) {
+                    throw new WrongUsageException("/eternity grandmaster act <state> [ticks]");
+                }
+                EntityGrandmaster.State state = named(EntityGrandmaster.State.class, args[2]);
+                int ticks = args.length > 3 ? parseInt(args[3], -1, 10000) : -1;
+                int n = 0;
+                for (WorldServer world : server.worlds) {
+                    for (Entity entity : world.loadedEntityList) {
+                        if (entity instanceof EntityGrandmaster && !entity.isDead) {
+                            ((EntityGrandmaster) entity).setShowcase(false);
+                            if (ticks >= 0) {
+                                ((EntityGrandmaster) entity).act(state, ticks);
+                            } else {
+                                ((EntityGrandmaster) entity).act(state);
+                            }
+                            n++;
+                        }
+                    }
+                }
+                reply(sender, n == 0 ? "There is no Grandmaster here." : "The Grandmaster: " + state.name().toLowerCase() + ".");
+                break;
+            }
+            default:
+                throw new WrongUsageException("/eternity grandmaster <status|begin [player]|end|forget|skip|cheat|move fx fy tx ty|strike x y [n]|showcase [player]|act <state> [ticks]>");
+        }
+    }
+
     private static void champion(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
         ChampionDirector director = ChampionDirector.INSTANCE;
         ChampionData data = director.data();
@@ -807,6 +901,15 @@ public class CommandEternity extends CommandBase {
                     "pound", "counter", "roar", "hammer", "breaker");
         }
         if (args.length == 3 && "champion".equals(args[0]) && ("visit".equals(args[1]) || "summon".equals(args[1]) || "showcase".equals(args[1]))) {
+            return getListOfStringsMatchingLastWord(args, server.getOnlinePlayerNames());
+        }
+        if (args.length == 2 && "grandmaster".equals(args[0])) {
+            return getListOfStringsMatchingLastWord(args, "status", "begin", "end", "forget", "skip", "rules", "cheat", "move", "strike", "showcase", "act");
+        }
+        if (args.length == 3 && "grandmaster".equals(args[0]) && "act".equals(args[1])) {
+            return getListOfStringsMatchingLastWord(args, java.util.Arrays.stream(EntityGrandmaster.State.values()).map(s -> s.name().toLowerCase()).toArray(String[]::new));
+        }
+        if (args.length == 3 && "grandmaster".equals(args[0]) && ("begin".equals(args[1]) || "showcase".equals(args[1]))) {
             return getListOfStringsMatchingLastWord(args, server.getOnlinePlayerNames());
         }
         if (args.length == 2 && "vault".equals(args[0])) {

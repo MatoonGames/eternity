@@ -1,0 +1,9 @@
+{
+    "variants": {
+        "color=gold": { "model": "eternity:board_gold" },
+        "color=blue": { "model": "eternity:board_blue" },
+        "color=throne": { "model": "eternity:board_throne" },
+        "color=refuge": { "model": "eternity:board_refuge" },
+        "color=rim": { "model": "eternity:board_rim" }
+    }
+}

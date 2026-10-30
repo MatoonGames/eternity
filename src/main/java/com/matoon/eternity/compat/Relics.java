@@ -36,7 +36,9 @@ public final class Relics {
         /** The Soul Stone: the gem on the In-Betweener's brow, or any found before it. */
         SOUL_STONE("the Soul Stone"),
         /** The Power Stone: the gem in the Champion's brow, or any found before it. */
-        POWER_STONE("the Power Stone");
+        POWER_STONE("the Power Stone"),
+        /** The Mind Stone: kept in play on the Grandmaster's board, or any found before it. */
+        MIND_STONE("the Mind Stone");
 
         public final String title;
 
@@ -72,6 +74,9 @@ public final class Relics {
         }
         if (item == anvil.infinity.items.Items.POWER_STONE) {
             return Kind.POWER_STONE;
+        }
+        if (item == anvil.infinity.items.Items.MIND_STONE) {
+            return Kind.MIND_STONE;
         }
         return null;
     }

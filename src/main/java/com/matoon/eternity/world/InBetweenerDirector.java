@@ -1391,10 +1391,7 @@ public final class InBetweenerDirector {
         if (stageTicks < ABSORB_TICKS) {
             return;
         }
-        ItemStack stack = player.getHeldItem(absorbHand);
-        if (!isRegulator(stack)) {
-            stack = player.getHeldItem(absorbHand == EnumHand.MAIN_HAND ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND);
-        }
+        ItemStack stack = ItemAstralRegulator.raised(player, absorbHand);
         if (wearsGem()) {
             giveGem(player);
         }

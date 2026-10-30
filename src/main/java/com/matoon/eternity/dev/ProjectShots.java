@@ -470,6 +470,11 @@ public final class ProjectShots {
                     EntityPlayerMP player = mc.getIntegratedServer().getPlayerList().getPlayers().get(0);
                     Entity armor = serverEntity(player, "destroyerarmor");
                     net.minecraft.item.Item item = net.minecraft.item.Item.getByNameOrId(p[1]);
+                    if ("charged_regulator".equals(p[1]) && armor instanceof com.matoon.eternity.entity.EntityDestroyerArmor) {
+                        ((com.matoon.eternity.entity.EntityDestroyerArmor) armor).getInventory().setInventorySlotContents(Integer.parseInt(p[0]),
+                                com.matoon.eternity.item.ItemAstralRegulator.charged());
+                        return;
+                    }
                     if (!(armor instanceof com.matoon.eternity.entity.EntityDestroyerArmor) || item == null) {
                         log("armorslot: no armor or no item " + p[1]);
                         return;

@@ -69,7 +69,9 @@ public class EntityAdamWarlock extends EntityLiving {
         COMBO, VOLLEY, BEAM,
         RISE, DIVE, SLAM,
         COCOON, EMERGE,
-        STAGGER, RETREAT
+        STAGGER, RETREAT,
+        // Only when someone else is directing him: holding a piece up over a board, standing on the ground, walking on it.
+        CARRY, STAND, WALK
     }
 
     /** What he can be told to do, for testing. */
@@ -162,6 +164,11 @@ public class EntityAdamWarlock extends EntityLiving {
     private int staggerFor = STAGGER_TICKS;
     private int nextBolt;
     private final List<Bolt> bolts = new ArrayList<>();
+    /** Directed by someone else (the Grandmaster's board): he fights nobody, and goes and does what he is told. */
+    private boolean scripted;
+    @Nullable
+    private Vec3d scriptAt, scriptFace;
+    private double scriptRate = 0.1D;
 
     /** A bolt of quantum energy in flight. Clients draw it from where and how fast it left his hand. */
     private static final class Bolt {
@@ -362,6 +369,10 @@ public class EntityAdamWarlock extends EntityLiving {
 
     private void serverTick() {
         stateTicks++;
+        if (scripted) {
+            scriptedTick();
+            return;
+        }
         EntityPlayerMP target = target();
         tickBolts();
         if (ticksExisted % 5 == 0) {
@@ -500,7 +511,7 @@ public class EntityAdamWarlock extends EntityLiving {
         if (target != null) {
             face(target, 0.15F);
         }
-        if (stateTicks == ARRIVE_STREAK + 6) {
+        if (stateTicks == ARRIVE_STREAK + 6 && !scripted) {
             say(ARRIVALS[rand.nextInt(ARRIVALS.length)]);
         }
         if (stateTicks >= ARRIVE_TICKS) {
@@ -1119,6 +1130,118 @@ public class EntityAdamWarlock extends EntityLiving {
         }
     }
 
+    // ------------------------------------------------------------------ directed
+
+    /** Puts him under someone else's direction, or lets him go back to fighting. Directed, he shows no boss bar. */
+    public void script(boolean on) {
+        if (scripted == on) {
+            return;
+        }
+        scripted = on;
+        bossInfo.setVisible(!on);
+        if (on) {
+            calm = true;
+            bolts.clear();
+        }
+    }
+
+    public boolean isScripted() {
+        return scripted;
+    }
+
+    /**
+     * Where to be and what to be doing there: hanging in the air or carrying something
+     * (gliding there at {@code rate}), or standing and walking on the ground ({@code rate} in
+     * blocks a tick), facing {@code face}.
+     */
+    public void direct(State state, Vec3d at, @Nullable Vec3d face, double rate) {
+        scriptAt = at;
+        scriptFace = face;
+        scriptRate = rate;
+        State now = getState();
+        if (now != state && now != State.ARRIVE && now != State.RETREAT && !(state == State.STAND && now == State.WALK)) {
+            setState(state);
+        }
+    }
+
+    /** Streaks down out of the sky to a point and stops dead there. */
+    public void arriveAt(Vec3d at, @Nullable Vec3d face) {
+        scriptAt = at;
+        scriptFace = face;
+        arriveTo = at;
+        Vec3d away = face != null ? flat(at.subtract(face)) : new Vec3d(0D, 0D, -1D);
+        Vec3d side = new Vec3d(-away.z, 0D, away.x);
+        arriveFrom = at.add(away.scale(30D)).add(side.scale(16D * (rand.nextBoolean() ? 1D : -1D))).add(0D, 34D, 0D);
+        setPosition(arriveFrom.x, arriveFrom.y, arriveFrom.z);
+        faceAlong(arriveTo.subtract(arriveFrom));
+        setState(State.ARRIVE);
+        playSound(EternitySounds.COMET_FLYBY, 6F, 1.3F);
+    }
+
+    /** Says a line now, to everyone near enough to hear it. */
+    public void speak(String line) {
+        lastSpoke = -1000;
+        say(line);
+    }
+
+    private void scriptedTick() {
+        State s = getState();
+        switch (s) {
+            case ARRIVE:
+                arriving(null);
+                if (stateTicks > ARRIVE_STREAK && scriptFace != null) {
+                    faceToward(scriptFace, 0.15F);
+                }
+                break;
+            case RETREAT:
+                retreating(null);
+                break;
+            case HOVER:
+            case CARRY:
+            case TAUNT:
+                if (scriptAt != null) {
+                    glide(scriptAt, scriptRate, s == State.CARRY ? 2D : 0.8D);
+                }
+                if (scriptFace != null) {
+                    faceToward(scriptFace, 0.25F);
+                }
+                if (s == State.TAUNT && stateTicks >= TAUNT_TICKS) {
+                    setState(State.HOVER);
+                }
+                break;
+            case STAND:
+            case WALK: {
+                if (scriptAt != null) {
+                    Vec3d step = new Vec3d(scriptAt.x - posX, 0D, scriptAt.z - posZ);
+                    double d = step.length();
+                    if (d > 0.2D) {
+                        step = step.scale(Math.min(scriptRate, d) / d);
+                        setPosition(posX + step.x, posY, posZ + step.z);
+                        float yaw = (float) Math.toDegrees(Math.atan2(step.z, step.x)) - 90F;
+                        rotationYaw += MathHelper.wrapDegrees(yaw - rotationYaw) * 0.3F;
+                        rotationYawHead = rotationYaw;
+                        if (s == State.STAND && d > 1D) {
+                            setState(State.WALK);
+                        }
+                    } else if (s == State.WALK) {
+                        setState(State.STAND);
+                    }
+                }
+                if (s == State.STAND && scriptFace != null) {
+                    faceToward(scriptFace, 0.12F);
+                }
+                // Down onto the ground, and his feet on it.
+                double ground = floor(posX, posY + 2D, posZ);
+                double high = posY - ground;
+                setPosition(posX, high > 0.05D ? posY - Math.min(high, Math.max(0.05D, high * 0.12D)) : ground, posZ);
+                break;
+            }
+            default:
+                setState(State.HOVER);
+                break;
+        }
+    }
+
     // ------------------------------------------------------------------ beaten
 
     private void retreat(boolean words) {
@@ -1192,6 +1315,9 @@ public class EntityAdamWarlock extends EntityLiving {
     @Override
     public boolean attackEntityFrom(DamageSource source, float amount) {
         if (world.isRemote) {
+            return false;
+        }
+        if (scripted) {
             return false;
         }
         State state = getState();
@@ -1399,6 +1525,13 @@ public class EntityAdamWarlock extends EntityLiving {
             case RETREAT:
                 base = t < RETREAT_LAUNCH ? 0.1F : 1F;
                 break;
+            case CARRY:
+                base = 0.7F;
+                break;
+            case STAND:
+            case WALK:
+                base = 0.12F;
+                break;
             default:
                 base = 0.3F;
                 break;
@@ -1571,7 +1704,9 @@ public class EntityAdamWarlock extends EntityLiving {
     @Override
     public void addTrackingPlayer(EntityPlayerMP player) {
         super.addTrackingPlayer(player);
-        bossInfo.addPlayer(player);
+        if (!scripted) {
+            bossInfo.addPlayer(player);
+        }
     }
 
     @Override

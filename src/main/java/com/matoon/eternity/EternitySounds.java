@@ -68,6 +68,10 @@ public final class EternitySounds {
     // The Destroyer. It borrows a fight track too.
     public static final SoundEvent MUSIC_DESTROYER = create("music.destroyer");
     public static final SoundEvent MUSIC_VOID = create("music.void");
+    public static final SoundEvent MUSIC_GRANDMASTER = create("music.grandmaster");
+    public static final SoundEvent MUSIC_GRANDMASTER_GAME = create("music.grandmaster_game");
+    public static final SoundEvent MUSIC_GRANDMASTER_ALONE = create("music.grandmaster_alone");
+    public static final SoundEvent GRANDMASTER_FRUSTRATED = create("entity.grandmaster.frustrated");
 
     private EternitySounds() {
     }

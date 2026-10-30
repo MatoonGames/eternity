@@ -130,6 +130,8 @@ public final class FightMusic {
             want = EternitySounds.MUSIC_CHAMPION;
         } else if (VaultClient.INSTANCE.destroyerFighting()) {
             want = EternitySounds.MUSIC_DESTROYER;
+        } else if (com.matoon.eternity.client.render.GrandmasterBoard.INSTANCE.music(mc.player.getPositionVector()) != null) {
+            want = com.matoon.eternity.client.render.GrandmasterBoard.INSTANCE.music(mc.player.getPositionVector());
         }
         play(want, volume);
         quiet();

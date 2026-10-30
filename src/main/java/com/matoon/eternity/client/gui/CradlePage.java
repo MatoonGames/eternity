@@ -1,9 +1,11 @@
 package com.matoon.eternity.client.gui;
 
+import com.matoon.eternity.client.ArmorClient;
 import com.matoon.eternity.compat.StoneAbilities;
 import com.matoon.eternity.entity.ArmorPowers;
 import com.matoon.eternity.entity.ArmorUpgrade;
 import com.matoon.eternity.entity.EntityDestroyerArmor;
+import com.matoon.eternity.item.ItemAstralRegulator;
 import lucraft.mods.lucraftcore.infinity.items.ItemInfinityStone;
 import lucraft.mods.lucraftcore.superpowers.abilities.Ability;
 import net.minecraft.item.Item;
@@ -29,8 +31,8 @@ class CradlePage extends DestroyerPage {
     /** Where the Regulator hangs in the cavity, and the arch of sockets over it, against the panel's corner. */
     private static final int CAVITY_X = 78, CAVITY_Y = 106, ARCH = 46;
     /** Which the right-hand panel tells of: a stone by index, or the Regulator. Whatever the mouse was last over. */
-    private static int told = ArmorPowers.POWER;
     private static final int REGULATOR = -1;
+    private static int told = REGULATOR;
     /** The names of the powers each kind of stone lends, worked out once. */
     private static final Map<Item, List<String>> POWERS = new HashMap<>();
 
@@ -126,16 +128,21 @@ class CradlePage extends DestroyerPage {
         inset(x + 152, y + 24, 126, 116);
         int tx = x + 157, ty = y + 29, tw = 116;
         if (told == REGULATOR) {
-            font.drawString("ASTRAL REGULATOR", tx, ty, built && !armor.regulator().isEmpty() ? VIOLET : DIM);
+            ItemStack heart = armor.regulator();
+            boolean set = built && !heart.isEmpty();
+            font.drawString("ASTRAL REGULATOR", tx, ty, set ? VIOLET : DIM);
             ty += 11;
-            ty = wrapSmall("It hangs in the cavity in its chest, under the arch of the stones.", tx, ty, tw, PALE) + 3;
-            small("WITH ITS DYNAMO:", tx, ty, GOLD);
+            small("HOLDS:", tx, ty, GOLD);
+            String held = set ? beings(heart) : "-";
+            ty = wrapSmall(held, tx + 26, ty, tw - 26, set && ItemAstralRegulator.isCharged(heart) ? VIOLET : DIM) + 3;
+            small("SET HERE, IT IS YOURS INSIDE:", tx, ty, GOLD);
             ty += 8;
-            ty = wrapSmall("It never runs dry: whatever it has drunk in pours through it as Forge Energy, more the more it holds.", tx, ty, tw,
-                    armor.electric() ? PALE : DIM) + 3;
-            if (!armor.electric()) {
-                wrapSmall("Forge the Dynamo to run on it.", tx, ty, tw, DIM);
-            }
+            int on = set ? PALE : DIM;
+            ty = wrapSmall("- Its powers, on your ability bar", tx, ty, tw, on);
+            ty = wrapSmall("- Eternity's endurance", tx, ty, tw, on);
+            ty = wrapSmall("- " + ArmorClient.ABSORB.getDisplayName() + ": drink in a beaten being", tx, ty, tw, on);
+            ty = wrapSmall("- Keeps your gear charged", tx, ty, tw, on);
+            wrapSmall(armor.electric() ? "- Feeds the dynamo" : "- Feeds a Dynamo, once forged", tx, ty, tw, armor.electric() ? on : DIM);
         } else {
             int stone = told;
             int rgb = ArmorPowers.RGB[stone];
@@ -157,10 +164,22 @@ class CradlePage extends DestroyerPage {
             }
         }
         drawRect(tx, y + 120, tx + tw, y + 121, EDGE);
-        small(armor.stones() != 0 ? "On your ability bar inside;" : "Set a stone in a socket", tx, y + 125, armor.stones() != 0 ? EMBER : DIM);
-        if (armor.stones() != 0) {
+        boolean lends = armor.stones() != 0 || !armor.regulatorKinds().isEmpty();
+        small(lends ? "On your ability bar inside;" : "Set a stone in a socket", tx, y + 125, lends ? EMBER : DIM);
+        if (lends) {
             small("the MOUSE WHEEL pages them", tx, y + 132, EMBER);
         }
+    }
+
+    /** Who a Regulator holds, in a few words. */
+    private static String beings(ItemStack stack) {
+        java.util.List<String> names = new ArrayList<>();
+        for (String id : ItemAstralRegulator.absorbed(stack)) {
+            names.add(id.equals(ItemAstralRegulator.ETERNITY) ? "Eternity" : id.equals(ItemAstralRegulator.TRIBUNAL) ? "the Living Tribunal"
+                    : id.equals(ItemAstralRegulator.ORDER) ? "Master Order" : id.equals(ItemAstralRegulator.CHAOS) ? "Lord Chaos"
+                    : id.equals(ItemAstralRegulator.INBETWEENER) ? "the In-Betweener" : id);
+        }
+        return names.isEmpty() ? "nothing yet" : String.join(", ", names);
     }
 
     /** The names of the Lucraft powers a stone lends, as it would in a gauntlet; any stone of its kind, if none is set. */

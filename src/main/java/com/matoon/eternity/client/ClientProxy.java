@@ -7,6 +7,7 @@ import com.matoon.eternity.client.render.CasketItemRenderer;
 import com.matoon.eternity.client.render.EinherjarItemRenderer;
 import com.matoon.eternity.client.render.RegulatorItemRenderer;
 import com.matoon.eternity.client.render.RenderDestroyer;
+import com.matoon.eternity.client.render.RenderGrandmaster;
 import com.matoon.eternity.client.render.RenderEinherjar;
 import com.matoon.eternity.client.render.RenderAdamWarlock;
 import com.matoon.eternity.client.render.RenderAstralRegulator;
@@ -25,11 +26,13 @@ import com.matoon.eternity.entity.EntityDestroyer;
 import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EntityEinherjar;
 import com.matoon.eternity.entity.EntityEternity;
+import com.matoon.eternity.entity.EntityGrandmaster;
 import com.matoon.eternity.entity.EntityInBetweener;
 import com.matoon.eternity.entity.EntityLivingTribunal;
 import com.matoon.eternity.entity.EntityOrderChaos;
 import com.matoon.eternity.item.EternityItems;
 import com.matoon.eternity.network.MsgComet;
+import com.matoon.eternity.network.MsgGrandmaster;
 import com.matoon.eternity.network.MsgInBetweener;
 import com.matoon.eternity.network.MsgTribunal;
 import com.matoon.eternity.network.MsgTribunalFx;
@@ -65,6 +68,7 @@ public class ClientProxy extends CommonProxy {
         RenderingRegistry.registerEntityRenderingHandler(EntityEinherjar.class, RenderEinherjar::new);
         RenderingRegistry.registerEntityRenderingHandler(EntityDestroyer.class, RenderDestroyer::new);
         RenderingRegistry.registerEntityRenderingHandler(EntityDestroyerArmor.class, RenderDestroyer::new);
+        RenderingRegistry.registerEntityRenderingHandler(EntityGrandmaster.class, RenderGrandmaster::new);
         EternityItems.ASTRAL_REGULATOR.setTileEntityItemStackRenderer(new RegulatorItemRenderer());
         EternityItems.CASKET.setTileEntityItemStackRenderer(new CasketItemRenderer());
         EinherjarItemRenderer gear = new EinherjarItemRenderer();
@@ -84,6 +88,9 @@ public class ClientProxy extends CommonProxy {
         MinecraftForge.EVENT_BUS.register(ChampionClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(VaultClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(ArmorClient.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(GrandmasterClient.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(Cutscene.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(com.matoon.eternity.client.gui.SpeakerPanel.INSTANCE);
         ArmorClient.INSTANCE.register();
         EternityItems.RELIC_TRACKER.addPropertyOverride(new ResourceLocation("angle"), new RelicTrackerAngle());
     }
@@ -115,6 +122,10 @@ public class ClientProxy extends CommonProxy {
     /** Packets arrive on the network thread; everything visual happens on the client thread. */
     @Override
     public void receive(IMessage message) {
+        if (message instanceof MsgGrandmaster) {
+            Minecraft.getMinecraft().addScheduledTask(() -> GrandmasterClient.INSTANCE.handle((MsgGrandmaster) message));
+            return;
+        }
         if (message instanceof MsgTribunal) {
             Minecraft.getMinecraft().addScheduledTask(() -> TribunalClient.INSTANCE.handle((MsgTribunal) message));
         } else if (message instanceof MsgTribunalFx && ((MsgTribunalFx) message).type >= MsgTribunalFx.VAULT_STATE) {

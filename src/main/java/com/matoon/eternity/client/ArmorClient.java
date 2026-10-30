@@ -5,6 +5,10 @@ import com.matoon.eternity.entity.ArmorUpgrade;
 import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EntityDestroyerArmor.Command;
 import com.matoon.eternity.entity.Overcharge;
+import com.matoon.eternity.entity.EntityInBetweener;
+import com.matoon.eternity.entity.EntityLivingTribunal;
+import com.matoon.eternity.entity.EntityOrderChaos;
+import com.matoon.eternity.item.ItemAstralRegulator;
 import com.matoon.eternity.item.ItemEinherjarSpear;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.network.MsgArmorCommand;
@@ -73,6 +77,8 @@ public final class ArmorClient {
     public static final KeyBinding OVERCHARGE_NEXT = new KeyBinding("key.eternity.armor_overcharge_next", Keyboard.KEY_RIGHT, "key.categories.eternity");
     public static final KeyBinding OVERCHARGE_PREV = new KeyBinding("key.eternity.armor_overcharge_prev", Keyboard.KEY_LEFT, "key.categories.eternity");
     public static final KeyBinding OVERCHARGE_CUT = new KeyBinding("key.eternity.armor_overcharge_cut", Keyboard.KEY_BACK, "key.categories.eternity");
+    /** Raising the Astral Regulator in its chest at whatever they look at, as they would raise it in a hand. */
+    public static final KeyBinding ABSORB = new KeyBinding("key.eternity.armor_absorb", Keyboard.KEY_G, "key.categories.eternity");
     /** Which of its parts the overcharge keys turn, by {@link Overcharge} index; its systems menu picks it too. */
     public static int surgePart;
 
@@ -87,7 +93,7 @@ public final class ArmorClient {
     private boolean threw;
     /** How long each overcharge key has been held, and whether the others were down last tick. */
     private int upFor, downFor;
-    private boolean nextWas, prevWas, cutWas;
+    private boolean nextWas, prevWas, cutWas, absorbWas;
     /** Ticks inside it since they were last put in, and whether they have paged through their powers yet: until then, they are told how. */
     private int insideTicks;
     private boolean paged;
@@ -106,6 +112,7 @@ public final class ArmorClient {
         ClientRegistry.registerKeyBinding(OVERCHARGE_NEXT);
         ClientRegistry.registerKeyBinding(OVERCHARGE_PREV);
         ClientRegistry.registerKeyBinding(OVERCHARGE_CUT);
+        ClientRegistry.registerKeyBinding(ABSORB);
     }
 
     @Nullable
@@ -177,6 +184,15 @@ public final class ArmorClient {
         }
         slamWas = slam;
         surgeKeys(armor, free);
+        // The Regulator in its chest, raised.
+        boolean absorb = free && held(ABSORB);
+        while (ABSORB.isPressed()) {
+            absorb = free;
+        }
+        if (absorb && !absorbWas) {
+            EternityNetwork.sendToServer(new MsgArmorCommand(Command.ABSORB, true));
+        }
+        absorbWas = absorb;
         // Jump: held, for its jets; tapped twice, it takes to the air or comes out of it.
         boolean jump = armor.clientJump;
         if (jump != jumpSent) {
@@ -261,6 +277,23 @@ public final class ArmorClient {
             EternityNetwork.sendToServer(new MsgArmorCommand(Command.SURGE, true, Short.MIN_VALUE & 0xFFFF));
         }
         cutWas = cut;
+    }
+
+    /**
+     * Under the crosshair, while the Regulator in its chest has something beaten in front of it to drink in: the key
+     * that raises it.
+     */
+    private void absorbHint(EntityDestroyerArmor armor, ScaledResolution res) {
+        if (ItemAstralRegulator.slotted(mc.player).isEmpty()) {
+            return;
+        }
+        String what = EntityLivingTribunal.downedNear(mc.player) ? "the Living Tribunal" : EntityOrderChaos.downedNear(mc.player) ? "them"
+                : EntityInBetweener.fallenNear(mc.player) ? "the In-Betweener" : null;
+        if (what == null) {
+            return;
+        }
+        String text = "[" + ABSORB.getDisplayName() + "] Draw " + what + " into the Astral Regulator";
+        mc.fontRenderer.drawStringWithShadow(text, (res.getScaledWidth() - mc.fontRenderer.getStringWidth(text)) / 2F, res.getScaledHeight() / 2F + 26F, 0xC890FF);
     }
 
     /** How far a key held this many ticks turns a part this tick: a step as it goes down, then repeating, then running. */
@@ -361,6 +394,7 @@ public final class ArmorClient {
                 boolean firstPerson = mc.gameSettings.thirdPersonView == 0;
                 ArmorView.visor(armor, res.getScaledWidth_double(), res.getScaledHeight_double(), event.getPartialTicks(), firstPerson);
                 scrollHint(armor, res);
+                absorbHint(armor, res);
                 if (exitHeld > 0) {
                     ArmorView.leaving(res.getScaledWidth_double(), res.getScaledHeight_double(), Math.min(1F, (exitHeld + event.getPartialTicks()) / EXIT_HOLD));
                 }

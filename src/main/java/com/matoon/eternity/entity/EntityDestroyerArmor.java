@@ -111,7 +111,7 @@ public class EntityDestroyerArmor extends EntityLivingBase implements DestroyerB
     public enum State { EMPTY, RISE, ENTER, EXIT, READY, PUNCH_R, PUNCH_L, SLAM, RAY, RAY_END, VENT, DOWN, IMPLODE }
 
     /** What its pilot asks of it. */
-    public enum Command { ATTACK, FIRE, SLAM, EXIT, MENU, FLY, JUMP, SURGE }
+    public enum Command { ATTACK, FIRE, SLAM, EXIT, MENU, FLY, JUMP, SURGE, ABSORB }
 
     /** How badly it is hurt, by how much integrity it has left. */
     public enum Condition {
@@ -364,6 +364,24 @@ public class EntityDestroyerArmor extends EntityLivingBase implements DestroyerB
             inventory.setInventorySlotContents(SLOT_STONES + i, ItemStack.EMPTY);
         }
         tend();
+    }
+
+    /**
+     * The Astral Regulator in its chest, live for whoever is inside: counted as theirs (see
+     * {@link ItemAstralRegulator#slotted}). On the server, the stack itself, so whatever it drinks in is kept.
+     */
+    public ItemStack lentRegulator(@Nullable Entity rider) {
+        if (rider == null || rider != pilot() || !has(ArmorUpgrade.CRADLE) || getState() == State.IMPLODE) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack stack = world.isRemote ? dataManager.get(REGULATOR) : inventory.getStackInSlot(SLOT_REGULATOR);
+        return stack.getItem() instanceof ItemAstralRegulator ? stack : ItemStack.EMPTY;
+    }
+
+    /** What the Regulator in its chest has drunk in, for the powers it lends; empty for none. */
+    public String regulatorKinds() {
+        ItemStack stack = has(ArmorUpgrade.CRADLE) ? regulator() : ItemStack.EMPTY;
+        return stack.getItem() instanceof ItemAstralRegulator && ItemAstralRegulator.isCharged(stack) ? String.join(",", ItemAstralRegulator.absorbed(stack)) : "";
     }
 
     /** The Astral Regulator in its chest, or nothing. */
@@ -1268,6 +1286,11 @@ public class EntityDestroyerArmor extends EntityLivingBase implements DestroyerB
             case JUMP:
                 jumpHeld = down;
                 break;
+            case ABSORB:
+                if (down && hidesPilot() && from instanceof EntityPlayerMP) {
+                    absorb((EntityPlayerMP) from);
+                }
+                break;
             case SURGE: {
                 int part = (value >> 16) - 1;
                 short step = (short) value;
@@ -1276,6 +1299,25 @@ public class EntityDestroyerArmor extends EntityLivingBase implements DestroyerB
                 }
                 break;
             }
+        }
+    }
+
+    /**
+     * The Regulator in its chest raised at whatever its pilot looks at, as they would raise it in their hand: it
+     * drinks in a beaten cosmic being, Eternity as he dies.
+     */
+    private void absorb(EntityPlayerMP pilot) {
+        ItemStack stack = lentRegulator(pilot);
+        if (stack.isEmpty()) {
+            pilot.sendStatusMessage(new TextComponentString(TextFormatting.GRAY + (has(ArmorUpgrade.CRADLE)
+                    ? "There is no Astral Regulator in its chest to raise." : "It has no cradle to hold an Astral Regulator: forge the Cradle.")), true);
+            return;
+        }
+        if (ItemAstralRegulator.raise(pilot, stack, EnumHand.MAIN_HAND) == net.minecraft.util.EnumActionResult.SUCCESS) {
+            sound(SoundEvents.BLOCK_PORTAL_TRIGGER, 1.5F, 1.4F);
+            tend();
+        } else {
+            pilot.sendStatusMessage(new TextComponentString(TextFormatting.GRAY + "Nothing it looks at for the Regulator to drink in: a cosmic being, beaten."), true);
         }
     }
 
@@ -1522,6 +1564,10 @@ public class EntityDestroyerArmor extends EntityLivingBase implements DestroyerB
      */
     private void lend(@Nullable EntityPlayer pilot) {
         boolean inside = pilot != null && hidesPilot();
+        ItemStack heart = inside ? lentRegulator(pilot) : ItemStack.EMPTY;
+        if (!heart.isEmpty()) {
+            heart.getItem().onUpdate(heart, world, pilot, -1, false);
+        }
         boolean soar = inside && StoneAbilities.flying(pilot);
         if (soar != dataManager.get(SOARING)) {
             dataManager.set(SOARING, soar);
@@ -1888,6 +1934,9 @@ public class EntityDestroyerArmor extends EntityLivingBase implements DestroyerB
         // Its plating overcharged turns some of every blow.
         if (surging() && source != DamageSource.OUT_OF_WORLD && source != OVERHEAT) {
             amount *= Overcharge.PLATING.factor(surge(Overcharge.PLATING));
+        }
+        if (pilot != null && ItemAstralRegulator.holdsIn(lentRegulator(pilot), ItemAstralRegulator.ETERNITY) && source != DamageSource.OUT_OF_WORLD) {
+            amount = Math.min(amount, getMaxHealth() * (float) EternityConfig.combat.maxHitFraction);
         }
         float before = getHealth();
         boolean hurt = super.attackEntityFrom(source, amount);

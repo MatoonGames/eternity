@@ -13,6 +13,7 @@ import net.minecraftforge.fml.common.network.NetworkRegistry;
 import com.matoon.eternity.world.ChampionDirector;
 import com.matoon.eternity.world.CometDirector;
 import com.matoon.eternity.world.Director;
+import com.matoon.eternity.world.GrandmasterDirector;
 import com.matoon.eternity.world.InBetweenerDirector;
 import com.matoon.eternity.world.MastersPowers;
 import com.matoon.eternity.world.Nexus;
@@ -73,6 +74,7 @@ public class Eternity {
         MinecraftForge.EVENT_BUS.register(TamarataBreaker.INSTANCE);
         MinecraftForge.EVENT_BUS.register(VaultDirector.INSTANCE);
         MinecraftForge.EVENT_BUS.register(Armory.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(GrandmasterDirector.INSTANCE);
         StoneAbilities.register();
         NetworkRegistry.INSTANCE.registerGuiHandler(this, new EternityGuis());
         StarChamber.register();
@@ -118,5 +120,6 @@ public class Eternity {
         MastersPowers.INSTANCE.reset();
         ChampionDirector.INSTANCE.reset();
         VaultDirector.INSTANCE.reset();
+        GrandmasterDirector.INSTANCE.reset();
     }
 }
