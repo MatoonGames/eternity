@@ -1,0 +1,6 @@
+{
+    "parent": "block/cube_all",
+    "textures": {
+        "all": "eternity:blocks/barrow_seal_11_lit"
+    }
+}

@@ -27,6 +27,9 @@ public class AbilityIcons {
     private static final String[] BETWEEN = {"inversion", "equilibrium", "paradox"};
     private static final Color BLUE = new Color(120, 200, 255, 160);
     private static final Color GREY = new Color(200, 200, 205, 150);
+    /** The Reality Stone's red, and the Soul Stone's amber: their powers at the Gardener's hedge. */
+    private static final Color RED = new Color(255, 50, 60, 160);
+    private static final Color AMBER = new Color(255, 150, 30, 160);
     private static Color GLOW = VIOLET;
     private static final Color CORE = new Color(245, 235, 255);
 
@@ -35,10 +38,11 @@ public class AbilityIcons {
         out.mkdirs();
         String[] names = {"unmake", "void_lances", "starfall", "shatter", "singularity", "rift_step", "rift_gate",
                 "gavel", "equitys_gaze", "necessitys_storm", "scales", "sentence", "convergence", "pillars", "cosmic_verdict",
-                "decree", "edict", "tessellation", "alignment", "dice", "maw", "wanderers", "disarray", "inversion", "equilibrium", "paradox"};
+                "decree", "edict", "tessellation", "alignment", "dice", "maw", "wanderers", "disarray", "inversion", "equilibrium", "paradox",
+                "rewrite", "reap"};
         for (String name : names) {
             GLOW = java.util.Arrays.asList(TRIBUNAL).contains(name) ? GOLD : java.util.Arrays.asList(CHAOS).contains(name) ? BLUE
-                    : java.util.Arrays.asList(BETWEEN).contains(name) ? GREY : VIOLET;
+                    : java.util.Arrays.asList(BETWEEN).contains(name) ? GREY : "rewrite".equals(name) ? RED : "reap".equals(name) ? AMBER : VIOLET;
             BufferedImage big = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
             Graphics2D g = big.createGraphics();
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -240,6 +244,27 @@ public class AbilityIcons {
                 g.fill(new Ellipse2D.Double(36, 16, 5, 5));
                 g.fill(new Ellipse2D.Double(45, 25, 5, 5));
                 break;
+            case "rewrite": {
+                // A thorned stem, whole at the root and coming apart into specks above, where reality has been rewritten.
+                burn(g, line(24, 54, 24, 30), 3.5F);
+                burn(g, line(24, 44, 16, 38), 2F);
+                burn(g, line(24, 36, 31, 31), 2F);
+                for (int[] d : new int[][]{{28, 22}, {35, 17}, {42, 22}, {44, 12}}) {
+                    g.setColor(CORE);
+                    g.fill(new java.awt.geom.Rectangle2D.Double(d[0] - 2.5D, d[1] - 2.5D, 5D, 5D));
+                }
+                break;
+            }
+            case "reap": {
+                // Its life rising off a dead stalk in one thread, into the stone.
+                burn(g, line(32, 54, 32, 34), 3.5F);
+                burn(g, line(32, 46, 22, 52), 2.5F);
+                burn(g, line(32, 42, 41, 48), 2.5F);
+                g.setColor(AMBER);
+                g.fill(new Ellipse2D.Double(20, 8, 24, 24));
+                burn(g, new Ellipse2D.Double(23, 11, 18, 18), 3F);
+                break;
+            }
             case "maw": {
                 // A mouth, open, breathing in.
                 Path2D mouth = new Path2D.Double();

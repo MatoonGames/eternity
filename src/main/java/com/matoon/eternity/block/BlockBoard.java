@@ -23,12 +23,15 @@ import net.minecraft.world.World;
  * A square of the Grandmaster's board: gold or blue lacquer, the throne at its heart, the
  * refuges at its corners, and the rim around it all. He lays it out and takes it away again,
  * so it can never be mined, blown up, picked or dropped; striking it is another matter, and
- * the board's own director listens for that.
+ * the board's own director listens for that. Where the Magus has laid a hand on it, out of
+ * turn, the lacquer goes white, veined with violet, and stays that way.
  */
 public class BlockBoard extends Block {
 
     public enum Face implements IStringSerializable {
-        GOLD, BLUE, THRONE, REFUGE, RIM;
+        GOLD, BLUE, THRONE, REFUGE, RIM,
+        /** A square the Magus has moved a piece across. Appended: a face is kept by its ordinal. */
+        WHITE;
 
         @Override
         public String getName() {
@@ -67,7 +70,7 @@ public class BlockBoard extends Block {
     @Override
     public MapColor getMapColor(IBlockState state, IBlockAccess world, BlockPos pos) {
         Face face = state.getValue(COLOR);
-        return face == Face.BLUE || face == Face.REFUGE ? MapColor.LAPIS : MapColor.GOLD;
+        return face == Face.BLUE || face == Face.REFUGE ? MapColor.LAPIS : face == Face.WHITE ? MapColor.QUARTZ : MapColor.GOLD;
     }
 
     @Override

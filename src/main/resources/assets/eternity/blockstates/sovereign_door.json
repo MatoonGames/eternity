@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=false": {
+      "model": "eternity:sovereign_door"
+    },
+    "lit=true": {
+      "model": "eternity:sovereign_door_lit"
+    }
+  }
+}

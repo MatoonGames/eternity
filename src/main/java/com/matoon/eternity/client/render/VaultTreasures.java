@@ -118,7 +118,10 @@ public final class VaultTreasures {
         GlStateManager.disableCull();
         GlStateManager.shadeModel(GL11.GL_SMOOTH);
         Vec3d flame = at(Relic.ETERNAL_FLAME, 34.5D).subtract(camera);
-        flame(flame, age);
+        // Once it has set a stone, there is nothing in the chalice but the dark.
+        if (!com.matoon.eternity.client.StoryClient.INSTANCE.flameSpent()) {
+            flame(flame, age);
+        }
         Vec3d fork = at(Relic.TUNING_FORK, 27D).subtract(camera);
         WarlockFx.glow(fork, 1.1D, new float[]{1F, 0.85F, 0.5F}, 0.06F + 0.04F * MathHelper.sin(age * 0.21F));
         Vec3d orb = at(Relic.WARLOCKS_EYE, 21.5D).subtract(camera);

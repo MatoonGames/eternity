@@ -105,7 +105,9 @@ public final class CometDirector {
         }
         switch (d.phase) {
             case DORMANT:
-                if (d.clock % TICKS_PER_MINUTE == 0 && EternityConfig.comet.enabled) {
+                if (d.promised != null && d.clock >= d.promiseAt && d.clock % 20 == 0) {
+                    keepPromise(d, server);
+                } else if (d.clock % TICKS_PER_MINUTE == 0 && EternityConfig.comet.enabled) {
                     rollAppearance(players);
                 }
                 break;
@@ -127,6 +129,30 @@ public final class CometDirector {
         if (d.relic != null && d.clock % 20 == 0) {
             tickRelic(d);
         }
+    }
+
+    /**
+     * Death has shown someone the comet: it comes, into their own sky, a little while after, the
+     * first moment they are standing in the Overworld. Nothing to wait two days of chance for.
+     */
+    public void promise(EntityPlayerMP player, int delayTicks) {
+        CometData d = data();
+        if (d.phase == CometData.Phase.SHATTERED || d.phase == CometData.Phase.CRACKING) {
+            return;
+        }
+        d.promised = player.getUniqueID();
+        d.promiseAt = d.clock + delayTicks;
+        d.markDirty();
+    }
+
+    private void keepPromise(CometData d, MinecraftServer server) {
+        EntityPlayerMP player = server.getPlayerList().getPlayerByUUID(d.promised);
+        if (player == null || player.dimension != 0 || player.isSpectator() || !player.isEntityAlive()) {
+            return;
+        }
+        d.promised = null;
+        d.markDirty();
+        appear(player, false);
     }
 
     /** Once a minute, for each place someone is, a small chance it comes. */

@@ -28,6 +28,8 @@ public final class DialogueCamera {
 
     private final Minecraft mc = Minecraft.getMinecraft();
     private long lastFrame;
+    /** This frame's turn is a story scene's, which only leans the view rather than taking it. */
+    private boolean gentle;
 
     private DialogueCamera() {
     }
@@ -55,7 +57,8 @@ public final class DialogueCamera {
         }
         float yaw = (float) Math.toDegrees(Math.atan2(-to.x, to.z));
         float pitch = (float) -Math.toDegrees(Math.atan2(to.y, flat));
-        float k = 1F - (float) Math.exp(-seconds * TURN_RATE);
+        float k = 1F - (float) Math.exp(-seconds * (gentle ? TURN_RATE * 0.35F : TURN_RATE));
+        gentle = false;
         float turnYaw = MathHelper.wrapDegrees(yaw - player.rotationYaw) * k;
         float turnPitch = (MathHelper.clamp(pitch, -90F, 90F) - player.rotationPitch) * k;
         // Both ends of this frame's interpolation move together, so the turn is smooth.
@@ -69,11 +72,23 @@ public final class DialogueCamera {
 
     @Nullable
     private Vec3d speaker(float partialTicks) {
+        if (mc.currentScreen instanceof com.matoon.eternity.client.gui.GuiStoryChoice) {
+            return ((com.matoon.eternity.client.gui.GuiStoryChoice) mc.currentScreen).speakerAt(partialTicks);
+        }
         if (mc.currentScreen instanceof GuiInBetweener) {
             return ((GuiInBetweener) mc.currentScreen).speakerAt(partialTicks);
         }
         if (mc.currentScreen instanceof GuiTribunal) {
             return TribunalClient.INSTANCE.speakerAt();
+        }
+        // In a story scene, with nothing open, the view settles on whoever has the line, unhurried.
+        int focus = com.matoon.eternity.client.gui.SpeakerPanel.INSTANCE.sceneFocus();
+        if (mc.currentScreen == null && focus >= 0 && !Cutscene.INSTANCE.isActive()) {
+            net.minecraft.entity.Entity e = mc.world.getEntityByID(focus);
+            if (e != null && e != mc.player && e.getDistance(mc.player) < 24F) {
+                gentle = true;
+                return e.getPositionEyes(partialTicks);
+            }
         }
         return null;
     }

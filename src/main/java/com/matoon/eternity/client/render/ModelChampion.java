@@ -38,6 +38,8 @@ public class ModelChampion extends ModelBase {
 
     public final ModelRenderer root, abdomen, chest, head, rArm, rFore, lArm, lFore, rLeg, rShin, lLeg, lShin;
     public final ModelRenderer[] mane = new ModelRenderer[EntityChampion.MANE];
+    /** The stone in his brow: only there while it is. */
+    private final ModelRenderer stone;
     private final float[] pose = new float[N];
     private float partial;
 
@@ -74,7 +76,7 @@ public class ModelChampion extends ModelBase {
         head = box(chest, 38, 0, -3.5F, -7F, -3.5F, 7, 7, 7);
         head.setRotationPoint(0F, -8.6F, -0.8F);
         box(head, 98, 6, -3.5F, -5.2F, -4.1F, 7, 1, 1);
-        ModelRenderer stone = new ModelRenderer(this, 120, 0);
+        stone = new ModelRenderer(this, 120, 0);
         stone.cubeList.add(new ModelBox(stone, 120, 0, -0.5F, -6.5F, -4.3F, 1, 1, 1, 0.2F));
         head.addChild(stone);
         // The mane: a crown swept back off his forehead, full at the sides, then the long locks behind.
@@ -174,6 +176,7 @@ public class ModelChampion extends ModelBase {
             return;
         }
         EntityChampion c = (EntityChampion) entity;
+        stone.showModel = c.wearsStone();
         float t = (c.clientStateTicks + partial) * c.getTempo();
         float pitch = headPitch * 0.017453292F;
         float rage = c.prevShownRage + (c.shownRage - c.prevShownRage) * partial;
@@ -270,6 +273,9 @@ public class ModelChampion extends ModelBase {
                 return 7F;
             case DRIFT:
                 return 14F;
+            case SNARED:
+                // Yanked into it: no easing.
+                return 3F;
             default:
                 return 5F;
         }
@@ -340,6 +346,15 @@ public class ModelChampion extends ModelBase {
                 break;
             case BOARD:
                 board(p, t, age);
+                break;
+            case SNARED:
+                snared(p, t, age);
+                break;
+            case STRAIN:
+                strain(p, t, age);
+                break;
+            case TEAR:
+                tear(p, t, age);
                 break;
         }
     }
@@ -1166,6 +1181,136 @@ public class ModelChampion extends ModelBase {
         set(p, RL_X, 0.3F, k);
         set(p, LL_X, 0.4F, k);
         p[LOOK] = 0F;
+    }
+
+    // ------------------------------------------------------------------ the Gardener's hedge
+
+    /**
+     * Caught: the vines whip round him and yank his arms down to his sides and his feet together. He rocks
+     * with it, then stands in it, looking down at himself, turning his head to see how much of it there is.
+     */
+    private static void snared(float[] p, float t, float age) {
+        float breath = MathHelper.sin(age * 0.09F);
+        // The jolt as it takes him, settling.
+        float jolt = (1F - smooth(t / 12F)) * MathHelper.sin(t * 0.9F);
+        p[DROP] = 0.25F + 0.4F * jolt;
+        p[LEAN] = 0.03F + 0.05F * jolt;
+        p[WAIST_X] = 0.04F;
+        p[CHEST_X] = 0.06F + breath * 0.02F;
+        // Pinned: arms dragged down and a little out, elbows barely bent, fists clenched against it.
+        float pin = 0.32F + 0.04F * MathHelper.sin(age * 1.9F) * smooth(t / 10F);
+        p[RA_X] = 0.12F;
+        p[RA_Z] = pin;
+        p[R_ELBOW] = -0.3F;
+        p[LA_X] = 0.12F;
+        p[LA_Z] = -pin;
+        p[L_ELBOW] = -0.3F;
+        // Feet bound together.
+        p[RL_Z] = 0.02F;
+        p[LL_Z] = -0.02F;
+        p[R_KNEE] = 0.12F;
+        p[L_KNEE] = 0.12F;
+        // He looks down at what has hold of him, then from side to side along it.
+        float look = smooth((t - 8F) / 14F);
+        p[HEAD_X] = 0.55F * look - 0.1F * jolt;
+        p[HEAD_Y] = MathHelper.sin(Math.max(0F, t - 22F) * 0.05F) * 0.55F * look;
+        p[HEAD_Z] = -p[HEAD_Y] * 0.15F;
+        p[LOOK] = 0F;
+    }
+
+    /** One heave against the vines in {@link EntityChampion#HEAVE} beats: how hard he is pulling, 0 to 1. */
+    static float heave(float t) {
+        float b = t % EntityChampion.HEAVE;
+        return smooth(b / 12F) * (1F - smooth((b - 24F) / 10F));
+    }
+
+    /**
+     * Heaving: down into his legs, shoulders bunching, arms forced out against the vines a hand's width and
+     * dragged back as he slackens; head thrown back at the top of it, trembling; then down, breathing hard.
+     */
+    private static void strain(float[] p, float t, float age) {
+        snared(p, 30F, age);
+        float h = heave(t);
+        float tremor = MathHelper.sin(age * 3.1F) * 0.04F * h;
+        float pant = (1F - h) * MathHelper.sin(age * 0.35F) * 0.04F;
+        p[DROP] = 0.25F + 0.9F * h;
+        p[LEAN] = 0.03F + 0.08F * h;
+        p[WAIST_X] = 0.04F + 0.1F * h;
+        p[CHEST_X] = 0.12F - 0.3F * h + pant;
+        p[CHEST_Z] = tremor;
+        p[RA_X] = 0.12F - 0.3F * h;
+        p[RA_Z] = 0.32F + 0.42F * h + tremor;
+        p[R_ELBOW] = -0.3F - 0.75F * h;
+        p[LA_X] = 0.12F - 0.3F * h;
+        p[LA_Z] = -0.32F - 0.42F * h - tremor;
+        p[L_ELBOW] = -0.3F - 0.75F * h;
+        p[R_KNEE] = 0.12F + 0.45F * h;
+        p[L_KNEE] = 0.12F + 0.45F * h;
+        p[RL_X] = -0.1F * h;
+        p[LL_X] = -0.1F * h;
+        p[RL_Z] = 0.02F + 0.1F * h;
+        p[LL_Z] = -0.02F - 0.1F * h;
+        p[HEAD_X] = 0.45F - 0.85F * h + pant * 2F;
+        p[HEAD_Y] = 0F;
+        p[HEAD_Z] = tremor * 1.5F;
+    }
+
+    /**
+     * Tearing out: down into a crouch with his forearms crossed in front of his chest, shaking; then he
+     * throws his arms apart and up and rises with them, and the vines go; the roar, head back; and down
+     * into his guard.
+     */
+    private static void tear(float[] p, float t, float age) {
+        strain(p, 0F, age);
+        int rip = EntityChampion.TEAR_RIP;
+        float tremor = MathHelper.sin(age * 3.4F) * 0.05F;
+        float gather = smooth(t / (rip - 3F)) * (1F - smooth((t - rip + 1F) / 2F));
+        set(p, DROP, 1.7F, gather);
+        set(p, LEAN, 0.25F, gather);
+        set(p, WAIST_X, 0.2F, gather);
+        set(p, CHEST_X, 0.32F + tremor, gather);
+        set(p, HEAD_X, 0.35F, gather);
+        set(p, RA_X, -1.15F, gather);
+        set(p, RA_Y, -0.85F, gather);
+        set(p, RA_Z, 0.1F + tremor, gather);
+        set(p, R_ELBOW, -1.7F, gather);
+        set(p, LA_X, -1.15F, gather);
+        set(p, LA_Y, 0.85F, gather);
+        set(p, LA_Z, -0.1F - tremor, gather);
+        set(p, L_ELBOW, -1.7F, gather);
+        set(p, R_KNEE, 0.75F, gather);
+        set(p, L_KNEE, 0.75F, gather);
+        // Out: arms flung wide and high, chest thrown open, rising.
+        float out = outBack(clamp((t - rip + 1F) / 4F)) * (1F - smooth((t - 46F) / 14F));
+        float shake = MathHelper.sin(age * 2.7F) * 0.04F * smooth((t - rip - 4F) / 6F);
+        set(p, DROP, -0.5F, out);
+        set(p, LEAN, -0.1F, out);
+        set(p, WAIST_X, -0.08F, out);
+        set(p, CHEST_X, -0.4F + shake, out);
+        set(p, HEAD_X, -0.75F, out);
+        set(p, HEAD_Y, 0F, out);
+        set(p, RA_X, -0.55F, out);
+        set(p, RA_Y, 0F, out);
+        set(p, RA_Z, 1.45F + shake, out);
+        set(p, R_ELBOW, -0.25F, out);
+        set(p, LA_X, -0.55F, out);
+        set(p, LA_Y, 0F, out);
+        set(p, LA_Z, -1.45F - shake, out);
+        set(p, L_ELBOW, -0.25F, out);
+        set(p, RL_Z, 0.22F, out);
+        set(p, LL_Z, -0.22F, out);
+        set(p, R_KNEE, 0.15F, out);
+        set(p, L_KNEE, 0.15F, out);
+        // And back into his guard, done with it.
+        float back = smooth((t - 48F) / 12F);
+        if (back > 0F) {
+            float[] g = new float[N];
+            guard(g, age, 0F);
+            for (int i = 0; i < N; i++) {
+                p[i] += (g[i] - p[i]) * back;
+            }
+        }
+        p[LOOK] = back;
     }
 
     // ------------------------------------------------------------------ easing

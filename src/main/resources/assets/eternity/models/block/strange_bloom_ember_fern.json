@@ -1,0 +1,6 @@
+{
+    "parent": "block/cross",
+    "textures": {
+        "cross": "eternity:blocks/strange_bloom_ember_fern"
+    }
+}

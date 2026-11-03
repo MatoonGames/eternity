@@ -198,6 +198,21 @@ public final class GrandmasterBoard {
             case MsgGrandmaster.FX_FADE:
                 effects.add(new CardBurst(m.a, 30, rand.nextLong()));
                 break;
+            case MsgGrandmaster.FX_HINT: {
+                // Warlock's suggestion: the piece in blue, where it goes in white, anything it takes in red.
+                int[] squares = {(int) m.a.x, (int) m.a.y, (int) m.b.x, (int) m.b.y};
+                int[] colours = {1, 4, 3, 3};
+                for (int i = 0; i < squares.length; i++) {
+                    if (squares[i] >= 0 && squares[i] < Kingstable.CELLS) {
+                        if (m.value > 0) {
+                            demoGlow(colours[i], m.value, squares[i]);
+                        } else {
+                            glowUntil[squares[i]] = Math.min(glowUntil[squares[i]], tick + 10);
+                        }
+                    }
+                }
+                break;
+            }
             default:
                 break;
         }
@@ -320,8 +335,12 @@ public final class GrandmasterBoard {
             float[] col = glow[sq] == 1 ? BLUE : glow[sq] == 2 ? STONE : glow[sq] == 3 ? RED : PALE;
             Vec3d c = centre(sq).add(0D, 0.05D, 0D).subtract(camera);
             float pulse = 0.7F + 0.3F * MathHelper.sin(t * 0.3F + sq);
-            WarlockFx.flat(c, 1.5D, col, 0.35F * left * pulse);
-            WarlockFx.ring(c, new Vec3d(0D, 1D, 0D), 1.25D, 0.1D, col, 0.85F * left);
+            WarlockFx.flat(c, 1.5D, col, 0.55F * left * pulse);
+            WarlockFx.flat(c, 0.8D, WarlockFx.WHITE, 0.25F * left * pulse);
+            WarlockFx.ring(c, new Vec3d(0D, 1D, 0D), 1.25D, 0.12D, col, 1F * left);
+            // A ring of the same light lifting off it, over and over, so it can be found among the pieces.
+            float up = ((t + sq * 7F) % 30F) / 30F;
+            WarlockFx.ring(c.add(0D, up * 2.6D, 0D), new Vec3d(0D, 1D, 0D), 1.1D - up * 0.3D, 0.08D, col, 0.8F * left * (1F - up));
         }
     }
 

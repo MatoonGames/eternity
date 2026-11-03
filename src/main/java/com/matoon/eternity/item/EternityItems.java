@@ -14,6 +14,7 @@ public final class EternityItems {
     public static final ItemRelicTracker RELIC_TRACKER = new ItemRelicTracker();
     public static final ItemAstralRegulator ASTRAL_REGULATOR = new ItemAstralRegulator();
     public static final ItemCasket CASKET = new ItemCasket();
+    public static final ItemChampionTicket CHAMPION_TICKET = new ItemChampionTicket();
     public static final ItemEinherjarArmor EINHERJAR_HELM = new ItemEinherjarArmor("einherjar_helm", EntityEquipmentSlot.HEAD);
     public static final ItemEinherjarArmor EINHERJAR_CUIRASS = new ItemEinherjarArmor("einherjar_cuirass", EntityEquipmentSlot.CHEST);
     public static final ItemEinherjarArmor EINHERJAR_GREAVES = new ItemEinherjarArmor("einherjar_greaves", EntityEquipmentSlot.LEGS);
@@ -35,6 +36,7 @@ public final class EternityItems {
         event.getRegistry().register(RELIC_TRACKER);
         event.getRegistry().register(ASTRAL_REGULATOR);
         event.getRegistry().register(CASKET);
+        event.getRegistry().register(CHAMPION_TICKET);
         event.getRegistry().registerAll(EINHERJAR_GEAR);
     }
 

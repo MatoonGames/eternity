@@ -216,7 +216,7 @@ public class ModelGrandmaster extends ModelBase {
 
         float[] p = pose.clone();
         float gait = g.prevGait + (g.gait - g.prevGait) * partial;
-        if (gait > 0.01F && state != State.FALL && state != State.LIE && state != State.FADE) {
+        if (gait > 0.01F && state != State.FALL && state != State.LIE && state != State.FADE && state != State.LIFTED) {
             stroll(p, g.prevStride + (g.stride - g.prevStride) * partial, gait, state);
         }
         float broken = g.getBroken();
@@ -330,7 +330,10 @@ public class ModelGrandmaster extends ModelBase {
             case CLAP:
                 return 4F;
             case FALL:
+            case AFRAID:
                 return 3F;
+            case LIFTED:
+                return 2F;
             case IDLE:
             case THINK:
                 return 10F;
@@ -380,6 +383,12 @@ public class ModelGrandmaster extends ModelBase {
                 break;
             case BOW:
                 bow(p, t, age);
+                break;
+            case AFRAID:
+                afraid(p, t, age);
+                break;
+            case LIFTED:
+                lifted(p, t, age);
                 break;
         }
     }
@@ -740,6 +749,80 @@ public class ModelGrandmaster extends ModelBase {
         p[LL_X] += 0.25F * in;
         p[L_KNEE] += 0.2F * in;
         p[LOOK] = 1F - down;
+    }
+
+    /**
+     * Frightened, for the first time in a very long time: a flinch, then backing off with both
+     * hands up between him and it, palms out and fingers spread, shoulders drawn up, the knees
+     * soft, leaning away from it and never taking his eyes off it; a tremble all through him.
+     */
+    private static void afraid(float[] p, float t, float age) {
+        idleBase(p, age);
+        float flinch = outCubic(clamp(t / 2F)) * (1F - smooth((t - 4F) / 10F));
+        float up = outBack(clamp((t - 2F) / 6F));
+        float shake = MathHelper.sin(age * 2.1F) * 0.02F + MathHelper.sin(age * 3.7F) * 0.012F;
+        set(p, RA_X, -1.0F + shake, up);
+        set(p, RA_Y, -0.2F, up);
+        set(p, RA_Z, 0.28F, up);
+        set(p, R_ELBOW, -1.15F, up);
+        set(p, R_FORE_Y, -0.5F, up);
+        set(p, R_WRIST, -0.75F, up);
+        set(p, R_CURL, 0F, up);
+        set(p, LA_X, -1.0F - shake, up);
+        set(p, LA_Y, 0.2F, up);
+        set(p, LA_Z, -0.28F, up);
+        set(p, L_ELBOW, -1.15F, up);
+        set(p, L_FORE_Y, 0.5F, up);
+        set(p, L_WRIST, -0.75F, up);
+        set(p, L_CURL, 0F, up);
+        // Leaning away from it, the shoulders hunched up round his neck.
+        p[LEAN] -= 0.1F * up + 0.12F * flinch;
+        p[CHEST_X] += 0.16F * up + shake;
+        p[HEAD_X] += 0.1F * up - 0.2F * flinch;
+        p[HEAD_Z] -= 0.1F * up;
+        p[DROP] += 0.7F * up + 0.9F * flinch;
+        p[RL_X] -= 0.15F * up;
+        p[LL_X] -= 0.15F * up;
+        p[R_KNEE] += 0.3F * up;
+        p[L_KNEE] += 0.3F * up;
+        p[LOOK] = 1F;
+    }
+
+    /**
+     * Held off the ground by the throat: jerked up, then hanging, both hands clawing at the
+     * grip at his throat, his head forced back, his legs dangling and kicking now and then.
+     */
+    private static void lifted(float[] p, float t, float age) {
+        idleBase(p, age);
+        float jerk = outCubic(clamp(t / 3F)) * (1F - smooth((t - 3F) / 9F));
+        float in = smooth(t / 5F);
+        float claw = MathHelper.sin(age * 1.3F) * 0.08F;
+        float kick = MathHelper.sin(age * 0.6F) * Math.max(0F, MathHelper.sin(age * 0.09F));
+        set(p, RA_X, -1.1F + claw, in);
+        set(p, RA_Y, -0.62F, in);
+        set(p, RA_Z, 0.05F, in);
+        set(p, R_ELBOW, -2.2F, in);
+        set(p, R_WRIST, -0.3F, in);
+        set(p, R_CURL, 0.7F + claw, in);
+        set(p, LA_X, -1.1F - claw, in);
+        set(p, LA_Y, 0.62F, in);
+        set(p, LA_Z, -0.05F, in);
+        set(p, L_ELBOW, -2.2F, in);
+        set(p, L_WRIST, -0.3F, in);
+        set(p, L_CURL, 0.7F - claw, in);
+        p[HEAD_X] = -0.55F * in - 0.2F * jerk;
+        p[HEAD_Z] = 0F;
+        p[CHEST_X] = -0.1F * in;
+        p[TILT] = 0F;
+        p[DROP] = 0F;
+        // Nothing under his feet: the legs hang and swing, the toes down.
+        p[RL_X] = 0.08F + kick * 0.3F + 0.3F * jerk;
+        p[LL_X] = -0.05F - kick * 0.3F + 0.2F * jerk;
+        p[RL_Z] = 0.02F;
+        p[LL_Z] = -0.02F;
+        p[R_KNEE] = 0.25F + Math.max(0F, kick) * 0.4F;
+        p[L_KNEE] = 0.25F + Math.max(0F, -kick) * 0.4F;
+        p[LOOK] = 0.2F;
     }
 
     // ------------------------------------------------------------------ easing

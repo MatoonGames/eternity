@@ -48,6 +48,8 @@ import java.util.Random;
  * and spikes of ice erupt from the ground.</li>
  * <li><b>Sneak and use</b>: it bursts out all round you at once, a ring of ice and a deeper freeze.</li>
  * <li>Held, water freezes under your feet.</li>
+ * <li>The Gardener's hedge, which nothing else short of the Power Stone gets through, freezes through
+ * wherever it reaches, and frozen, breaks like glass.</li>
  * </ul>
  * Nothing it does changes the world inside Odin's Vault, the Star Chamber or the Nexus, nor
  * anywhere at all with {@code casketChangesTerrain} off. Like the stones, it cannot be destroyed.
@@ -119,6 +121,8 @@ public class ItemCasket extends ItemIndestructible {
                 freeze(victim, player, 6F, dir.scale(0.5D));
             }
         }
+        // The Gardener's hedge freezes through wherever it reaches, wherever terrain is otherwise left alone.
+        com.matoon.eternity.story.StoryDirector.INSTANCE.frostHedge(player, from, dir, GALE_LENGTH, GALE_SPREAD, 0D);
         if (changesTerrain(world)) {
             for (int i = 0; i < 140; i++) {
                 double along = 1.5D + random.nextDouble() * (GALE_LENGTH - 1.5D);
@@ -144,6 +148,7 @@ public class ItemCasket extends ItemIndestructible {
                 freeze(victim, player, 10F, away.lengthSquared() < 1.0E-4 ? Vec3d.ZERO : away.normalize().scale(0.8D));
             }
         }
+        com.matoon.eternity.story.StoryDirector.INSTANCE.frostHedge(player, at, Vec3d.ZERO, 0D, 0D, BURST_RADIUS);
         if (changesTerrain(world)) {
             for (int i = 0; i < 220; i++) {
                 double r = 1.5D + Math.sqrt(random.nextDouble()) * (BURST_RADIUS - 1.5D);

@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "flag=false,upper=false": {
+      "model": "eternity:cocoon_sealed_lower"
+    },
+    "flag=false,upper=true": {
+      "model": "eternity:cocoon_sealed_upper"
+    },
+    "flag=true,upper=false": {
+      "model": "eternity:cocoon_fused_lower"
+    },
+    "flag=true,upper=true": {
+      "model": "eternity:cocoon_fused_upper"
+    }
+  }
+}

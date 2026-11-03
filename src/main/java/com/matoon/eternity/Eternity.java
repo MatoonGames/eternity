@@ -75,13 +75,16 @@ public class Eternity {
         MinecraftForge.EVENT_BUS.register(VaultDirector.INSTANCE);
         MinecraftForge.EVENT_BUS.register(Armory.INSTANCE);
         MinecraftForge.EVENT_BUS.register(GrandmasterDirector.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(com.matoon.eternity.story.StoryDirector.INSTANCE);
         StoneAbilities.register();
+        com.matoon.eternity.ability.HedgeAbilities.register();
         NetworkRegistry.INSTANCE.registerGuiHandler(this, new EternityGuis());
         StarChamber.register();
         Nexus.register();
         OdinsVault.register();
         // Galacticraft registers the dimension itself, from the planet.
         TamarataPlanet.register();
+        com.matoon.eternity.compat.galacticraft.SovereignMoon.register();
         proxy.preInit();
     }
 
@@ -89,6 +92,7 @@ public class Eternity {
     public void postInit(FMLPostInitializationEvent event) {
         InfinityTemples.disable();
         TamarataPlanet.postInit();
+        com.matoon.eternity.compat.galacticraft.SovereignMoon.postInit();
     }
 
     @Mod.EventHandler
@@ -121,5 +125,6 @@ public class Eternity {
         ChampionDirector.INSTANCE.reset();
         VaultDirector.INSTANCE.reset();
         GrandmasterDirector.INSTANCE.reset();
+        com.matoon.eternity.story.StoryDirector.INSTANCE.reset();
     }
 }

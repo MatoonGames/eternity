@@ -46,6 +46,13 @@ public final class ChampionFx {
         final Vec3d at, dir;
         final int kind;
         final long seed;
+        /** Thrown without the stone: white and heat, none of its purple. */
+        boolean plain;
+
+        public Impact plain(boolean plain) {
+            this.plain = plain;
+            return this;
+        }
 
         public Impact(Vec3d at, Vec3d dir, int kind, long seed) {
             super(kind == 0 ? 8 : kind == 1 ? 14 : 18);
@@ -65,14 +72,14 @@ public final class ChampionFx {
             WarlockFx.glow(c, size * (1D + 1.4D * flash), WHITE, 0.9F * flash);
             WarlockFx.glow(c, size * 2.4D, HEAT, 0.3F * fade);
             WarlockFx.star(c, size * 0.25D, size * (1.3D + p * 1.4D), 14, seed, (age + partialTicks) * 0.05F, WHITE, 0.85F * fade);
-            WarlockFx.star(c, size * 0.2D, size * (1.9D + p * 1.8D), 9, seed + 7L, -(age + partialTicks) * 0.03F, PALE, 0.35F * fade);
+            WarlockFx.star(c, size * 0.2D, size * (1.9D + p * 1.8D), 9, seed + 7L, -(age + partialTicks) * 0.03F, plain ? HEAT : PALE, 0.35F * fade);
             double grow = 1D - Math.pow(1D - p, 2.5D);
             WarlockFx.ring(c.add(dir.scale(grow * size * 1.5D)), dir, size * (0.5D + 2.8D * grow), size * 0.55D, WHITE, 0.7F * fade);
             if (kind > 0) {
                 WarlockFx.ring(c.add(dir.scale(grow * size * 3.2D)), dir, size * (0.35D + 2D * grow), size * 0.45D, HEAT, 0.55F * fade);
             }
             if (kind == 2) {
-                WarlockFx.ring(c.add(dir.scale(grow * size * 5D)), dir, size * (0.3D + 1.4D * grow), size * 0.4D, MAGENTA, 0.4F * fade);
+                WarlockFx.ring(c.add(dir.scale(grow * size * 5D)), dir, size * (0.3D + 1.4D * grow), size * 0.4D, plain ? HEAT : MAGENTA, 0.4F * fade);
             }
         }
     }
@@ -233,6 +240,13 @@ public final class ChampionFx {
         final Vec3d fallback;
         final double reach;
         final int entityId;
+        /** Roared without the stone: shocked air and nothing else. */
+        boolean plain;
+
+        public Roar plain(boolean plain) {
+            this.plain = plain;
+            return this;
+        }
 
         public Roar(Vec3d at, double reach, int entityId, int ticks) {
             super(ticks);
@@ -254,12 +268,12 @@ public final class ChampionFx {
                 double r = reach * (1D - Math.pow(1D - q, 2D));
                 float fade = (1F - q) * (1F - q) * 0.4F;
                 // Shells of shocked air in three planes, so they read as a sphere from anywhere.
-                WarlockFx.ring(c, UP, r, 0.2D + r * 0.05D, PALE, fade);
+                WarlockFx.ring(c, UP, r, 0.2D + r * 0.05D, plain ? WHITE : PALE, fade);
                 WarlockFx.ring(c, c.lengthSquared() < 1.0E-4 ? UP : c.normalize(), r, 0.3D + r * 0.06D, WHITE, fade * 0.8F);
-                WarlockFx.ring(c, new Vec3d(1D, 0D, 0D), r * 0.92D, 0.2D, MAGENTA, fade * 0.5F);
+                WarlockFx.ring(c, new Vec3d(1D, 0D, 0D), r * 0.92D, 0.2D, plain ? HEAT : MAGENTA, fade * 0.5F);
             }
             float flash = Math.max(0F, 1F - p * 2.5F);
-            WarlockFx.glow(c, 1.5D + 2D * flash, MAGENTA, 0.5F * flash);
+            WarlockFx.glow(c, 1.5D + 2D * flash, plain ? HEAT : MAGENTA, (plain ? 0.2F : 0.5F) * flash);
         }
     }
 

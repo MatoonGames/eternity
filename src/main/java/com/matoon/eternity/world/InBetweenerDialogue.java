@@ -239,6 +239,11 @@ public final class InBetweenerDialogue {
 
     // ------------------------------------------------------------------ Master Order and Lord Chaos
 
+    // He sees what stands behind someone who carries Death's mark, and can't resist telling them (story chapter 4).
+    static final int IMBALANCE = 90, IMB_BALANCE = 91, IMB_DONE = 92, IMB_KNOW = 93, IMB_HALF = 94, IMB_LAST = 95;
+    // Order and Chaos, to someone carrying the stones for her: Eternity is coming. Then whatever they came to say.
+    static final int W_SIX_THIEF = 96, W_SIX_BYSTANDER = 97, W_SIX_EMPTY = 98;
+
     public static final int WRATH_THIEF = 100;
     public static final int WRATH_BYSTANDER = 101;
     public static final int WRATH_EMPTY = 113;
@@ -1003,9 +1008,50 @@ public final class InBetweenerDialogue {
                 act("Knock again.", OFFENDED).annoy(1).ego(-2),
                 a("Nothing. Carry on.", NEXT));
 
+        // -------------------------------------------------------------- what stands behind you
+
+        ask(IMBALANCE, B_DIM, say(
+                "Oh.",
+                "Oh, she's right behind you.",
+                "Has she told you what you're doing?"),
+                a("Balance.", IMB_BALANCE),
+                a("She said she needs something done.", IMB_DONE),
+                a("I know who she is.", IMB_KNOW));
+        tell(IMB_BALANCE, B_LAUGH, IMB_HALF, FX_NONE, say(
+                "Balance.",
+                "I'm the gap between the living and the dead. I don't guess at it. I feel it.",
+                "One side of me has never been this heavy. Everything that breathes, pushing."));
+        tell(IMB_DONE, B_LAUGH, IMB_HALF, FX_NONE, say(
+                "Something done. She does say that.",
+                "I'm the gap between the living and the dead. I feel it. One side of me has never been this heavy.",
+                "Everything that breathes, pushing."));
+        tell(IMB_KNOW, B_SIT, IMB_HALF, FX_NONE, say(
+                "Of course you do. Everyone knows who she is.",
+                "Do you know what she wants? I do. I'm the gap between the living and the dead.",
+                "One side of me has never been this heavy."));
+        tell(IMB_HALF, B_ECHOES, IMB_LAST, FX_NONE, say(
+                "You want to know what even looks like?",
+                "One hand for the living. One for the dead. Now watch this one go down.",
+                "About half. Half of every living thing, on every world, all at once.",
+                "Your hand. Her idea."));
+        tell(IMB_LAST, B_TAP, NEXT, FX_NONE, say(
+                "And she can't do it herself, can she? Not allowed.",
+                "So she found someone who'll keep getting up.",
+                "Anyway. Where were we?"));
+
         // -------------------------------------------------------------- Master Order and Lord Chaos
 
         String surrender = "O:The gem. Hand it over.";
+        String six = duo(
+                "O:Wait.",
+                "O:You carry the stones. When there are six, he comes for you. Eternity. All that is.",
+                "C:He won't talk. He can't. You'll just see the sky go.",
+                "O:And kill him, and everything goes with him. Your world. Hers.",
+                "O:Ask yourself why the end of all things will want you to keep the universe alive.",
+                "C:Anyway! Where were we?");
+        mastersTell(W_SIX_THIEF, B_NONE, WRATH_THIEF, FX_NONE, six);
+        mastersTell(W_SIX_BYSTANDER, B_NONE, WRATH_BYSTANDER, FX_NONE, six);
+        mastersTell(W_SIX_EMPTY, B_NONE, WRATH_EMPTY, FX_NONE, six);
 
         masters(WRATH_THIEF, B_NONE, FX_NONE, duo(
                 "O:You. You stand where Order and Chaos meet.",
@@ -1096,6 +1142,20 @@ public final class InBetweenerDialogue {
     }
 
     private InBetweenerDialogue() {
+    }
+
+    /** Order and Chaos's opening, with their warning first. */
+    static int warned(int opening) {
+        switch (opening) {
+            case WRATH_THIEF:
+                return W_SIX_THIEF;
+            case WRATH_BYSTANDER:
+                return W_SIX_BYSTANDER;
+            case WRATH_EMPTY:
+                return W_SIX_EMPTY;
+            default:
+                return opening;
+        }
     }
 
     public static Node node(int id) {

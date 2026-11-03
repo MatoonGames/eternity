@@ -98,6 +98,8 @@ public class MsgTribunalFx implements IMessage {
 
     // The Champion of the Universe. Everything from CHAMPION_IMPACT on is his.
     /** A blow lands at (x,y,z), driving along (a,b,c). id = who it struck (-1 for nobody), time = 0 a jab, 1 a big hit, 2 a haymaker. */
+    /** Added to the kind of a Champion's impact or guard flash when he has no stone: drawn without its purple. */
+    public static final int PLAIN = 10;
     public static final byte CHAMPION_IMPACT = 42;
     /** A blow of yours meets his guard at (x,y,z), facing along (a,b,c). time = 0 blocked, 1 slipped, 2 parried. */
     public static final byte CHAMPION_GUARD = 43;
@@ -161,6 +163,16 @@ public class MsgTribunalFx implements IMessage {
     public static final byte DESTROYER_WOUND = 68;
     /** The Destroyer Armor imploding, its core breached: a = its size; id = the armour. */
     public static final byte DESTROYER_IMPLODE = 69;
+
+    // The Magus, and what he does in the Sovereign. Everything from MAGUS_IMPACT on is his.
+    /** One of his blows lands at (x,y,z), driving along (a,b,c). id = who it struck (-1 for nobody), time = 0 light, 1 heavy, 2 ruinous. */
+    public static final byte MAGUS_IMPACT = 70;
+    /** His hold on someone: arcs from entity {@link #id}'s raised hand into entity (int) a, for time ticks. */
+    public static final byte MAGUS_GRASP = 71;
+    /** A soul going up out of a body at (x,y,z), over time ticks. */
+    public static final byte MAGUS_SOUL = 72;
+    /** The roof coming off over (x,y,z), a across, over time ticks. */
+    public static final byte MAGUS_BREACH = 73;
 
     public byte type;
     public double x, y, z;

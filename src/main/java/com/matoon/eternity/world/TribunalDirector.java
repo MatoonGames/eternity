@@ -304,7 +304,33 @@ public final class TribunalDirector {
         node = question;
         setStage(Stage.ASKING);
         rumble(player, 0.45F);
-        EternityNetwork.send(new MsgTribunal(MsgTribunal.SPEAK, question), player);
+        speakTo(player, question);
+    }
+
+    /**
+     * He speaks: the chamber shakes on their side, and his words come in the story's panel, a
+     * sentence at a time; a question ends in the answers they may give him (and the one he does
+     * not want: to refuse to be judged).
+     */
+    private void speakTo(EntityPlayerMP player, int id) {
+        EternityNetwork.send(new MsgTribunal(MsgTribunal.SPEAK, id), player);
+        TribunalDialogue.Node n = TribunalDialogue.node(id);
+        com.matoon.eternity.story.Talk t = new com.matoon.eternity.story.Talk(player);
+        String plain = TextFormatting.getTextWithoutFormattingCodes(n.speech);
+        for (String sentence : (plain == null ? "" : plain).split("(?<=[.!?])\\s+")) {
+            if (!sentence.trim().isEmpty()) {
+                t.line(com.matoon.eternity.story.Speakers.TRIBUNAL, null, sentence.trim());
+            }
+        }
+        if (TribunalDialogue.isQuestion(id)) {
+            com.matoon.eternity.story.Talk.Choice[] choices = new com.matoon.eternity.story.Talk.Choice[n.answers.length];
+            for (int i = 0; i < n.answers.length; i++) {
+                int index = i;
+                choices[i] = com.matoon.eternity.story.Talk.say(n.answers[i], c -> c.run(() -> answer(player, id, index)));
+            }
+            t.ask(com.matoon.eternity.story.Speakers.TRIBUNAL, null, choices);
+        }
+        com.matoon.eternity.story.StoryDirector.INSTANCE.talk(player, t);
     }
 
     /** The defendant answers. Only the question being asked, only from the one on trial. */
@@ -335,7 +361,7 @@ public final class TribunalDirector {
         setStage(Stage.VERDICT);
         rumble(player, 0.35F);
         player.world.playSound(null, player.posX, player.posY, player.posZ, SoundEvents.ENTITY_LIGHTNING_THUNDER, SoundCategory.MASTER, 4F, 0.5F);
-        EternityNetwork.send(new MsgTribunal(MsgTribunal.SPEAK, verdict), player);
+        speakTo(player, verdict);
     }
 
     private void carryOut(MinecraftServer server, EntityPlayerMP player) {
@@ -415,7 +441,7 @@ public final class TribunalDirector {
         setStage(Stage.CHALLENGED);
         rumble(player, 0.3F);
         player.world.playSound(null, player.posX, player.posY, player.posZ, SoundEvents.ENTITY_LIGHTNING_THUNDER, SoundCategory.MASTER, 4F, 0.4F);
-        EternityNetwork.send(new MsgTribunal(MsgTribunal.SPEAK, node), player);
+        speakTo(player, node);
     }
 
     private void rise(EntityPlayerMP player) {
@@ -525,7 +551,7 @@ public final class TribunalDirector {
         node = verdict;
         setStage(Stage.VERDICT);
         rumble(player, 0.3F);
-        EternityNetwork.send(new MsgTribunal(MsgTribunal.SPEAK, verdict), player);
+        speakTo(player, verdict);
     }
 
     // ------------------------------------------------------------------ the banished

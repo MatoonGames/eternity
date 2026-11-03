@@ -38,7 +38,11 @@ public final class Relics {
         /** The Power Stone: the gem in the Champion's brow, or any found before it. */
         POWER_STONE("the Power Stone"),
         /** The Mind Stone: kept in play on the Grandmaster's board, or any found before it. */
-        MIND_STONE("the Mind Stone");
+        MIND_STONE("the Mind Stone"),
+        /** The Reality Stone: the Aether, set in the Eternal Flame, or any found before it. */
+        REALITY_STONE("the Reality Stone"),
+        /** The Time Stone: bound into the Gardener, and taken out of him, or any found before it. */
+        TIME_STONE("the Time Stone");
 
         public final String title;
 
@@ -77,6 +81,12 @@ public final class Relics {
         }
         if (item == anvil.infinity.items.Items.MIND_STONE) {
             return Kind.MIND_STONE;
+        }
+        if (item == anvil.infinity.items.Items.REALITY_STONE) {
+            return Kind.REALITY_STONE;
+        }
+        if (item == anvil.infinity.items.Items.TIME_STONE) {
+            return Kind.TIME_STONE;
         }
         return null;
     }
@@ -124,6 +134,11 @@ public final class Relics {
      * returns false if that kind is already claimed.
      */
     public static boolean claim(ItemStack stack, EntityPlayer player) {
+        return claim(stack, player.getUniqueID(), player.getName());
+    }
+
+    /** As {@link #claim(ItemStack, EntityPlayer)}, for whoever has it: someone who is not a player, too. */
+    public static boolean claim(ItemStack stack, UUID claimant, String name) {
         Kind kind = kind(stack);
         if (kind == null || DimensionManager.getWorld(0) == null) {
             return false;
@@ -134,14 +149,14 @@ public final class Relics {
         }
         UUID mark = UUID.randomUUID();
         stamp(stack, mark);
-        ledger.claims.put(kind, new RelicLedger.Claim(mark, player.getUniqueID(), player.getName(),
+        ledger.claims.put(kind, new RelicLedger.Claim(mark, claimant, name,
                 DimensionManager.getWorld(0).getTotalWorldTime()));
         ledger.markDirty();
         if (stack.getItem() == HEItems.SPACE_STONE) {
             // Taken already out of its Tesseract.
             opened();
         }
-        Eternity.LOG.info("{} has claimed {}.", player.getName(), kind.title);
+        Eternity.LOG.info("{} has claimed {}.", name, kind.title);
         return true;
     }
 

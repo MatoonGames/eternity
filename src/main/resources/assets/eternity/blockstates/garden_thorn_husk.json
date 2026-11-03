@@ -1,0 +1,6 @@
+{
+    "variants": {
+        "dead=false": { "model": "eternity:garden_thorn_frozen" },
+        "dead=true": { "model": "eternity:garden_thorn_dead" }
+    }
+}

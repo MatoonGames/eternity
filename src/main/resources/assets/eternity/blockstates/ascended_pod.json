@@ -1,0 +1,22 @@
+{
+  "variants": {
+    "flag=false,part=0": {
+      "model": "eternity:ascended_pod_0"
+    },
+    "flag=true,part=0": {
+      "model": "eternity:ascended_pod_clear_0"
+    },
+    "flag=false,part=1": {
+      "model": "eternity:ascended_pod_1"
+    },
+    "flag=true,part=1": {
+      "model": "eternity:ascended_pod_clear_1"
+    },
+    "flag=false,part=2": {
+      "model": "eternity:ascended_pod_2"
+    },
+    "flag=true,part=2": {
+      "model": "eternity:ascended_pod_clear_2"
+    }
+  }
+}

@@ -4,6 +4,7 @@
         "color=blue": { "model": "eternity:board_blue" },
         "color=throne": { "model": "eternity:board_throne" },
         "color=refuge": { "model": "eternity:board_refuge" },
-        "color=rim": { "model": "eternity:board_rim" }
+        "color=rim": { "model": "eternity:board_rim" },
+        "color=white": { "model": "eternity:board_white" }
     }
 }

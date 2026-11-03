@@ -20,7 +20,8 @@ import java.util.Random;
  * red back, then faces.</li>
  * <li><b>entity/tafl_raider.png, tafl_guard.png, tafl_king.png</b> (64x64): his pieces, one
  * layout for all three.</li>
- * <li><b>blocks/board_*.png</b> (16x16): the squares of his board, its rim and its sides.</li>
+ * <li><b>blocks/board_*.png</b> (16x16): the squares of his board, its rim and its sides, and
+ * the white-and-violet the Magus leaves on whatever squares he moves a piece across.</li>
  * </ul>
  * The box layouts here must match client/render/ModelGrandmaster.java and ModelTaflPiece.java.
  * In every front face the left of the picture is his right side, as when you face him.
@@ -36,6 +37,9 @@ public class GrandmasterSkin {
     private static final int[] CAPE = {0x0E1438, 0x172258, 0x213276, 0x2C4494, 0x3C58AE, 0x5274C4, 0x7092D6};
     private static final int[] JEWEL = {0x4A0606, 0x7A0C0C, 0xA81414, 0xD42222, 0xF04838, 0xFF8A70, 0xFFD0C0};
     private static final int[] BRASS = {0x3E2A0A, 0x664416, 0x8E6420, 0xB4862E, 0xD0A64A, 0xE6C678, 0xF6E2B0};
+    /** The Magus's colours, for the squares he takes over: pale lacquer and the violet of what he holds. */
+    private static final int[] WHITE = {0x8E88A0, 0xB0AAC0, 0xCCC7DA, 0xDEDAEA, 0xEAE7F4, 0xF4F2FA, 0xFDFCFF};
+    private static final int[] VIOLET = {0x1E0838, 0x34105E, 0x4E1C88, 0x6A2EAE, 0x8A4ECC, 0xAE7EE6, 0xD2B4F8};
     private static final int EYE = 0xF2F5FF, TEETH = 0xE6E2D8, LIP = 0x23306A;
 
     private static final int TOP = 0, BOTTOM = 1, RIGHT = 2, FRONT = 3, LEFT = 4, BACK = 5;
@@ -634,6 +638,18 @@ public class GrandmasterSkin {
             return BRASS[clamp(1 + (int) Math.round(Math.sin(x * 0.5) * 0.6) + (RANDOM.nextFloat() < 0.08F ? 1 : 0))];
         });
         tile(dir, "board_side", (x, y) -> y == 0 ? GOLD[5] : y == 1 ? GOLD[2] : SUIT[clamp(2 + (x % 8 == 0 ? 1 : 0))]);
+        // Painted last, so the tiles before it come out of the same random numbers they always have.
+        tile(dir, "board_white", (x, y) -> {
+            // Where the Magus has moved a piece: white lacquer, veined like the blue, the veins violet, a few flecks of it sunk in.
+            double vein = Math.sin(x * 0.7 + Math.sin(y * 0.4) * 2.0) + Math.cos(y * 0.5 + x * 0.2);
+            if (RANDOM.nextFloat() < 0.025F) {
+                return VIOLET[5];
+            }
+            if (vein > 1.35) {
+                return VIOLET[clamp((int) Math.round(3 + (vein - 1.35) * 2.0))];
+            }
+            return WHITE[clamp((int) Math.round(4 + vein * 0.6))];
+        });
     }
 
     private interface Tile {

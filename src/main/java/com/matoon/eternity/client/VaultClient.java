@@ -275,7 +275,7 @@ public final class VaultClient {
     /** Embers rising off the Eternal Flame; frost spilling off the Casket. */
     private void embers() {
         Vec3d flame = VaultTreasures.at(OdinsVault.Relic.ETERNAL_FLAME, 34.5D);
-        if (flame.squareDistanceTo(mc.player.getPositionVector()) < 48D * 48D) {
+        if (flame.squareDistanceTo(mc.player.getPositionVector()) < 48D * 48D && !StoryClient.INSTANCE.flameSpent()) {
             if (rand.nextInt(3) == 0) {
                 mc.world.spawnParticle(EnumParticleTypes.FLAME, flame.x + rand.nextGaussian() * 0.15D, flame.y + 0.2D, flame.z + rand.nextGaussian() * 0.15D,
                         0D, 0.04D + rand.nextDouble() * 0.03D, 0D);

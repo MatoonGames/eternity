@@ -235,6 +235,11 @@ public class ModelAdamWarlock extends ModelBase {
                 return 4F;
             case HOVER:
                 return 9F;
+            case DOWNED:
+                return 2F;
+            case FLARE:
+            case HELD:
+                return 4F;
             default:
                 return 6F;
         }
@@ -299,6 +304,21 @@ public class ModelAdamWarlock extends ModelBase {
                 break;
             case WALK:
                 walk(p, age);
+                break;
+            case FLARE:
+                flare(p, t, age);
+                break;
+            case DOWNED:
+                downed(p, t, age);
+                break;
+            case HELD:
+                held(p, t, age);
+                break;
+            case CAUGHT:
+                caught(p, t, age);
+                break;
+            case KNEEL:
+                kneel(p, t, age);
                 break;
         }
     }
@@ -841,21 +861,215 @@ public class ModelAdamWarlock extends ModelBase {
         p[LOOK] = 0.3F;
     }
 
+    /**
+     * Everything he has, all at once: curled in on himself in the air, fists clenched at his
+     * hips, shaking with it; then it bursts out of him, arms flung down and back, chest out,
+     * head thrown back, roaring; and he comes out of it with his fists still clenched.
+     */
+    private static void flare(float[] p, float t, float age) {
+        hover(p, age, true);
+        int burst = EntityAdamWarlock.FLARE_BURST;
+        float coil = smooth(t / 12F) * (1F - outCubic(clamp((t - burst) / 3F)));
+        float shake = MathHelper.sin(age * 3.4F) * (0.03F + 0.06F * clamp(t / burst)) * (t < burst + 24 ? 1F : 0.3F);
+        set(p, WAIST_X, 0.45F, coil);
+        set(p, CHEST_X, 0.3F, coil);
+        set(p, HEAD_X, 0.5F, coil);
+        set(p, RA_X, 0.25F + shake, coil);
+        set(p, RA_Y, 0.2F, coil);
+        set(p, RA_Z, 0.35F, coil);
+        set(p, R_ELBOW, -1.6F, coil);
+        set(p, LA_X, 0.25F - shake, coil);
+        set(p, LA_Y, -0.2F, coil);
+        set(p, LA_Z, -0.35F, coil);
+        set(p, L_ELBOW, -1.6F, coil);
+        set(p, RL_X, -1.2F, coil);
+        set(p, R_KNEE, 1.8F, coil);
+        set(p, LL_X, -1.1F, coil);
+        set(p, L_KNEE, 1.9F, coil);
+        p[DROP] += -2F * coil;
+        float roar = outBack(clamp((t - burst) / 4F)) * (1F - smooth((t - burst - 22F) / 8F));
+        set(p, WAIST_X, -0.1F, roar);
+        set(p, CHEST_X, -0.45F, roar);
+        set(p, HEAD_X, -0.85F, roar);
+        set(p, RA_X, 0.35F + shake, roar);
+        set(p, RA_Y, 0F, roar);
+        set(p, RA_Z, 0.75F, roar);
+        set(p, R_ELBOW, -0.15F, roar);
+        set(p, LA_X, 0.35F - shake, roar);
+        set(p, LA_Y, 0F, roar);
+        set(p, LA_Z, -0.75F, roar);
+        set(p, L_ELBOW, -0.15F, roar);
+        set(p, RL_X, 0.1F, roar);
+        set(p, R_KNEE, 0.15F, roar);
+        set(p, RL_Z, 0.22F, roar);
+        set(p, LL_X, 0.1F, roar);
+        set(p, L_KNEE, 0.15F, roar);
+        set(p, LL_Z, -0.22F, roar);
+        p[CHEST_Y] += shake * roar;
+        // After: hanging there with it pouring off him, fists still balled at his sides.
+        float after = smooth((t - burst - 22F) / 8F);
+        set(p, RA_X, 0.1F + shake * 0.5F, after);
+        set(p, RA_Z, 0.42F, after);
+        set(p, R_ELBOW, -0.55F, after);
+        set(p, LA_X, 0.1F - shake * 0.5F, after);
+        set(p, LA_Z, -0.42F, after);
+        set(p, L_ELBOW, -0.55F, after);
+        set(p, CHEST_X, -0.12F, after);
+        set(p, HEAD_X, 0.12F, after);
+        p[LOOK] = after;
+    }
+
+    /**
+     * Beaten flat on his back, an arm thrown out, a knee drawn up, his head rolled to one
+     * side; now and then he tries to lift himself, and can't.
+     */
+    private static void downed(float[] p, float t, float age) {
+        float impact = 1F - clamp(t / 4F);
+        p[LEAN] = -1.5708F;
+        p[DROP] = 9.5F - 1.2F * impact * impact;
+        float breath = MathHelper.sin(age * 0.3F);
+        p[CHEST_X] = breath * 0.04F;
+        p[RA_X] = -0.2F;
+        p[RA_Z] = 1.1F;
+        p[R_ELBOW] = -0.35F;
+        p[LA_X] = 0.15F;
+        p[LA_Z] = -0.55F;
+        p[L_ELBOW] = -0.6F;
+        p[RL_X] = -0.75F;
+        p[R_KNEE] = 1.2F;
+        p[RL_Z] = 0.15F;
+        p[LL_X] = 0.05F;
+        p[L_KNEE] = 0.15F;
+        p[LL_Z] = -0.08F;
+        p[HEAD_Y] = 0.5F;
+        p[HEAD_X] = -0.1F;
+        // Trying to get up: the shoulders off the floor, a hand pushing; and down again.
+        float cycle = (t - 30F) % 70F;
+        float rise = t < 30F ? 0F : smooth(cycle / 14F) * (1F - smooth((cycle - 24F) / 10F));
+        p[WAIST_X] += 0.45F * rise;
+        p[CHEST_X] += 0.25F * rise;
+        p[HEAD_Y] *= 1F - rise;
+        p[HEAD_X] += 0.45F * rise;
+        set(p, LA_X, 0.65F, rise);
+        set(p, LA_Z, -0.25F, rise);
+        set(p, L_ELBOW, -0.2F, rise);
+        p[LOOK] = 0.6F * rise;
+    }
+
+    /**
+     * On both knees beside her, bowed over, his shoulders shaking. Then his fists close and
+     * pull down tight at his sides and the shaking is something else; his head comes up, and
+     * goes back, and he screams.
+     */
+    private static void kneel(float[] p, float t, float age) {
+        float sob = MathHelper.sin(age * 0.5F) * 0.03F * (1F - smooth((t - EntityAdamWarlock.KNEEL_RAGE) / 15F));
+        p[DROP] = 4.6F;
+        p[RL_X] = -0.05F;
+        p[R_KNEE] = 1.57F;
+        p[RL_Z] = 0.08F;
+        p[LL_X] = -0.05F;
+        p[L_KNEE] = 1.57F;
+        p[LL_Z] = -0.08F;
+        p[WAIST_X] = 0.32F;
+        p[CHEST_X] = 0.3F + sob;
+        p[HEAD_X] = 0.65F;
+        p[RA_X] = -0.25F;
+        p[RA_Z] = 0.05F;
+        p[R_ELBOW] = -0.5F;
+        p[LA_X] = -0.2F;
+        p[LA_Z] = -0.05F;
+        p[L_ELBOW] = -0.55F;
+        float rage = smooth((t - EntityAdamWarlock.KNEEL_RAGE) / 25F);
+        float shake = MathHelper.sin(age * 3.3F) * 0.05F * rage * (0.4F + 0.6F * smooth((t - 70F) / 25F));
+        set(p, RA_X, 0.35F + shake, rage);
+        set(p, RA_Z, 0.3F, rage);
+        set(p, R_ELBOW, -0.35F, rage);
+        set(p, LA_X, 0.35F - shake, rage);
+        set(p, LA_Z, -0.3F, rage);
+        set(p, L_ELBOW, -0.35F, rage);
+        set(p, HEAD_X, 0.3F, rage);
+        set(p, WAIST_X, 0.12F, rage);
+        p[CHEST_Y] += shake;
+        float scream = outBack(clamp((t - EntityAdamWarlock.KNEEL_SCREAM) / 6F));
+        set(p, HEAD_X, -0.95F, scream);
+        set(p, CHEST_X, -0.4F, scream);
+        set(p, WAIST_X, -0.15F, scream);
+        set(p, RA_X, 0.55F + shake, scream);
+        set(p, RA_Z, 0.6F, scream);
+        set(p, R_ELBOW, -0.1F, scream);
+        set(p, LA_X, 0.55F - shake, scream);
+        set(p, LA_Z, -0.6F, scream);
+        set(p, L_ELBOW, -0.1F, scream);
+        p[LOOK] = 0F;
+    }
+
+    /** Stopped dead mid-punch, the fist caught and held: leaning into it with everything, and it does not move. */
+    private static void caught(float[] p, float t, float age) {
+        float strain = smooth(t / 6F);
+        float shake = MathHelper.sin(age * 3.6F) * 0.05F * strain;
+        p[LEAN] = 0.45F - 0.15F * strain;
+        p[CHEST_Y] = -0.45F;
+        p[WAIST_Y] = -0.15F;
+        p[RA_X] = -1.6F + shake;
+        p[RA_Y] = -0.05F;
+        p[R_ELBOW] = -0.05F;
+        p[LA_X] = 0.55F - shake;
+        p[LA_Z] = -0.35F;
+        p[L_ELBOW] = -0.9F;
+        p[RL_X] = 0.45F;
+        p[R_KNEE] = 0.6F;
+        p[LL_X] = -0.2F;
+        p[L_KNEE] = 0.9F;
+        p[HEAD_X] = 0.1F;
+        p[LOOK] = 0.8F;
+        // Realising: the head comes up, staring.
+        float dawning = smooth((t - 10F) / 8F);
+        p[HEAD_X] -= 0.3F * dawning;
+    }
+
+    /** Held up off the ground by the throat: head forced back, both hands clawing at the wrist, legs kicking, then barely. */
+    private static void held(float[] p, float t, float age) {
+        float fading = 1F - 0.75F * smooth((t - 40F) / 60F);
+        float kick = MathHelper.sin(age * 0.45F) * 0.3F * fading;
+        float claw = MathHelper.sin(age * 0.9F) * 0.08F * fading;
+        p[HEAD_X] = -0.55F;
+        p[CHEST_X] = -0.12F;
+        p[RA_X] = -2.35F + claw;
+        p[RA_Y] = -0.55F;
+        p[RA_Z] = -0.15F;
+        p[R_ELBOW] = -1.5F;
+        p[LA_X] = -2.35F - claw;
+        p[LA_Y] = 0.55F;
+        p[LA_Z] = 0.15F;
+        p[L_ELBOW] = -1.5F;
+        p[RL_X] = 0.12F + kick;
+        p[R_KNEE] = 0.35F + Math.max(0F, kick);
+        p[LL_X] = 0.12F - kick;
+        p[L_KNEE] = 0.35F + Math.max(0F, -kick);
+        p[RL_Z] = 0.05F;
+        p[LL_Z] = -0.05F;
+        // As it goes out of him, the hands slip.
+        float slip = smooth((t - 70F) / 30F);
+        set(p, RA_X, -0.4F, slip * 0.6F);
+        set(p, R_ELBOW, -0.6F, slip * 0.6F);
+        p[LOOK] = 0F;
+    }
+
     // ------------------------------------------------------------------ easing
 
     /** Eases one value of the pose toward a target, by f. */
-    private static void set(float[] p, int i, float value, float f) {
+    static void set(float[] p, int i, float value, float f) {
         p[i] += (value - p[i]) * f;
     }
 
-    private static void mix(float[] out, float[] a, float[] b, float f) {
+    static void mix(float[] out, float[] a, float[] b, float f) {
         for (int i = 0; i < N; i++) {
             out[i] = a[i] + (b[i] - a[i]) * f;
         }
     }
 
     /** A blow: snapping out between start and contact, held a moment, drawn back by end. */
-    private static float strike(float t, float start, float contact, float end) {
+    static float strike(float t, float start, float contact, float end) {
         if (t < start || t > end + 2F) {
             return 0F;
         }

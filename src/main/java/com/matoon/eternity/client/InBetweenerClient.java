@@ -117,8 +117,8 @@ public final class InBetweenerClient {
                 mask = m.mask;
                 speakTicks = 0;
                 shatterTicks = -1;
+                // His words are in the story's panel now; this side only shows the beat.
                 beginBeat(m.cue);
-                mc.displayGuiScreen(new GuiInBetweener(node, mask));
                 break;
             case MsgInBetweener.CLOSE:
                 close();
@@ -281,9 +281,6 @@ public final class InBetweenerClient {
         black = Math.max(0F, black - 0.03F);
         if (node >= 0) {
             speakTicks++;
-            if (mc.currentScreen == null) {
-                mc.displayGuiScreen(new GuiInBetweener(node, mask));
-            }
         }
         if (shatterTicks >= 0) {
             shatterTicks--;

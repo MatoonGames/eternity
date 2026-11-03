@@ -11,6 +11,9 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Reads which Infinity Stones an entity carries. Every stone from InfinityCraft and
  * HeroesExpansion (including the Tesseract) extends Lucraft's {@link ItemInfinityStone},
@@ -65,9 +68,55 @@ public final class InfinityStones {
 
     /** Whether the Power Stone is in either of someone's hands, on its own or set in a gauntlet. */
     public static boolean wieldsPower(EntityLivingBase entity) {
-        int power = bit(EnumInfinityStone.POWER);
+        return wields(entity, EnumInfinityStone.POWER);
+    }
+
+    /** Whether a stone of a kind is in either of someone's hands, on its own or set in a gauntlet. */
+    public static boolean wields(EntityLivingBase entity, EnumInfinityStone stone) {
+        int bit = bit(stone);
         boolean remote = entity.world.isRemote;
-        return (of(entity.getHeldItemMainhand(), remote) & power) != 0 || (of(entity.getHeldItemOffhand(), remote) & power) != 0;
+        return (of(entity.getHeldItemMainhand(), remote) & bit) != 0 || (of(entity.getHeldItemOffhand(), remote) & bit) != 0;
+    }
+
+    /**
+     * Takes a recognised stone of a kind off someone, wherever they carry it: loose, set in a
+     * gauntlet, on the cursor, or in the chest of the Destroyer Armor. Empty if they have none.
+     */
+    public static ItemStack take(EntityPlayer player, EnumInfinityStone type) {
+        List<ItemStack> places = new ArrayList<>();
+        places.addAll(player.inventory.mainInventory);
+        places.addAll(player.inventory.offHandInventory);
+        places.addAll(player.inventory.armorInventory);
+        places.add(player.inventory.getItemStack());
+        if (player.getRidingEntity() instanceof EntityDestroyerArmor) {
+            EntityDestroyerArmor armor = (EntityDestroyerArmor) player.getRidingEntity();
+            for (int i = 0; i < ArmorPowers.COUNT; i++) {
+                places.add(armor.getInventory().getStackInSlot(EntityDestroyerArmor.SLOT_STONES + i));
+            }
+        }
+        for (ItemStack stack : places) {
+            if (stack.isEmpty()) {
+                continue;
+            }
+            if (stack.getItem() instanceof ItemInfinityStone && ((ItemInfinityStone) stack.getItem()).getType() == type
+                    && Relics.recognized(stack, false)) {
+                return stack.splitStack(1);
+            }
+            if (stack.getItem() instanceof ItemInfinityGauntlet && stack.hasTagCompound()) {
+                InventoryInfinityGauntlet gauntlet = new InventoryInfinityGauntlet(stack);
+                for (int i = 0; i < gauntlet.getSizeInventory(); i++) {
+                    ItemStack socket = gauntlet.getStackInSlot(i);
+                    if (!socket.isEmpty() && socket.getItem() instanceof ItemInfinityStone
+                            && ((ItemInfinityStone) socket.getItem()).getType() == type && Relics.recognized(socket, false)) {
+                        ItemStack out = socket.copy();
+                        gauntlet.setInventorySlotContents(i, ItemStack.EMPTY);
+                        gauntlet.markDirty();
+                        return out;
+                    }
+                }
+            }
+        }
+        return ItemStack.EMPTY;
     }
 
     private static int of(ItemStack stack, boolean remote) {

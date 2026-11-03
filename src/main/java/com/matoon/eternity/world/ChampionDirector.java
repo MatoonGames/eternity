@@ -82,6 +82,11 @@ public final class ChampionDirector {
             "You. You did this on purpose. Made me miss, and miss, until I swung at the world instead.",
             "Clever. I'll give you that. Hollow way to win, but clever.",
             "You have a ship. Bring me a rocket and the stone in my brow is yours. Never knew what it was for anyway."};
+    private static final String[] STRANDED_ROBBED = {
+            "The boy. The boy took it out of my head while I hung here like meat.",
+            "Billions of years nobody took a thing from me I didn't let them take.",
+            "No ground to push off. I can't even chase him. Do you know what that is, for me?",
+            "Bring me a rocket. I'll tell you where to hit him. I'll owe you, and I've never left a debt unpaid."};
     private static final String[] STRANDED_EMPTY = {
             "...Well. That was my planet.",
             "No ground to push off. I never needed to fly. There was always somewhere to stand.",
@@ -110,6 +115,10 @@ public final class ChampionDirector {
     private int tick;
     /** Whether the breaking wave has been set going this session (after a restart, it picks up where it was). */
     private boolean waveRunning;
+    /** Whether the story told the breaking, so he does not say it all again in chat. */
+    private boolean storyTold;
+    /** Until when he stays in the wreck with nobody living near (something is happening to him that has to be seen through). */
+    private int presentUntil;
 
     private ChampionDirector() {
     }
@@ -288,7 +297,9 @@ public final class ChampionDirector {
     private void resident(WorldServer world) {
         ChampionData d = data();
         List<EntityPlayerMP> near = near(world, arena(), PRESENCE_RANGE);
-        if (near.isEmpty()) {
+        // With the challenger down, he and Warlock finish it between them, whether anyone is watching or not.
+        boolean finishing = body != null && !body.isDead && body.fightingAlone();
+        if (near.isEmpty() && !finishing) {
             if (d.phase == ChampionData.Phase.DUEL) {
                 endDuel();
             }
@@ -305,6 +316,19 @@ public final class ChampionDirector {
             EntityPlayer duel = champion.getDuel() == null ? null : world.getPlayerEntityByUUID(champion.getDuel());
             if (!committed && (duel == null || !duel.isEntityAlive() || horizontal(duel, champion) > DUEL_RANGE)) {
                 endDuel();
+            }
+            return;
+        }
+        if (finishing) {
+            // He and Warlock are still at it; whoever walks back in close enough is called back into it.
+            EntityPlayerMP back = null;
+            for (EntityPlayerMP player : near) {
+                if (player.getDistance(champion) < CHALLENGE_RANGE && (back == null || player.getDistance(champion) < back.getDistance(champion))) {
+                    back = player;
+                }
+            }
+            if (back != null) {
+                beginDuel(champion, back);
             }
             return;
         }
@@ -390,7 +414,9 @@ public final class ChampionDirector {
         d.markDirty();
         // He remembers how badly you made him lose his temper last time, a little.
         champion.setRage(d.rage(player.getUniqueID()) * 0.5F);
-        champion.challenge(player);
+        // The first time, the story has a word first, and he keeps his own challenge to himself.
+        boolean scene = com.matoon.eternity.story.StoryDirector.INSTANCE.duelBegins(champion, player);
+        champion.challenge(player, scene);
     }
 
     private void endDuel() {
@@ -462,7 +488,13 @@ public final class ChampionDirector {
         EternityNetwork.sendToDimension(new MsgTribunalFx(MsgTribunalFx.CHAMPION_WORLD, x, y, z, 0, 0, 0, 1, 0), Tamarata.dimension());
         TextComponentString notice = new TextComponentString("Far away, a planet called Tamarata breaks apart.");
         notice.getStyle().setColor(TextFormatting.DARK_PURPLE).setItalic(true);
-        FMLCommonHandler.instance().getMinecraftServerInstance().getPlayerList().sendMessage(notice);
+        boolean story = com.matoon.eternity.story.StoryDirector.enabled();
+        for (EntityPlayerMP player : FMLCommonHandler.instance().getMinecraftServerInstance().getPlayerList().getPlayers()) {
+            // Anyone standing on it is told by the story, as it happens, not by a line of chat.
+            if (!story || player.dimension != Tamarata.dimension()) {
+                player.sendMessage(notice);
+            }
+        }
         Eternity.LOG.info("The Champion of the Universe has broken Tamarata.");
     }
 
@@ -477,10 +509,13 @@ public final class ChampionDirector {
             return;
         }
         champion.endDuel();
-        if (d.breakTicks == 70) {
+        if (d.breakTicks == 30) {
+            storyTold = com.matoon.eternity.story.StoryDirector.INSTANCE.planetBreaks(champion, near(world, champion.getPositionVector(), PRESENCE_RANGE));
+        }
+        if (d.breakTicks == 70 && !storyTold) {
             champion.say("That wasn't the floor cracking. That was the world.");
         }
-        if (d.breakTicks == 160) {
+        if (d.breakTicks == 160 && !storyTold) {
             champion.say("Ah. I hit it too hard.");
         }
         boolean inCrater = champion.getState() == EntityChampion.State.IMPACT;
@@ -501,6 +536,10 @@ public final class ChampionDirector {
     private void stranded(WorldServer world) {
         Vec3d at = driftPoint();
         List<EntityPlayerMP> near = near(world, at, PRESENCE_RANGE);
+        if (near.isEmpty() && tick < presentUntil && body != null && !body.isDead) {
+            body.drift(at);
+            return;
+        }
         if (near.isEmpty()) {
             if (body != null) {
                 body.setDead();
@@ -519,8 +558,11 @@ public final class ChampionDirector {
         for (EntityPlayerMP player : near) {
             listening |= player.getDistance(champion) < 64D;
         }
+        if (com.matoon.eternity.story.StoryDirector.INSTANCE.championStranded(champion, near)) {
+            return;
+        }
         if (listening && tick >= nextLine) {
-            String[] lines = wearsStone() ? STRANDED : STRANDED_EMPTY;
+            String[] lines = wearsStone() ? STRANDED : "Adam Warlock".equals(data().stoneHolder) ? STRANDED_ROBBED : STRANDED_EMPTY;
             champion.say(lines[Math.min(strandedLine, lines.length - 1)]);
             strandedLine = strandedLine < lines.length - 1 ? strandedLine + 1 : lines.length - 2 + (strandedLine + 1) % 2;
             nextLine = tick + 160 + rand.nextInt(80);
@@ -592,6 +634,11 @@ public final class ChampionDirector {
         tradeTicks++;
         EntityChampion champion = body;
         EntityPlayerMP player = trader == null ? null : FMLCommonHandler.instance().getMinecraftServerInstance().getPlayerList().getPlayerByUUID(trader);
+        // Once the stone is given he pays what he owes, and the rocket waits until he has.
+        if (tradeTicks == 41 && tradeForReal && champion != null && player != null
+                && com.matoon.eternity.story.StoryDirector.INSTANCE.championDebt(champion, player)) {
+            tradeTicks = 40;
+        }
         if (rocket != null) {
             rocket.motionX = rocket.motionY = rocket.motionZ = 0D;
             rocket.setPositionAndRotation(rocketAt.x, rocketAt.y, rocketAt.z, rocket.rotationYaw, 0F);
@@ -603,7 +650,10 @@ public final class ChampionDirector {
                 Vec3d brow = champion.brow();
                 fx(world, MsgTribunalFx.CHAMPION_STONE, brow.x, brow.y, brow.z, 0, 0, 0, player.getEntityId(), 24);
             }
-            if (tradeTicks == 36 && champion.wearsStone()) {
+            if (tradeTicks == 36 && champion.wearsStone() && tradeForReal && (player == null || !player.isEntityAlive())) {
+                // Whoever brought the ship is not here to take the stone: it stays where it is until they are.
+                tradeTicks = 35;
+            } else if (tradeTicks == 36 && champion.wearsStone()) {
                 champion.setStone(false);
                 if (tradeForReal && player != null) {
                     giveStone(player);
@@ -664,6 +714,23 @@ public final class ChampionDirector {
         trader = null;
         tradeTicks = -1;
         body = null;
+    }
+
+    /** Keeps him in the wreck a while with nobody living near, for what is about to happen to him. */
+    public void holdPresence(int ticks) {
+        presentUntil = tick + ticks;
+    }
+
+    /** The stone has been torn out of his brow by someone who did not trade for it. */
+    public void stoneTakenBy(String who) {
+        ChampionData d = data();
+        d.stoneTaken = true;
+        d.stoneHolder = who;
+        d.markDirty();
+        if (body != null) {
+            body.setStone(false);
+        }
+        strandedLine = 0;
     }
 
     /** The Power Stone leaves his brow and is yours, the one true Power Stone. */

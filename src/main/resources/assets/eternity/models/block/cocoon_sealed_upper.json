@@ -1,0 +1,400 @@
+{
+  "parent": "block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "shell": "eternity:blocks/cocoon_shell",
+    "particle": "eternity:blocks/cocoon_shell"
+  },
+  "elements": [
+    {
+      "from": [
+        1,
+        0,
+        1
+      ],
+      "to": [
+        15,
+        6,
+        15
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1,
+            10,
+            15,
+            16
+          ],
+          "texture": "#shell"
+        },
+        "south": {
+          "uv": [
+            1,
+            10,
+            15,
+            16
+          ],
+          "texture": "#shell"
+        },
+        "east": {
+          "uv": [
+            1,
+            10,
+            15,
+            16
+          ],
+          "texture": "#shell"
+        },
+        "west": {
+          "uv": [
+            1,
+            10,
+            15,
+            16
+          ],
+          "texture": "#shell"
+        },
+        "up": {
+          "uv": [
+            1,
+            1,
+            15,
+            15
+          ],
+          "texture": "#shell"
+        },
+        "down": {
+          "uv": [
+            1,
+            1,
+            15,
+            15
+          ],
+          "texture": "#shell"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        6,
+        2
+      ],
+      "to": [
+        14,
+        10,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            6,
+            14,
+            10
+          ],
+          "texture": "#shell"
+        },
+        "south": {
+          "uv": [
+            2,
+            6,
+            14,
+            10
+          ],
+          "texture": "#shell"
+        },
+        "east": {
+          "uv": [
+            2,
+            6,
+            14,
+            10
+          ],
+          "texture": "#shell"
+        },
+        "west": {
+          "uv": [
+            2,
+            6,
+            14,
+            10
+          ],
+          "texture": "#shell"
+        },
+        "up": {
+          "uv": [
+            2,
+            2,
+            14,
+            14
+          ],
+          "texture": "#shell"
+        },
+        "down": {
+          "uv": [
+            2,
+            2,
+            14,
+            14
+          ],
+          "texture": "#shell"
+        }
+      }
+    },
+    {
+      "from": [
+        4,
+        10,
+        4
+      ],
+      "to": [
+        12,
+        13,
+        12
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            3,
+            12,
+            6
+          ],
+          "texture": "#shell"
+        },
+        "south": {
+          "uv": [
+            4,
+            3,
+            12,
+            6
+          ],
+          "texture": "#shell"
+        },
+        "east": {
+          "uv": [
+            4,
+            3,
+            12,
+            6
+          ],
+          "texture": "#shell"
+        },
+        "west": {
+          "uv": [
+            4,
+            3,
+            12,
+            6
+          ],
+          "texture": "#shell"
+        },
+        "up": {
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ],
+          "texture": "#shell"
+        },
+        "down": {
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ],
+          "texture": "#shell"
+        }
+      }
+    },
+    {
+      "from": [
+        6,
+        13,
+        6
+      ],
+      "to": [
+        10,
+        15,
+        10
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            1,
+            10,
+            3
+          ],
+          "texture": "#shell"
+        },
+        "south": {
+          "uv": [
+            6,
+            1,
+            10,
+            3
+          ],
+          "texture": "#shell"
+        },
+        "east": {
+          "uv": [
+            6,
+            1,
+            10,
+            3
+          ],
+          "texture": "#shell"
+        },
+        "west": {
+          "uv": [
+            6,
+            1,
+            10,
+            3
+          ],
+          "texture": "#shell"
+        },
+        "up": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#shell"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#shell"
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        0,
+        0.5
+      ],
+      "to": [
+        9,
+        9,
+        1
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            7,
+            7,
+            9,
+            16
+          ],
+          "texture": "#shell"
+        },
+        "east": {
+          "uv": [
+            15,
+            7,
+            15.5,
+            16
+          ],
+          "texture": "#shell"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            7,
+            1,
+            16
+          ],
+          "texture": "#shell"
+        },
+        "up": {
+          "uv": [
+            7,
+            0.5,
+            9,
+            1
+          ],
+          "texture": "#shell"
+        },
+        "down": {
+          "uv": [
+            7,
+            15,
+            9,
+            15.5
+          ],
+          "texture": "#shell"
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        0,
+        15
+      ],
+      "to": [
+        9,
+        9,
+        15.5
+      ],
+      "faces": {
+        "south": {
+          "uv": [
+            7,
+            7,
+            9,
+            16
+          ],
+          "texture": "#shell"
+        },
+        "east": {
+          "uv": [
+            0.5,
+            7,
+            1,
+            16
+          ],
+          "texture": "#shell"
+        },
+        "west": {
+          "uv": [
+            15,
+            7,
+            15.5,
+            16
+          ],
+          "texture": "#shell"
+        },
+        "up": {
+          "uv": [
+            7,
+            15,
+            9,
+            15.5
+          ],
+          "texture": "#shell"
+        },
+        "down": {
+          "uv": [
+            7,
+            0.5,
+            9,
+            1
+          ],
+          "texture": "#shell"
+        }
+      }
+    }
+  ]
+}

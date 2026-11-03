@@ -77,6 +77,13 @@ public class RenderChampion extends RenderLiving<EntityChampion> {
         if (entity.isInvisible()) {
             return;
         }
+        GlSnapshot vines = GlSnapshot.take();
+        ChampionVines.render(entity, x, y, z, partialTicks);
+        vines.restore();
+        if (!entity.wearsStone()) {
+            // Everything else drawn round him is the stone's light; without it, he is only himself.
+            return;
+        }
         float rage = entity.prevShownRage + (entity.shownRage - entity.prevShownRage) * partialTicks;
         float glow = entity.prevGlow + (entity.glow - entity.prevGlow) * partialTicks;
         Vec3d base = new Vec3d(entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * partialTicks,
@@ -106,7 +113,7 @@ public class RenderChampion extends RenderLiving<EntityChampion> {
     protected void renderModel(EntityChampion entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw,
                                float headPitch, float scaleFactor) {
         super.renderModel(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch, scaleFactor);
-        if (entity.isInvisible()) {
+        if (entity.isInvisible() || !entity.wearsStone()) {
             return;
         }
         float rage = entity.prevShownRage + (entity.shownRage - entity.prevShownRage) * partial;
@@ -235,7 +242,8 @@ public class RenderChampion extends RenderLiving<EntityChampion> {
                     break;
             }
             boolean stone = entity.wearsStone();
-            if (!stone && fists <= 0.02F) {
+            if (!stone) {
+                // His fists only ever burned with the stone's light.
                 return;
             }
             GlSnapshot before = GlSnapshot.take();

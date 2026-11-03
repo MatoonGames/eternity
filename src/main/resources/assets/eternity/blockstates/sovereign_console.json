@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "eternity:sovereign_console"
+    },
+    "facing=east": {
+      "model": "eternity:sovereign_console",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "eternity:sovereign_console",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "eternity:sovereign_console",
+      "y": 270
+    }
+  }
+}

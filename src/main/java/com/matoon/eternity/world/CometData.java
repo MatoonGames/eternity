@@ -54,6 +54,9 @@ public class CometData extends WorldSavedData {
     public String breaker = "";
 
     /** The Astral Regulator it left behind, until someone takes it. */
+    /** Someone Death has shown the comet to: it comes into their sky, in the Overworld, once the clock passes promiseAt. */
+    public UUID promised;
+    public long promiseAt;
     public UUID relic;
     public int relicDim;
     public double relicX, relicY, relicZ;
@@ -83,6 +86,8 @@ public class CometData extends WorldSavedData {
 
     @Override
     public void readFromNBT(NBTTagCompound nbt) {
+        promised = nbt.hasUniqueId("promised") ? nbt.getUniqueId("promised") : null;
+        promiseAt = nbt.getLong("promiseAt");
         int ordinal = nbt.getInteger("phase");
         phase = ordinal >= 0 && ordinal < Phase.values().length ? Phase.values()[ordinal] : Phase.DORMANT;
         clock = nbt.getLong("clock");
@@ -112,6 +117,10 @@ public class CometData extends WorldSavedData {
 
     @Override
     public NBTTagCompound writeToNBT(NBTTagCompound nbt) {
+        if (promised != null) {
+            nbt.setUniqueId("promised", promised);
+            nbt.setLong("promiseAt", promiseAt);
+        }
         nbt.setInteger("phase", phase.ordinal());
         nbt.setLong("clock", clock);
         nbt.setInteger("dim", dimension);

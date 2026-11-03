@@ -455,6 +455,13 @@ public final class Kingstable {
         return best;
     }
 
+    /** How good one move is for whoever makes it, looking {@code depth} moves ahead, as {@link #bestMove} reckons it. */
+    public int moveScore(int move, int depth) {
+        Kingstable k = copy();
+        k.play(move / CELLS, move % CELLS, null);
+        return -k.search(depth - 1, -WIN * 2, WIN * 2);
+    }
+
     /** Negamax with alpha-beta, scored for the side to move. */
     private int search(int depth, int alpha, int beta) {
         if (outcome != Outcome.PLAYING || depth <= 0) {

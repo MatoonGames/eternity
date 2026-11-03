@@ -429,6 +429,20 @@ public class RenderAdamWarlock extends RenderLiving<EntityAdamWarlock> {
                 case EMERGE:
                     right = left = 1F - ModelAdamWarlock.smooth((t - 25F) / 20F);
                     break;
+                case FLARE:
+                    right = left = Math.min(1.2F, t / EntityAdamWarlock.FLARE_BURST);
+                    break;
+                case CAUGHT:
+                    right = 1F;
+                    left = 0.3F;
+                    break;
+                case KNEEL:
+                    right = left = ModelAdamWarlock.smooth((t - EntityAdamWarlock.KNEEL_RAGE) / 60F) * 1.2F;
+                    break;
+                case DOWNED:
+                case HELD:
+                    right = left = 0F;
+                    break;
                 default:
                     right = left = entity.isEvolved() ? 0.25F : 0F;
                     break;

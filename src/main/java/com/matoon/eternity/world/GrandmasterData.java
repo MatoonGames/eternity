@@ -26,8 +26,8 @@ public class GrandmasterData extends WorldSavedData {
     /** Where the encounter has got to. Appended to only, since it is saved by ordinal. */
     public enum Phase { NONE, ARRIVING, OPENING, STAKES, RULES, PLAYING, LOST, COLLAPSE, DONE }
 
-    /** Adam Warlock's part in it. */
-    public enum Warlock { ABSENT, PLAYING, WALKED, GONE }
+    /** Adam Warlock's part in it; ALLIED is on their side of the table, on the Magus's road. Appended to only. */
+    public enum Warlock { ABSENT, PLAYING, WALKED, GONE, ALLIED }
 
     public Phase phase = Phase.NONE;
     public int dimension;
@@ -55,6 +55,11 @@ public class GrandmasterData extends WorldSavedData {
     public boolean finished;
     /** Warlock walked off his board: he refused it, whatever he was before. For the finale. */
     public boolean warlockRefused;
+    /**
+     * The Magus came to play instead of Warlock: someone who had seen him rise was holding the
+     * stones, and Warlock stood with them. He plays the raiders until the Grandmaster cheats.
+     */
+    public boolean magus;
 
     public GrandmasterData() {
         super(NAME);
@@ -110,6 +115,7 @@ public class GrandmasterData extends WorldSavedData {
         playerMoves = nbt.getInteger("playerMoves");
         finished = nbt.getBoolean("finished");
         warlockRefused = nbt.getBoolean("warlockRefused");
+        magus = nbt.getBoolean("magus");
     }
 
     @Override
@@ -141,6 +147,7 @@ public class GrandmasterData extends WorldSavedData {
         nbt.setInteger("playerMoves", playerMoves);
         nbt.setBoolean("finished", finished);
         nbt.setBoolean("warlockRefused", warlockRefused);
+        nbt.setBoolean("magus", magus);
         return nbt;
     }
 }

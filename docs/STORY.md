@@ -2,7 +2,7 @@
 
 This covers the story, the opposition that drives it, what every side stands to lose, the
 reasoning behind each character's choices, and the systems we need to build to carry it.
-Nothing here is implemented yet, except Chapter 6 (the Grandmaster), which is built.
+Chapters 1 to 6 are built, with the Sovereign branch of Chapter 3. The Finale and the alliance path are not yet.
 
 ---
 
@@ -411,6 +411,10 @@ Every objective has three clues. None of them is a waypoint, and any two are eno
 
 ### Chapter 1: The Oath (Space)
 
+*Built: `story/Oath.java`, `story/Barrow.java`, `story/Leaks.java`, `story/Stones.java`,
+`entity/EntityNorse.java`, `entity/EntityDraugr.java`. Try it with `/eternity story village`, or from
+the beginning with `/eternity story begin` and `/eternity story ragna`.*
+
 **Local four-corner.**
 - The player.
 - **Hrafn**, who wants the cube gone.
@@ -591,9 +595,106 @@ tries it.
 She gives the reason (he's asleep) and the deadline (he'll wake). She doesn't say what's in the
 room.
 
+#### As built
+
+What the chapter added to the outline above, and why.
+
+- **The village is wherever HeroesExpansion put it.** It's the nearest Norse village to whoever is
+  about when the ward starts failing, so "the northern coast" is replaced by the true compass
+  direction from wherever Ragna comes down. The stranger doesn't lie, so she never says "north"
+  unless it is: her "A long way south" to Ragna becomes "a long way" in whatever direction it is.
+- **The leaks point home.** Each piece of the north skids as it lands: its tail of torn turf and
+  snow runs away from the village. That's the **found** clue, and it needs no waypoint. The second
+  leak always carries Eirik's grave-stone, so the marker Hrafn recognises is in the world early,
+  and its line of the oath with it.
+- **The oath is five lines, one per keeper.** Ulf swore it. Each keeper after him added a line
+  when they took it on and cut it on their own stone:
+
+  | Keeper | Their line | Where the stone is |
+  | --- | --- | --- |
+  | Ulf, who swore it | "What the One-Eyed gave into our hands, we keep." | The barrow, the deepest grave |
+  | Asgerd Ulfsdottir | "Under the earth, under the stone, out of the light." | The barrow |
+  | Bjorn Asgerdsson | "We do not open it. We do not sell it. We do not ask what it is." | The barrow |
+  | Sigrid Bjornsdottir | "Until the One-Eyed comes himself and asks for it back." | Beside the path, with Ragna's |
+  | Eirik Sigridsson | "And whoever of us breaks it, our dead will take." | Lost to the sea, then thrown out into the world by a leak |
+
+  **Why nobody knows it all:** Hrafn's father was meant to teach him, and the sea took him first.
+  Hrafn knows only his father's line ("He said it was the line nobody wanted"). **The puzzle is
+  in the names:** each runs from the last, so the order can be worked out from the stones alone.
+  At the door the lines are offered in the alphabetical order of their keepers, which gives
+  nothing away. The last line, the one the player finds first, is the price of the whole chapter.
+- **Two doors.** The outer door opens to Hrafn's blood: he cuts his palm and lays it on the stone.
+  The inner door opens to the oath, spoken oldest first. A wrong line wakes the keeper whose words
+  should have come (or one of the kin, for the keepers buried in the village). That draugr gets up
+  to deal with whoever is in its barrow, and lies back down once it has been knocked down or has
+  hunted long enough. The runes light row by row as the lines go in.
+- **The dead can't be killed.** Knocked down, a draugr lies there a while and gets up. That's why
+  Hrafn can only hold them, not beat them.
+- **The climax, if the player stays.** If the player stays in the barrow, the fight goes on until
+  Hrafn falls in front of them. She comes down the stair behind them, the way anyone would, and
+  kneels by him, and the falling action plays then and there. She is there when something dies.
+- **The falling action** has a second question. "Who are you?" gets "I came for the funeral.":
+  true, and it tells them nothing. Whatever they ask, she tells them about the vault.
+- **Hrafn reacts to some stones** if he's with the player when they read them: Ulf's ("Everything
+  since is because of him."), Sigrid's ("She sang it to us. Only her line."), Ragna's ("I cut that
+  yesterday."), Eirik's ("That was meant to stand here.").
+- **The way on.** The cube shows whoever holds it the vault, for a few heartbeats at a time, every
+  half a minute or so. Using the cube while it's showing takes them there; at any other time it
+  does what it always did.
+- **Help at the door, for anyone who skimmed.** The puzzle has to be solvable by someone who
+  didn't read every line, so it is restated wherever they look:
+  - The door's answers give each keeper's **whole name** ("Asgerd Ulfsdottir's: ..."), so the
+    order is right there in the choices.
+  - **"How does it go?"** is always one of the answers. Hrafn says the rule ("Oldest first. Every
+    keeper after him was the child of the one before. It's in their names."). After one wrong
+    line he spells out the first link; after two he simply says whose line is next.
+  - A wrong line ends with Hrafn saying whose words should have come.
+  - Speaking to Hrafn in the barrow gives the same help, plus how many lines are still unread and
+    where they are.
+  - **The journal** (below) lists every line read, under each keeper's whole name, with the rule.
+
+#### The journal
+
+*Built: `story/Journal.java`, `client/gui/StoryJournal.java`, `client/gui/GuiStoryJournal.java`.*
+
+Everything the story has told the player, kept for anyone who skimmed a conversation. A key (J
+by default) opens it: the chapter, what to do now, and "what you know", meaning the lines and
+directions that bear on it.
+- When the goal moves on, a note slides in at the top left for a few seconds.
+- It never knows more than the scenes have said: where Death pointed, it says where she pointed;
+  where the stranger named a direction, it keeps that direction.
+- It only gives distances to things the story has already put in front of the player (where
+  Ragna fell, the green on Mars).
+
+#### Playing together
+
+*Built: `story/Talk.java`, `client/gui/GuiStoryChoice.java`.*
+
+A conversation belongs to everyone standing in it. Whoever starts it is its lead, and anyone who
+comes within 14 blocks while it plays is drawn in. A question goes to everyone in the
+conversation, and each person votes:
+- Each card shows the faces of whoever voted for it. A strip over the cards says how many have
+  voted, and once someone has, how long the rest have.
+- Anyone can change their vote until the question is settled. It settles when everyone has voted,
+  when one answer has more than half of all possible votes, or 15 seconds after the first vote.
+- The most votes wins. A tie goes to the lead's answer.
+- The winning card is stamped "CHOSEN · 2 of 3" while the others fall away. The answer is then
+  said in the speaker panel as **YOUR PARTY**, with the face of someone who chose it, before the
+  conversation goes on.
+- Whatever the answer decides is decided for everyone who voted: Warlock's stance, beats, trust.
+- Cutscenes play for the whole party.
+- Whoever wanders off drops out without ending it for the rest; the lead passes to someone still
+  there.
+
+`/eternity story phantoms <n> [answer]` adds make-believe voters, so a party's vote can be tested
+with one client.
+
 ---
 
 ### Chapter 2: The Vault (Reality)
+
+*Built: `story/VaultStory.java`, `story/Presence.java`, with the vault's own `world/VaultDirector.java`.
+Try it with `/eternity story vault`, then `aether`, `warlock` and `flame`.*
 
 **Local four-corner.**
 - The player.
@@ -742,9 +843,74 @@ becomes **BETRAYED**.
 
 His fights from then on start one evolution higher (the existing cocoon mechanic).
 
+#### As built
+
+- **The Aether** replaces the vault's Tesseract while the story runs (`story.enabled`). It is drawn
+  on the Tesseract's old cradle: a column of dark glass, bound in iron at the foot, the waist and
+  the crown, with slow bands of red folding inside it. Using it breaks it. The Aether pours into
+  whoever used it, and the Destroyer wakes.
+- **With it in them:** red veins grow in from the edges of the screen to a slow heartbeat. In the
+  vault, the veins on the side facing the Eternal Flame grow longer and brighter: that's the
+  **felt** clue. Blocks near them flicker into red sandstone, bone or nether wart for a few
+  frames. About two creatures in five that try to target them lose interest for a while. In the
+  overworld, a block or three round their home is rewritten into its red twin every half a
+  minute, for good (`story.aetherChangesWorld`).
+- **The guards lie where they fell**, and the woman in mourning comes up the steps behind the
+  player, out of their sight, and kneels by each in turn. They stay there until Warlock has seen
+  them.
+- **When Warlock comes:** once the Destroyer falls, or the moment the player reaches the doors with
+  the Aether (or the stone) before then. In the second case he meets them on the steps and the
+  vault stands still while they talk. He sees one soul or both, whichever is true. The camera holds
+  on the player for the long beat after "Yes."
+- **The answers added:** "Where?" gets "Where I'm from. The Sovereign keep what's theirs." "Get
+  away from me." gets a direction: she doesn't move, and her eyes don't leave them. Silence on the
+  last choice counts as no; he reads it in their face, and it doesn't earn the +1 trust an honest
+  no does.
+- **"Were you?"** is offered as a question (yes, no, or silence) and she doesn't answer it. The
+  answer is kept (`were_you_yes`, `were_you_no`, `were_you_silent`) for the finale.
+- **The Eternal Flame:** using the chalice with the Aether in them draws it out in a red stream,
+  the fire flares white, the stone is theirs (the true Reality Stone,
+  `Relics.Kind.REALITY_STONE`), and the chalice is dark from then on.
+- **TRUCE, then a stone:** Warlock notices any stone type they didn't hold when they promised. He
+  comes one to three minutes later, already evolved, says his lines, and fights.
+- **Chapter 3's direction** (`story/Presence.java`): after the vault, the next time something dies
+  at the player's hand, Death in her true form is standing over it, her face turned to the sky,
+  then a fist raised as if holding up a belt. She answers questions with what she does.
+
 ---
 
 ### Chapter 3: The Champion (Power)
+
+*Built: `story/Arena.java`, laid over the existing `world/ChampionDirector.java`. Death's direction to Tamarata is in
+`story/Presence.java`.*
+
+As built, the fight runs like this:
+- **A word before the bell.** The first call-out holds everyone: the Champion squares up and throws
+  nothing, and Warlock (if he is their rival) streaks down and hangs in the air between them. The
+  view leans toward whoever is talking. The Champion turns to face Warlock when he speaks, and
+  back to the player for "Two challengers". A bell starts the fight.
+- **Scene 3A is a real free-for-all.** Each picks a target for every move, so Warlock goes for the
+  Champion as often as the player ("Stay out of this, Elder."). The Champion turns on him between
+  moves, more often after Warlock has hit him ("Wait your turn, boy.").
+  - The Champion's fists take Warlock's usual cap per blow and can knock him reeling.
+  - Warlock's blows barely hurt the Champion, but they raise his temper.
+  - The Champion wears Warlock down but can't put him down: Champion blows stop at 30% of his health. Only a player beats
+    him. Warlock's boss bar shows throughout, including after the call-out scene, which had been hiding it for good.
+  - **Fixed: Warlock invisible (there, but not drawn).** Seen after the bell here and at the In-Betweener's glass. His
+    client position came through a `Rotations` data parameter, and `Rotations` wraps every value modulo 360 (it is meant
+    for angles). So x=504 arrived as 144, and the "off" marker y=-1000 arrived as -280: he was put under the world
+    and removed on the client while the server still had him (bar, lines, effects). The Sovereign only worked because it
+    sits near the origin. SPOT is now three float parameters in EntityAdamWarlock and EntityMagus. It is synced always,
+    and the client ignores vanilla tracker moves for both. `/eternity story glass` now removes a Warlock already at the
+    glass before staging another.
+- **Lines said in the middle of a fight** use the speaker panel without turning the view. This
+  covers the Champion's and Warlock's shouts, and all their lines everywhere while the story runs;
+  the shouts never talk over a conversation that's already playing.
+- **Planet Breaker stops everything again.** "Under your feet, Tamarata comes apart", then the
+  Champion's two lines, in the panel, not in chat. If Warlock is still there, he hangs over the
+  wreck and reacts ("You broke it. Your own world. Over one fight."), then turns to the player:
+  "No more referee. Just you and me." The fight in the wreck is his and theirs alone.
+  - Only players elsewhere get the "Far away, a planet called Tamarata breaks apart" chat line.
 
 **Local four-corner.**
 - The player.
@@ -838,6 +1004,136 @@ After the trade (existing):
 The warning isn't care; it's what an old fighter has noticed.
 
 ---
+
+### Chapter 3, branch: The Sovereign (when you fall in the Champion fight)
+
+**Dying before the planet breaks.** If Warlock is in the ring, he doesn't leave ("Then it's you and me, Elder."). He and
+the Champion lock onto each other (`turnOn`) and keep fighting until you get back; the Champion can't put him down
+(30% floor). Walking back within challenge range calls you back in, and it's the three of them again (`Arena.rejoin`).
+**He stays in the fight across absences.** World beat `warlock_in_arena` (set when he comes down, cleared when he
+really leaves: beaten by a player, or the heist). Whenever the Champion is summoned, `Arena.keepInArena` brings
+Warlock back (streaking in) if he isn't there: after a rejoin, a respawn elsewhere, or the arena emptying. If the
+Champion is dueling a living player, Warlock joins that duel; otherwise he fights the Champion alone. Post-break, he
+comes back at the nearest player. (`warlock_lost_champion` / "Sit down, boy" remain as a fallback but no longer happen.)
+
+**Replaying Chapter 3 from arrival:** `/eternity story champion`. It stops any conversation, takes Warlock and Death off
+the field, and runs `/eternity champion restore` (world whole, stone back in his brow, temper forgotten). For every
+player and the world, it clears `arena_called`, `first_loss`, `warlock_lost_champion`, `warlock_in_arena`,
+`warlock_took`, `dir_station`, `champion_helped` and `champion_debt`. If Warlock had only carried the stone home (station
+ABANDONED), that is undone too: Sovereign back to UNSEEN, stone and claim released. A Sovereign that has already been
+confronted is left alone. `death_revealed` and `dir_champion` stay, so the journal points you at Tamarata again.
+Your Warlock stance is kept; set it with `/eternity story stance <rival|betrayed|...>`.
+
+**Dying in the wreck (after Planet Breaker).** Warlock takes the Power Stone and flees home (`Arena.fell`):
+- If you were carrying it, he takes it off your body (`InfinityStones.take`, before drops).
+- Otherwise he flies to the drifting Champion and tears it out of his brow. The stone flies from brow to hand: "No. No!
+  That's mine. I bled for that!" / "You broke a world to keep it, old man. You don't get to keep it." / "Come back here!"
+- The stone is held in `SovereignData.stone`, claimed under `Arena.WARLOCK_ID`. Beat `warlock_took`.
+- When you wake, Death is standing near. She looks back at your own world, and just beside it, then cups her hands round
+  nothing and opens them empty. Beat `dir_station`.
+
+**The robbed Champion.** He stays adrift, with new bargaining lines ("The boy took it out of my head..."). A rocket
+still gets him home. He has nothing to give, but he gives the Nexus pointer anyway, plus "Hit him low. He never guards
+low." Beats `champion_helped` and `champion_debt`. He also gives himself: his ticket, which calls him to their side as a
+companion with no stone. It is one way through the Gardener's hedge (Chapter 5, "Ways through the hedge"). Anyone
+who already has `champion_helped` is given the ticket the next time they're not in a conversation.
+
+**The Sovereign station.** A Galacticraft moon of Earth, tier 1 (`SovereignMoon`, `WorldProviderSovereign`). It is
+precomputed by `SovereignStation` and pre-lit like the vault. Gold everywhere; nobody comes to meet you.
+- Halls in order: the landing ring, the atrium (her statue with its face cut away), the Hall of Cocoons (his, split
+  open, at the end), the vats, the archive, the Gallery of the Ascended, and the Sanctum.
+- Iris doors light when you have seen enough of the hall before them (`Sovereign.ready`).
+- Her recorded voice on the consoles (speaker RECORD) plants what he is becoming. The word Magus is never said.
+- The gallery's capsules hold sleepers with his face, older, violet, robed in white (`RenderAscendedPod` draws the
+  Magus model asleep).
+- What the vats rejected gets up when you walk in among them (`EntityDraugr.grown`: the spawn look, mortal).
+- Beats `sov_*`; the journal tracks every step.
+
+**The Sanctum** (`Sovereign.confront`):
+1. Warlock and Ayesha argue on her dais. He brought the stone; she wants it and him back in his cocoon. "What you are for."
+2. Time stops. Lord Chaos (`EntityOrderChaos` in puppet mode) steps out of a mirror: "A church with your face on every
+   altar." Warlock calls it a lie. Chaos proves it through the stone, and the window tears open.
+3. The Magus steps through. "That was a possibility. Go back." "No." Chaos withdraws, unsettled.
+4. Warlock turns on her: "You were making him." The Magus: "So small. I had forgotten how small." / "I have no mother.
+   I have a church." He kills her.
+5. The fight: the Magus (`EntityMagus`) against the player and Warlock. He can't be beaten. After 24 hits or 100
+   seconds he says "Enough", lifts Warlock by the throat, takes the stone into his brow (claimed under
+   `Sovereign.MAGUS_ID`), and leaves through the window.
+6. Aftermath (revised, see "The Magus, rebuilt" below): no words. Warlock kneels over her, goes up out of the station
+   into space, and the title comes up. Stance ALLY, beat `magus_risen`, and the Nexus pointer if you never got it from
+   the Champion, all without a word said.
+
+Operator: `/eternity story sovereign <status|visit|stage|open [door]|seen <beat...>>`.
+
+
+**Revisions (2026-10-31, from play):**
+- The vats and the gallery's capsules are three blocks tall. Each capsule holds a real sleeper (the Magus model, asleep).
+  Touching one tells you nothing: the frost clears, the view goes to his face (the plaque is all the text), he opens his eyes and looks at you, and the frost comes back.
+- Falling off the station is caught every tick and puts you back on the landing ring.
+- Lord Chaos's portrait no longer leaves fog on, which had blacked out the screen.
+- Story progress is kept per player, by identity. A single-player world now hands its story to whoever logs in with none of their own, when it holds exactly one other player's story (StoryDirector.inherit). Launchers that change the offline name every run had made each launch a stranger to the save. The dev client also always launches as "Dev".
+- ENTER (rebindable: Controls, "Skip Dialogue Line") finishes a line that is still typing, and pressed again moves on to the next. In a party the conversation moves on once everyone in it has pressed. Lines said in the middle of a fight are only cleared from your own screen.
+- Dialogue reads slower everywhere (Talk.readTicks; the panel keeps lines up longer). The Grandmaster's rules run at 1.7x their old length (GrandmasterScenes.PACE), and at the end he asks "Do you want it again, or have you got it?"
+- The In-Betweener, Order and Chaos, the Living Tribunal and the Einherjar speak through the story panel and choice cards now. The old screens are no longer opened.
+- The Nexus opens with 2 stones and stops pulling at you once you hold the Soul Stone. Warlock comes to the glass for any stance he has met you under, ALLY included. Death won't send you on to the Garden before the Champion (or the Magus) is behind you.
+- When Death shows you the comet, it comes into your sky within a minute or so of you next standing in the Overworld (CometDirector.promise).
+- On Mars the garden takes its place where you land, not where you launched. A thread of green light stands over it, and the journal gives its coordinates.
+
+**The Magus, rebuilt (2026-10-31, from play):**
+- **His look.** He is no longer a Norse-rig figure. `EntityMagus` is a flier of its own on Warlock's skeleton
+  (`ModelMagus`, same joints and proportions as `ModelAdamWarlock`, 8% taller), skinned by `tools/MagusSkin.java` after
+  the classic comics look: lavender skin, white hair swept high off a widow's peak, blank white eyes, a violet tunic
+  with a white lightning bolt and great pointed shoulders, violet trunks, bare arms and legs, silver belt and round
+  buckle, silver wristbands, silver knee boots with flared tops. `magus_power.png` (white-violet) comes up over him as
+  his power rises, with a cold corona, burning hands and violet afterimages (`RenderMagus`). The gallery's sleepers are
+  the same model, asleep, in a grey, eyes-shut skin (`magus_sleeper.png`).
+- **His teleport.** He folds: his body draws in to a line of white light as tall as he is, the air rings out round it,
+  streaks of light are pulled in, and the line goes out. Unfolding is the same backwards, with a shock at the end
+  (`Pose.VANISH`/`APPEAR`, and `BLINK_OUT`/`BLINK_IN` in a fight). He enters through the window this way and leaves the
+  Sanctum this way.
+- **Her death** (`Sovereign.motherDies`, staged to the tick on a `Timeline`). He raises an open hand at her from across
+  the room (`Pose.CRUSH`). She is seized and lifted off her dais, clawing at her throat (`NorsePose.SEIZED`), his
+  lightning in her (`MAGUS_GRASP`); she gets out "Adam -". The fist closes: a burst, and she goes limp, drops, and
+  lies still. The gold drains out of her skin to ash (`EntityNorse.setAsh`), and a small gold light goes up out of her
+  (`MAGUS_SOUL`). "She hits the floor of her own Sanctum and does not move again." Warlock: "...Mother?"
+- **The fight is Warlock's, not yours** (`MagusDuel`, about 20 seconds, nobody else in it):
+  1. Warlock flares: everything at once, gold, roaring (`State.FLARE`). Every mirror in the room bursts. "You don't get
+     to be me."
+  2. He throws the first punch and it lands: the Magus goes through the far mirror and the wall behind it.
+  3. Warlock is on him before he is up: jab, cross, and an uppercut that puts him through the roof. The top of the
+     dome comes off (`SovereignStation.domeCap`, flung away as debris; `MAGUS_BREACH`).
+  4. Over the hole, the Earth under them, Warlock pours everything into his beam. The Magus holds it off with one palm,
+     straining and giving ground, then not. "Are you finished?"
+  5. Warlock comes again. The Magus catches the fist (`State.CAUGHT`): "I remember this. I threw this punch, a long
+     time ago." Then the combo: a palm to the chest; gone and behind him, a backhand; gone and in his path, a knee;
+     gone and above him, both fists down.
+  6. Warlock goes into the Sanctum floor (a crater, `State.DOWNED`; the gold goes out of him). The Magus comes down
+     after him through the hole, unhurried.
+  7. He picks Warlock up by the throat, one-handed (`Pose.GRIP`, `State.HELD`, Warlock hung from his hand every
+     tick), takes the stone into his brow (`Pose.TAKE`, the gem burns: `crown`), drops him, looks at you, and folds
+     away. The window closes. Through the hole in the roof, the Earth turns.
+  8. **Warlock goes** (`Sovereign.aftermath`/`ascent`, no dialogue at all). He gets up, crosses to her, and goes down
+     on his knees beside her (`State.KNEEL`): bowed, shoulders shaking. Then his fists close, power streams into him,
+     the floor cracks and the station's lights burst one after another outward from him. He throws his head back and
+     screams, and goes straight up through what is left of the Sanctum and on into space, gold, taking most of the
+     station with him (everything above the floors within 36 blocks, flung away as debris; never the ground under
+     anyone, nor her).
+  9. **The title** (`TitleCard`), in first person: nobody's camera leaves their eyes. Your view is drawn to him as it
+     builds, pulled up after him as he goes, and held on the sky where he went, where **ETERNITY** comes up out of
+     space in the blocky lettering of the old logo: letters made of the dark itself, clear as crystal, their edges
+     traced in light first (left to right, a point of light drawing each one), then their faces filling with a cold
+     glow, brightest at their glancing faces and along their tops, a sheen running across them as the word turns a
+     little. A small MARVEL logo (`textures/gui/marvel.png`) sits centred over the word and comes up with its crystal.
+     It holds, goes back into the dark, and your view is your own again. The HUD is hidden from the moment he
+     goes until it is over.
+  10. He is your ally from here on (he shows up and backs you up, as before) without a word ever exchanged. The
+     journal: "He has not said he is with you. He will be there when you need him."
+- **Music.** "Sovereign" (`music.sovereign`) is the Magus's theme: it plays whenever he is near and awake, except at
+  the Grandmaster's table, where the game's own music plays until the board breaks. "Muse Uprising" (`music.uprising`) starts the moment Warlock goes up and carries the title.
+- `/eternity story sovereign ascent` jumps straight to Warlock's going.
+- The room stays broken. `/eternity story sovereign stage` puts it back (`SovereignStation.restoreSanctum`).
+  `/eternity story sovereign duel [death]` jumps straight to the fight (or to her death); `poses` lines up every new
+  pose in the Sanctum for inspection.
 
 ### Chapter 4: The Nexus (Soul): the master climax
 
@@ -945,6 +1241,38 @@ have seen it.
 *Alliance path: after the Soul Stone, Warlock comes down to the hub island with a new deal
 (Scene AL-1, §6, "The alliance path").*
 
+#### As built
+
+*Built: `story/Glass.java`, new nodes in `world/InBetweenerDialogue.java` (90-98), and hooks in
+`world/InBetweenerDirector.java` and `story/Presence.java`.*
+
+- **The way in.** Once the Champion has paid his debt and the player carries three stones, the
+  world gives way onto the Nexus round them in the overworld:
+  - The first rift opens about half a minute after both are true, and then every five minutes or
+    so. Each is one of Eternity's own great rifts, torn a few blocks in front of them, its twin
+    opening at the edge of the grey disc.
+  - "Where all the worlds touch. It won't stay open long."
+  - It stops once they have been through.
+- **Scene 4A** plays if Warlock is their rival, as they come within 30 blocks of the glass.
+  - He hangs just off it, on their side. The In-Betweener speaks in the speaker panel, from his
+    glass.
+  - After "What's your excuse?" the player answers for themselves: "Leave him alone." (+1 trust,
+    and the In-Betweener calls it sweet), "He's got a point." (-1; "You'd know."), or silence.
+  - A rival leaves ("Don't deal with him..."). One whose word was broken (`BETRAYED`) fights.
+  - The In-Betweener's own conversation waits until the scene is over.
+- **Scene 4B, `IMBALANCE`,** is a turn in the In-Betweener's own game. From the second round
+  onward, if the visitor carries Death's mark, he stops: "Oh, she's right behind you."
+  - The three answers lead into "One hand for the living. One for the dead." and "Your hand. Her
+    idea.", then back into his game where it was.
+  - It happens once per player (`imbalance`).
+- **Scene 4C** is Order and Chaos's warning, said before whatever wrath node they open with.
+  - It plays once per player (`masters_warned`).
+  - It says "You carry the stones" rather than a count, because which stones a player holds here
+    varies.
+- **Scene 4D:** the next kill after they hold the Soul Stone. Death looks at the sky as if waiting
+  for something to cross it, points straight up, and closes her hands round something small
+  (`dir_regulator`).
+
 ---
 
 ### Chapter 5: The Garden (Time)
@@ -1044,6 +1372,151 @@ they do.
 
 *Alliance path: the Gardener offers the stone to Warlock's hands instead (§6, "The alliance
 path").*
+
+#### As built
+
+*Built: `story/Garden.java` (the chapter), `story/GardenPlot.java` (the place),
+`block/BlockStrangeBloom.java`, `block/BlockGardenThorn.java`, the Gardener's look in
+`client/render/NorseBoxes.java` and `ModelNorse.java` (skin from `tools/NorseSkin.java`; the
+plants and hedge from `tools/GardenArt.java`), and `Relics.Kind.TIME_STONE`.*
+
+- **Told:** the next kill after `dir_regulator`. She crouches and lays her palm on the ground. The
+  grass under her hand really dies (grass to coarse dirt, flowers to dead bushes). Then she points
+  low in the east (`dir_garden`).
+- **Found:** strange blooms. Once the player has the Soul Stone and has been shown the Comet, every
+  few minutes in the overworld a plant comes up within thirty blocks of them, in bare stone, sand,
+  gravel or grass. There are four kinds: glass bells, ember-ferns, lantern-heads and blackleaf.
+  - Each gives off a little light and its own particles.
+  - Each item's tooltip says *"Not from here."*
+  - The first one gets a direction line saying which way it is.
+- **Felt:** the first time they're on Mars after `dir_garden`, the garden takes its place about 110
+  blocks from where they came down, and they're told the direction: "Off to the west, against all
+  that red: green."
+  - From then on, while it's theirs to find, the stones they carry tick on that planet like a
+    clock: a soft tick-tock on the client.
+  - Without Galacticraft's Mars, the garden goes in the overworld.
+- **The garden** is built the first time it is loaded with someone near:
+  - a round lawn with a ragged edge where the red comes back;
+  - a pond with a clay bed, lilies and reeds;
+  - four beds of ripe grain and roots, edged in logs and watered down the middle;
+  - rows of flowers, colour by colour;
+  - six old trees round the rim;
+  - a bench facing the water, with a lantern on a post, and tall flowers behind it;
+  - paths, and strange blooms among the grass.
+- **The Gardener** is built on the same jointed figure as the Norse people:
+  - fingers, lids, a moving mouth, and hair, beard, robe, sleeves and mantle on springs;
+  - moss-green skin, white hair and beard with leaves caught in them, and a circlet of leaves and
+    white flowers;
+  - a bark-cloth robe with a vine stitched round its hem, a mantle of living leaves, a plaited
+    grass belt with a trowel through it, and bare feet with root-like toes.
+  - He stands a head taller than anyone in the north. Standing, he is a little stooped, hands
+    folded low, and every so often he looks down at the plants and back up.
+  - Three new poses: **TEND** (kneeling at a bed, the trowel going in and turning the soil, his
+    other hand firming it, sitting back now and then to look); **RAISE** (his arms rise palms up
+    and his hands close, and the ground answers); **PRESS** (the stone held out, brought to his
+    chest, pressed in, his back bowing round it).
+- **Scene 5A** plays as written, with an answer to each question:
+  - "I can make you." → "Everyone who's come here has thought that."
+  - "She'll find another way." → "She always does. That's never been a reason to help her."
+  - A rival Warlock stands at the Gardener's shoulder, and says "They won't."
+  - Then RAISE, and the ground opens under everyone in the party who is inside the garden: a pit,
+    walls of roots, and the roots holding them while they tighten. That death is certain; it gets
+    through armour and anything else.
+  - Moving doesn't get you out of it. The pit opens where you stand on the ground, even mid-jump.
+    You're put over its middle, and pulled back over it if you step onto the rim or climb out.
+    Anyone inside the garden or within 28 blocks of him is caught. If everyone got clear anyway,
+    or left the world while held, the roots "close on nothing" and the hedge goes up all the same.
+    The garden never sits half-finished with him frozen mid-raise.
+- **Death won't let them in.** They wake at home: "Then something cold and flat against your chest,
+  pushing. She won't have you. Not yet." Whatever they carried, his roots pushed out through the
+  hedge onto the plain, so the Power Stone is never lost inside a garden only the Power Stone can
+  open.
+- **The hedge.** It goes up the moment he knows: two blocks thick and five high, round the lawn.
+  - No blade or fire gets through it, and it tears whoever pushes into it.
+  - While it stands whole, his roots throw back anyone who comes into the garden, flyers
+    included. Holding the Power Stone, the roots break before they close.
+  - Once anything has got through it, the way through is kept (`StoryData.gardenBreach`), and his
+    roots stop throwing anyone out.
+- **Ways through the hedge.** The Power Stone isn't the only one. A player who went down the Magus
+  branch (Warlock took the stone) has to have another, so there are four more:
+  - **The Power Stone.** Struck with it in hand, the hedge comes apart for three blocks round the
+    blow.
+  - **The Champion.** If they brought the robbed Champion home (`champion_helped`), he gives them
+    his ticket (`item/ItemChampionTicket`): "Hold it up when you need a fist, and I'll come."
+    - Using it calls him down beside them. He comes with no stone, none of its powers and no boss
+      bar: just a strong Elder (`EntityChampion.befriend`).
+    - Without the stone he is drawn without it: no gem in his brow, no purple veins, aura, corona,
+      afterimages or burning fists. His impacts, landings and roars flash white and heat instead of
+      purple (`MsgTribunalFx.PLAIN`). The same goes for the robbed Champion adrift on Tamarata.
+    - He follows them and fights whatever hostile mob comes for them, or whatever they're
+      fighting. His blows are capped at 40, and he never hits a person.
+    - He is never saved. While called, he is put back at their side after a login, a change of
+      world, or if he falls more than 40 blocks behind. Using the ticket again sends him off: he
+      walks away and is gone in one leap.
+    - Walk him within nine blocks of the standing hedge and he says "A hedge. He grew a hedge."
+      He wades in, and it takes him. There are three animations of his own for it, with no stone
+      effects in any of them:
+      - **SNARED:** a jolt as the vines yank him hard up against the hedge, arms pinned at his sides
+        and feet bound. Then he looks down at himself and along the vines.
+      - **STRAIN:** heaves against the vines, two seconds each. He sinks into his legs, forces his
+        arms out a hand's width, throws his head back trembling, then slackens and pants. Creaks,
+        breaths and groans are timed to each heave.
+      - **TEAR:** he crouches with his forearms crossed and shaking. Then he throws his arms wide and
+        rises, the vines snap, and he roars at the hedge before settling back into his guard.
+    - The vines are rendered, not blocks (`client/render/ChampionVines`). Thick black-green
+      stems with pale thorns and the odd leaf come off the hedge in front of him and up out of the
+      ground. They wind round his legs, waist, chest and both arms, and follow his arms as he
+      strains. They whip in when he's caught, tighten with each heave and stretch as he gathers
+      himself. When he tears free the coils break into lengths and fly off him, and the slack
+      reaches drop to the ground.
+    - Lines between the beats: "Huh." and "Strong. For a gardener." When he tears loose, the hedge
+      in front of him comes apart, leaving a gap eight blocks wide.
+  - **The Casket of Ancient Winters.** Its gale, or its burst, freezes whatever of the hedge it
+    reaches (`block/BlockThornHusk`, frozen). It does this even where the Casket otherwise leaves
+    terrain alone. Frozen through, the hedge isn't alive, "only wood": it breaks by hand like
+    glass, along with the frozen stems round it, and nothing grows back into the gap.
+  - **The Reality Stone.** Held in hand within sixteen blocks of the standing hedge, it puts
+    **Rewrite** on the ability bar (`ability/HedgeAbilities`, its own Lucraft context). Use it and
+    "Not broken. Gone; never there at all."
+    - From where they stand, a wave runs round the ring both ways: the stems go red and glassy,
+      then aren't there.
+    - It ends with "Where the hedge stood there's only the plain, running right up to the edge of
+      his lawn, as if it always had."
+  - **The Soul Stone.** Held there, it puts **Reap** on the bar. "It opens, and it's hungry."
+    - For about five seconds, everything in the garden gives up its life in threads of amber light
+      to the player: crops, flowers and blooms go to dead stalks, leaves fall, grass goes to bare
+      earth, and the hedge goes to grey husks you can walk through, which crumble away.
+    - The player comes out of it with absorption and regeneration. Any animals in the garden die.
+  - The client learns where the standing hedge is from the story state, so both sides agree when
+    the abilities are on the bar.
+  - The journal lists each way the player actually has: the Power Stone always, the Champion if
+    they hold his ticket, the Casket if they carry it, and the stones if they carry either one.
+- **Scene 5B** plays within nine blocks of him, once through the hedge (or with the Power Stone
+  in hand). He is kneeling, and everything round him goes grey as they come. What he says first
+  depends on how they got through:
+  - the Power Stone: "You broke it. Of course you did."
+  - the Champion: "Tryco. They've put you on a leash." The Champion, if he's there: "Nobody holds
+    my leash, old man. I pay what I owe."
+  - the Casket: "Winter. You brought winter into a garden."
+  - the Reality Stone: "You didn't even break it. You made it so it was never there."
+  - the Soul Stone: "All of it. Every living thing in it, for one stone." He kneels "in the dust
+    that was his garden", and the stone in his chest is "part of the last living thing here".
+  - Then the PRESS, the stone lit in his chest with roots of light under the skin, and the lines as
+    written. "Stand aside, child." is only said if Warlock is there.
+  - To test: `/eternity story garden hedge` puts the hedge back up whole, and
+    `/eternity story companion [ticket|call|dismiss]` handles the Champion.
+- **(Take it.)** He takes their wrist and puts their hand where the stone is.
+  - The true Time Stone is theirs.
+  - He goes down, and Death is kneeling by him with her hand on him before he has finished falling.
+  - Warlock says nothing and goes.
+  - Over the next minute, the whole garden dies.
+- **(Leave.)** "Then go home."
+  - The hedge comes down, and he goes back to his work with the stone still lit in his chest.
+  - At their next kill Death stands over it and only waits.
+  - Coming back to him, or speaking to him, offers the choice again: "You came back. It's still
+    here."
+- **What comes next:** with the Time Stone, a player who followed the story holds five stones and
+  not the Mind Stone, which is exactly when the Grandmaster comes, at the next dawn (Chapter 6).
 
 ---
 
@@ -1221,6 +1694,40 @@ Stone lies on it, still.
 > yourself.
 
 ---
+
+#### On the Magus's road (built)
+
+For a player with `magus_risen` (Warlock their ally, the Magus holding the Power Stone):
+- **Trigger.** The game comes with four stones instead of five (`due()`, and the journal).
+- **Opening.** The Grandmaster announces a challenger who asked for the game by name. The Magus comes down out of the
+  sky to play the raiders. Warlock lands beside the player (`GrandmasterData.Warlock.ALLIED`) and never touches the
+  board ("Don't watch him. Watch the board.").
+- **Play.** The Magus moves his raiders the way Warlock would have: he flies down over the piece, bends over it
+  (EntityMagus CARRY) and carries it across, in violet light and particles where Warlock's are gold. He sees one move
+  deeper than the house.
+- **Warlock coaches** (`world/Coaching`), on the player's turn, every other move, starting with the first. He picks a
+  sound move with the engine (looking three moves ahead), lights it on the board (`MsgGrandmaster.FX_HINT`: the piece
+  in blue, where it goes in pale gold, anything it takes in red; out the moment the player moves) and says why, in
+  priority order: the king can reach a corner now; a raider is one move from closing on the king (step the king out,
+  block the square, or take the raider); a king move that opens two corners at once; a capture; a king move that opens
+  one road; otherwise the engine's choice, explained (nearer the edge, more room to run, a guard beside the king, a
+  corner kept open, a raider set up to be taken). His first tip also says how the game is won.
+  `/eternity grandmaster move hint` plays his last suggestion, for testing.
+- **The turn.** At the first cheat the Magus names it: "He moved his own board." / "Then the rules were never the game.
+  Only the hand that enforces them." / "I am no longer bound by them." The stage becomes SEIZED:
+  - The Grandmaster's cheats stop working.
+  - The Magus moves raiders whenever he likes; every square he touches turns white and violet (`BlockBoard.Face.WHITE`).
+  - The Grandmaster backs away in fright (EntityGrandmaster AFRAID).
+- **The Grandmaster switches sides.** "Fine. FINE. You. With me." He throws everything he has at the Magus (`gmTurns`):
+  1. the board stood up as walls round him, which the Magus blasts apart;
+  2. every card he has;
+  3. the whole table, thrown square by square.
+  The player and Warlock can fight the Magus meanwhile. None of it touches him.
+- **The end** (`magusEnding`). The Magus lifts the Grandmaster by the throat (LIFTED) and takes the Mind Stone, claimed
+  under `Sovereign.MAGUS_ID` (`SovereignData.magusHasMind`). Then he leaves. The Grandmaster lives: "He didn't even
+  want to play." The pot goes back to the player.
+- **Elsewhere in Chapter 6.** When Warlock walks out in the usual game, StoryData now records REFUSED.
+- Operator: `/eternity grandmaster magus`.
 
 ### The Finale
 

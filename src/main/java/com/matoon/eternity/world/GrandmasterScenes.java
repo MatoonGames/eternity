@@ -23,7 +23,7 @@ public final class GrandmasterScenes {
         public final int hold;
 
         Beat(int tick, String line, State gesture, int hold) {
-            this.tick = tick;
+            this.tick = at(tick);
             this.line = line;
             this.gesture = gesture;
             this.hold = hold;
@@ -48,8 +48,19 @@ public final class GrandmasterScenes {
             new Beat(790, "It's all in there, if you forget. Raiders first.", State.BOW, -1),
     };
 
+    /**
+     * How much slower than it was first timed he tells it: unhurried enough that everyone can read
+     * every line twice while the board shows it. Every tick of the cutscene goes through at().
+     */
+    public static final float PACE = 1.7F;
+
     /** The rules cutscene's length, from its clock's 0. */
-    public static final int RULES_LENGTH = 870;
+    public static final int RULES_LENGTH = at(870);
+
+    /** A tick of the rules as first timed, at the pace he tells them now. */
+    public static int at(int tick) {
+        return Math.round(tick * PACE);
+    }
 
     private GrandmasterScenes() {
     }

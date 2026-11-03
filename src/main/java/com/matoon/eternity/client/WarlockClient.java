@@ -63,6 +63,8 @@ public final class WarlockClient {
     private int tick;
     private float shake;
     private float flash;
+    /** Whether the flash on screen now is the Magus's, white-violet, rather than Warlock's gold. */
+    private boolean flashCold;
     /** How hard the world is rushing past at the edges of the view, 0 to 1. */
     private float rush;
     private float fovKick;
@@ -106,6 +108,7 @@ public final class WarlockClient {
         Vec3d to = new Vec3d(m.a, m.b, m.c);
         double dist = mc.player.getPositionVector().distanceTo(at);
         long seed = rand.nextLong();
+        flashCold = false;
         switch (m.type) {
             case MsgTribunalFx.WARLOCK_BOOM:
                 effects.add(new WarlockFx.Boom(at, to, m.time, seed));
@@ -208,6 +211,49 @@ public final class WarlockClient {
             default:
                 break;
         }
+    }
+
+    /** The Magus's effects share all of this: the same shake, the same flash, only colder. */
+    public void magus(MsgTribunalFx m) {
+        if (mc.world == null || mc.player == null) {
+            return;
+        }
+        Vec3d at = new Vec3d(m.x, m.y, m.z);
+        Vec3d to = new Vec3d(m.a, m.b, m.c);
+        double dist = mc.player.getPositionVector().distanceTo(at);
+        long seed = rand.nextLong();
+        switch (m.type) {
+            case MsgTribunalFx.MAGUS_IMPACT: {
+                float weight = m.time == 0 ? 0.6F : m.time == 1 ? 1F : 1.6F;
+                effects.add(new com.matoon.eternity.client.render.MagusFx.Impact(at, to, m.time, seed));
+                shake = Math.max(shake, 2.2F * weight * closeness(dist, 30D));
+                tint(Math.max(flash, 0.22F * weight * closeness(dist, 16D)));
+                if (m.time > 0) {
+                    fovKick = Math.max(fovKick, 0.06F * weight * closeness(dist, 20D));
+                }
+                break;
+            }
+            case MsgTribunalFx.MAGUS_GRASP:
+                effects.add(new com.matoon.eternity.client.render.MagusFx.Grasp(m.id, (int) m.a, m.time));
+                break;
+            case MsgTribunalFx.MAGUS_SOUL:
+                effects.add(new com.matoon.eternity.client.render.MagusFx.Soul(at, m.time, seed));
+                break;
+            case MsgTribunalFx.MAGUS_BREACH:
+                effects.add(new com.matoon.eternity.client.render.MagusFx.Breach(at, m.a, m.time, seed, m.b > 0.5D));
+                shake = Math.max(shake, 6F * closeness(dist, 60D));
+                tint(Math.max(flash, 0.6F * closeness(dist, 40D)));
+                rush = Math.max(rush, 0.6F * closeness(dist, 30D));
+                break;
+            default:
+                break;
+        }
+    }
+
+    /** A flash of the Magus's: white-violet, where Warlock's is gold. */
+    private void tint(float amount) {
+        flash = amount;
+        flashCold = true;
     }
 
     // ------------------------------------------------------------------ ticking
@@ -452,11 +498,12 @@ public final class WarlockClient {
         BufferBuilder buffer = tessellator.getBuffer();
         if (shownFlash > 0.01F) {
             GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+            float r = flashCold ? 0.9F : 1F, g = flashCold ? 0.82F : 0.85F, b = flashCold ? 1F : 0.5F;
             buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR);
-            buffer.pos(0, h, 0).color(1F, 0.85F, 0.5F, shownFlash).endVertex();
-            buffer.pos(w, h, 0).color(1F, 0.85F, 0.5F, shownFlash).endVertex();
-            buffer.pos(w, 0, 0).color(1F, 0.85F, 0.5F, shownFlash).endVertex();
-            buffer.pos(0, 0, 0).color(1F, 0.85F, 0.5F, shownFlash).endVertex();
+            buffer.pos(0, h, 0).color(r, g, b, shownFlash).endVertex();
+            buffer.pos(w, h, 0).color(r, g, b, shownFlash).endVertex();
+            buffer.pos(w, 0, 0).color(r, g, b, shownFlash).endVertex();
+            buffer.pos(0, 0, 0).color(r, g, b, shownFlash).endVertex();
             tessellator.draw();
         }
         if (rush > 0.02F) {

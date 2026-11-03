@@ -1,0 +1,163 @@
+{
+  "parent": "block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "metal": "eternity:blocks/vat_metal",
+    "glass": "eternity:blocks/vat_glass",
+    "broken": "eternity:blocks/vat_broken",
+    "liquid": "eternity:blocks/vat_liquid",
+    "particle": "eternity:blocks/vat_metal"
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        0,
+        3
+      ],
+      "to": [
+        13,
+        16,
+        13
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            3,
+            0,
+            13,
+            16
+          ],
+          "texture": "#liquid"
+        },
+        "south": {
+          "uv": [
+            3,
+            0,
+            13,
+            16
+          ],
+          "texture": "#liquid"
+        },
+        "east": {
+          "uv": [
+            3,
+            0,
+            13,
+            16
+          ],
+          "texture": "#liquid"
+        },
+        "west": {
+          "uv": [
+            3,
+            0,
+            13,
+            16
+          ],
+          "texture": "#liquid"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        0,
+        2
+      ],
+      "to": [
+        14,
+        16,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            0,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "south": {
+          "uv": [
+            2,
+            0,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "east": {
+          "uv": [
+            2,
+            0,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "west": {
+          "uv": [
+            2,
+            0,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        }
+      }
+    },
+    {
+      "from": [
+        1.5,
+        7,
+        1.5
+      ],
+      "to": [
+        14.5,
+        8,
+        14.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1.5,
+            8,
+            14.5,
+            9
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            1.5,
+            8,
+            14.5,
+            9
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            1.5,
+            8,
+            14.5,
+            9
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            1.5,
+            8,
+            14.5,
+            9
+          ],
+          "texture": "#metal"
+        }
+      }
+    }
+  ]
+}

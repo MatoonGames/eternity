@@ -130,6 +130,9 @@ public final class InBetweenerDirector {
     private int stageTicks;
     private UUID visitor;
     private int node = -1;
+    /** What the visitor's answer sets going, run on the next tick. */
+    @Nullable
+    private Runnable next;
     private int mask;
     private byte beat;
     private int ego, hunger, suspicion, pull, facts, rounds, moves;
@@ -137,6 +140,8 @@ public final class InBetweenerDirector {
     private int irritation;
     private boolean bluffed, ranted;
     private boolean turned;
+    /** He has told this visitor what stands behind them. */
+    private boolean imbalanced;
     /** The visitor is inside his glass. */
     private boolean inside;
     /** From the moment the glass breaks until he falls: broken, but not yet knowing it. */
@@ -224,6 +229,12 @@ public final class InBetweenerDirector {
         MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
         if (server == null || DimensionManager.getWorld(0) == null || server.getPlayerList().getPlayers().isEmpty()) {
             return;
+        }
+        if (next != null) {
+            // What an answer set going, a tick after it was chosen, so a conversation never ends itself mid-step.
+            Runnable r = next;
+            next = null;
+            r.run();
         }
         InBetweenerData d = data();
         d.clock++;
@@ -585,7 +596,7 @@ public final class InBetweenerDirector {
                 lingering.remove(id);
             }
             if (player.isSpectator() || !player.isEntityAlive() || h > TALK_RANGE || Math.abs(player.posY - Nexus.JUNCTION_Y) > 9D
-                    || lingering.contains(id)) {
+                    || lingering.contains(id) || com.matoon.eternity.story.StoryDirector.INSTANCE.talking(player)) {
                 continue;
             }
             begin(player);
@@ -600,7 +611,7 @@ public final class InBetweenerDirector {
         visitor = player.getUniqueID();
         ego = START_EGO;
         hunger = suspicion = pull = facts = rounds = moves = irritation = 0;
-        turned = bluffed = ranted = false;
+        turned = bluffed = ranted = imbalanced = false;
         inside = false;
         tried.clear();
         Memory memory = d.memory(visitor);
@@ -663,7 +674,61 @@ public final class InBetweenerDirector {
                 voice(player, EternitySounds.ENTITY_VOICE, 1.2F, 0.55F);
             }
         }
+        // The beat's look (frost, dimming, echoes) is still the client's to show; the words go in the panel.
         EternityNetwork.send(new MsgInBetweener(MsgInBetweener.SPEAK, id, mask, beat), player);
+        deliver(player, id, n);
+    }
+
+    /**
+     * What he says, in the story's own panel, a sentence at a time; his two voices are one
+     * speaker there, and Order and Chaos each their own. Then the answers he will hear, as the
+     * story asks anything; or, if he expects none, on to whatever comes next once it is read.
+     */
+    private void deliver(EntityPlayerMP player, int id, Node n) {
+        boolean masters = n.speaker == InBetweenerDialogue.MASTERS;
+        Entity him = masters ? null : body;
+        com.matoon.eternity.story.Talk t = new com.matoon.eternity.story.Talk(player).at(him != null ? him : player, 64D);
+        byte last = com.matoon.eternity.story.Speakers.IN_BETWEENER;
+        for (String part : n.speech.split("§")) {
+            if (part.isEmpty()) {
+                continue;
+            }
+            char code = part.charAt(0);
+            String text = part.substring(1).trim();
+            if (text.isEmpty()) {
+                continue;
+            }
+            byte who = com.matoon.eternity.story.Speakers.IN_BETWEENER;
+            Entity at = him;
+            if (masters) {
+                boolean order = code == '6';
+                who = order ? com.matoon.eternity.story.Speakers.ORDER : com.matoon.eternity.story.Speakers.CHAOS;
+                at = order ? OrderAndChaos.INSTANCE.order() : OrderAndChaos.INSTANCE.chaos();
+            }
+            last = who;
+            t.line(who, at, text);
+        }
+        if (n.isQuestion() && mask != 0) {
+            List<com.matoon.eternity.story.Talk.Choice> choices = new ArrayList<>();
+            for (int i = 0; i < n.answers.length; i++) {
+                if ((mask & (1 << i)) == 0) {
+                    continue;
+                }
+                int index = i;
+                Answer a = n.answers[i];
+                com.matoon.eternity.story.Talk.Branch then = c -> c.run(() -> next = () -> act(player, MsgInBetweenerAct.ANSWER, id, index));
+                choices.add(a.kind == InBetweenerDialogue.ACT ? com.matoon.eternity.story.Talk.act(a.text, then)
+                        : com.matoon.eternity.story.Talk.say(a.text, then));
+            }
+            t.ask(last, masters ? null : him, choices.toArray(new com.matoon.eternity.story.Talk.Choice[0]));
+        } else {
+            t.pause(10).run(() -> next = () -> {
+                if (node == id && stage == Stage.SPEAKING) {
+                    go(player, InBetweenerDialogue.node(id).then);
+                }
+            });
+        }
+        com.matoon.eternity.story.StoryDirector.INSTANCE.talk(player, t);
     }
 
     /** How he holds himself while he says something. */
@@ -721,6 +786,10 @@ public final class InBetweenerDirector {
     }
 
     private void speaking(EntityPlayerMP player) {
+        if (com.matoon.eternity.story.StoryDirector.INSTANCE.talking(player)) {
+            // The panel is still saying it; the story moves things on when it's done.
+            return;
+        }
         if (!InBetweenerDialogue.isQuestion(node) || mask == 0) {
             if (stageTicks >= readingTicks(node) + 100) {
                 go(player, InBetweenerDialogue.node(node).then);
@@ -871,6 +940,11 @@ public final class InBetweenerDirector {
         rounds++;
         if (rounds > MAX_ROUNDS) {
             return InBetweenerDialogue.DRAW;
+        }
+        if (!imbalanced && rounds >= 2 && visitor != null && com.matoon.eternity.story.StoryDirector.INSTANCE.behindThem(visitor)) {
+            // Death is standing behind them. He can't not say so.
+            imbalanced = true;
+            return InBetweenerDialogue.IMBALANCE;
         }
         if (!turned && hunger >= HUNGER_TO_TURN && suspicion <= SUSPICION_TO_TURN) {
             turned = true;
@@ -1698,8 +1772,12 @@ public final class InBetweenerDirector {
         EntityPlayerMP speaker = thief != null ? thief : nearest;
         OrderAndChaos.INSTANCE.arrive(nexus, speaker);
         if (speaker != null && stage != Stage.BATTLE) {
-            converse(speaker, d.inBetweenerAbsorbed ? InBetweenerDialogue.WRATH_EMPTY
-                    : thief != null ? InBetweenerDialogue.WRATH_THIEF : InBetweenerDialogue.WRATH_BYSTANDER);
+            int opening = d.inBetweenerAbsorbed ? InBetweenerDialogue.WRATH_EMPTY
+                    : thief != null ? InBetweenerDialogue.WRATH_THIEF : InBetweenerDialogue.WRATH_BYSTANDER;
+            if (com.matoon.eternity.story.StoryDirector.INSTANCE.warnOfEternity(speaker)) {
+                opening = InBetweenerDialogue.warned(opening);
+            }
+            converse(speaker, opening);
         }
     }
 

@@ -112,7 +112,10 @@ public final class FightMusic {
 
         EntityEternity eternity = EternityClient.INSTANCE.foe();
         EntityLivingTribunal tribunal = findTribunal();
-        if (EternityClient.INSTANCE.inVoid()) {
+        if (TitleCard.INSTANCE.wantsMusic()) {
+            // Warlock's going, and the title: nothing else plays over it.
+            want = EternitySounds.MUSIC_UPRISING;
+        } else if (EternityClient.INSTANCE.inVoid()) {
             want = EternitySounds.MUSIC_VOID;
             volume = 0.7F;
         } else if (eternity != null) {
@@ -131,7 +134,10 @@ public final class FightMusic {
         } else if (VaultClient.INSTANCE.destroyerFighting()) {
             want = EternitySounds.MUSIC_DESTROYER;
         } else if (com.matoon.eternity.client.render.GrandmasterBoard.INSTANCE.music(mc.player.getPositionVector()) != null) {
+            // At the Grandmaster's table his music plays, whoever has come to play him.
             want = com.matoon.eternity.client.render.GrandmasterBoard.INSTANCE.music(mc.player.getPositionVector());
+        } else if (magusNear()) {
+            want = EternitySounds.MUSIC_SOVEREIGN;
         }
         play(want, volume);
         quiet();
@@ -219,6 +225,19 @@ public final class FightMusic {
             }
         }
         return null;
+    }
+
+    /** The Magus is here, awake, and not folded away: his theme, wherever he is. */
+    private boolean magusNear() {
+        for (Entity entity : mc.world.loadedEntityList) {
+            if (entity instanceof com.matoon.eternity.entity.EntityMagus && !((com.matoon.eternity.entity.EntityMagus) entity).isAway()
+                    && ((com.matoon.eternity.entity.EntityMagus) entity).pose() != com.matoon.eternity.entity.EntityMagus.Pose.SLEEP
+                    && ((com.matoon.eternity.entity.EntityMagus) entity).pose() != com.matoon.eternity.entity.EntityMagus.Pose.STIR
+                    && entity.getDistance(mc.player) < 160F) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Order or Chaos is fighting, rather than arriving, talking or leaving. */

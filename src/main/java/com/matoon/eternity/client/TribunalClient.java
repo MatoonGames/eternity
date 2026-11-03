@@ -110,7 +110,7 @@ public final class TribunalClient {
                     SoundFx.everywhere(EternitySounds.FINALE_DRUMS, SoundCategory.MASTER, 0.9F, 0.7F);
                     flash = 0.6F;
                 }
-                mc.displayGuiScreen(new GuiTribunal(node));
+                // His words are in the story's panel; this side shakes the chamber with them.
                 break;
             case MsgTribunal.RETURN:
                 returnTicks = 0;
@@ -350,9 +350,6 @@ public final class TribunalClient {
                 if (speakTicks % 40 == 0) {
                     SoundFx.everywhere(EternitySounds.AMBIENT_RUMBLE, SoundCategory.MASTER, 0.8F, 0.5F);
                 }
-            }
-            if (mc.currentScreen == null) {
-                mc.displayGuiScreen(new GuiTribunal(node));
             }
         }
         updateHall();

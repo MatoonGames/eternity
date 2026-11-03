@@ -1,0 +1,31 @@
+{
+  "variants": {
+    "kind=plate": {
+      "model": "eternity:sovereign_hull_plate"
+    },
+    "kind=panel": {
+      "model": "eternity:sovereign_hull_panel"
+    },
+    "kind=rib": {
+      "model": "eternity:sovereign_hull_rib"
+    },
+    "kind=trim": {
+      "model": "eternity:sovereign_hull_trim"
+    },
+    "kind=dark": {
+      "model": "eternity:sovereign_hull_dark"
+    },
+    "kind=floor": {
+      "model": "eternity:sovereign_hull_floor"
+    },
+    "kind=mirror": {
+      "model": "eternity:sovereign_hull_mirror"
+    },
+    "kind=shell": {
+      "model": "eternity:sovereign_hull_shell"
+    },
+    "kind=membrane": {
+      "model": "eternity:sovereign_hull_membrane"
+    }
+  }
+}

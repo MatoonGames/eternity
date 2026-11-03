@@ -130,26 +130,28 @@ public final class ChampionClient {
         switch (m.type) {
             case MsgTribunalFx.CHAMPION_IMPACT: {
                 boolean me = m.id == mc.player.getEntityId();
-                float weight = m.time == 0 ? 0.5F : m.time == 1 ? 1F : 1.4F;
+                boolean plain = m.time >= MsgTribunalFx.PLAIN;
+                int kind = m.time % MsgTribunalFx.PLAIN;
+                float weight = kind == 0 ? 0.5F : kind == 1 ? 1F : 1.4F;
                 if (me) {
                     // Hit yourself, you feel it rather than see it.
                     shake = Math.max(shake, 4.5F * weight);
                     flash = Math.max(flash, 0.4F * weight);
-                    if (m.time > 0) {
+                    if (kind > 0) {
                         rush = 1F;
                         fovKick = Math.max(fovKick, 0.2F * weight);
                     }
                     burst(at.add(to.scale(1.5D)), 8, 0.5D, to.scale(0.8D));
                     break;
                 }
-                effects.add(new ChampionFx.Impact(at, to, m.time, seed));
+                effects.add(new ChampionFx.Impact(at, to, kind, seed).plain(plain));
                 shake = Math.max(shake, 1.8F * weight * closeness(dist, 26D));
                 flash = Math.max(flash, 0.15F * weight * closeness(dist, 12D));
                 break;
             }
             case MsgTribunalFx.CHAMPION_GUARD:
-                effects.add(new ChampionFx.Guard(at, to, m.time, seed));
-                if (m.time == 2) {
+                effects.add(new ChampionFx.Guard(at, to, m.time % MsgTribunalFx.PLAIN, seed));
+                if (m.time % MsgTribunalFx.PLAIN == 2) {
                     for (Entity entity : mc.world.loadedEntityList) {
                         if (entity instanceof EntityChampion && entity.getDistanceSq(m.x, m.y, m.z) < 16D) {
                             ((EntityChampion) entity).counterTick = ((EntityChampion) entity).clientStateTicks;
@@ -157,7 +159,7 @@ public final class ChampionClient {
                     }
                 }
                 if (m.id == mc.player.getEntityId()) {
-                    shake = Math.max(shake, m.time == 0 ? 1F : 0.4F);
+                    shake = Math.max(shake, m.time % MsgTribunalFx.PLAIN == 0 ? 1F : 0.4F);
                 }
                 break;
             case MsgTribunalFx.CHAMPION_QUAKE:
@@ -169,7 +171,8 @@ public final class ChampionClient {
                 effects.add(new ChampionFx.Crack(at, m.a, m.id, m.time));
                 break;
             case MsgTribunalFx.CHAMPION_ROAR:
-                effects.add(new ChampionFx.Roar(at, m.a, m.id, m.time));
+                Entity roarer = mc.world.getEntityByID(m.id);
+                effects.add(new ChampionFx.Roar(at, m.a, m.id, m.time).plain(roarer instanceof EntityChampion && !((EntityChampion) roarer).wearsStone()));
                 shake = Math.max(shake, 2.5F * closeness(dist, m.a * 2D));
                 if (dist < m.a) {
                     rush = Math.max(rush, 0.7F * closeness(dist, m.a));

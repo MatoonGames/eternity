@@ -1,0 +1,198 @@
+{
+  "parent": "block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "base": "eternity:blocks/pod_base",
+    "glass": "eternity:blocks/pod_glass",
+    "clear": "eternity:blocks/pod_glass_clear",
+    "particle": "eternity:blocks/pod_base"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        0,
+        2
+      ],
+      "to": [
+        14,
+        12,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            4,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "south": {
+          "uv": [
+            2,
+            4,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "east": {
+          "uv": [
+            2,
+            4,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "west": {
+          "uv": [
+            2,
+            4,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        }
+      }
+    },
+    {
+      "from": [
+        1,
+        12,
+        1
+      ],
+      "to": [
+        15,
+        16,
+        15
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1,
+            0,
+            15,
+            4
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            1,
+            0,
+            15,
+            4
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            1,
+            0,
+            15,
+            4
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            1,
+            0,
+            15,
+            4
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            1,
+            1,
+            15,
+            15
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            1,
+            1,
+            15,
+            15
+          ],
+          "texture": "#base"
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        15,
+        5
+      ],
+      "to": [
+        11,
+        16.5,
+        11
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            0,
+            11,
+            1
+          ],
+          "texture": "#base"
+        },
+        "south": {
+          "uv": [
+            5,
+            0,
+            11,
+            1
+          ],
+          "texture": "#base"
+        },
+        "east": {
+          "uv": [
+            5,
+            0,
+            11,
+            1
+          ],
+          "texture": "#base"
+        },
+        "west": {
+          "uv": [
+            5,
+            0,
+            11,
+            1
+          ],
+          "texture": "#base"
+        },
+        "up": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#base"
+        },
+        "down": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#base"
+        }
+      }
+    }
+  ]
+}

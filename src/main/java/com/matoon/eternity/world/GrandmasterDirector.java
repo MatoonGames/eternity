@@ -10,9 +10,13 @@ import com.matoon.eternity.compat.Relics;
 import com.matoon.eternity.entity.EntityAdamWarlock;
 import com.matoon.eternity.entity.EntityGrandmaster;
 import com.matoon.eternity.entity.EntityGrandmaster.State;
+import com.matoon.eternity.entity.EntityMagus;
+import com.matoon.eternity.entity.NorsePose;
 import com.matoon.eternity.item.ItemAstralRegulator;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.network.MsgGrandmaster;
+import com.matoon.eternity.story.Speakers;
+import com.matoon.eternity.story.StoryDirector;
 import lucraft.mods.lucraftcore.infinity.EnumInfinityStone;
 import lucraft.mods.lucraftcore.infinity.items.InventoryInfinityGauntlet;
 import lucraft.mods.lucraftcore.infinity.items.ItemInfinityGauntlet;
@@ -20,6 +24,7 @@ import lucraft.mods.lucraftcore.infinity.items.ItemInfinityStone;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -32,8 +37,10 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.nbt.NBTTagString;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -80,6 +87,15 @@ import java.util.Random;
  * them and the board breaks, and he dies among his pieces, pleased. The stone lies still,
  * the pot comes back, and if Warlock walked, he has one thing to say before he goes.</li>
  * </ol>
+ * On the Magus's road (whoever holds the stones saw him rise, and Warlock stands with them,
+ * and the Power Stone is gone for good, so four stones bring him) it goes another way. A
+ * challenger has asked for the game by name: the Magus comes down out of the sky to play the
+ * raiders, and Warlock lands at their side, to talk them through it and never touch a piece.
+ * The first time the board shifts, the Magus names it, and stops playing by the rules: he moves
+ * raiders when he likes, and the squares he touches go white. Frightened for the first time in
+ * a very long time, the Grandmaster takes their side and throws everything he has at him, and
+ * none of it is enough. The Magus takes the Mind Stone from him and goes; the Grandmaster
+ * lives, and wishes he had not seen it.
  */
 public final class GrandmasterDirector {
 
@@ -95,7 +111,8 @@ public final class GrandmasterDirector {
     /** Piece animations, as the client draws them. */
     public static final int ANIM_SLIDE = 0, ANIM_CARRY = 1, ANIM_CONDUCT = 2, ANIM_CONJURE = 3;
 
-    private enum Stage { WAIT, PLAYER_MOVE, THINK, APPROACH, CARRY, SETTLE, CHEAT, SCENE, PAUSE }
+    /** SEIZED: nobody's move any more; the Magus moves raiders whenever he likes. */
+    private enum Stage { WAIT, PLAYER_MOVE, THINK, APPROACH, CARRY, SETTLE, CHEAT, SCENE, PAUSE, SEIZED }
 
     private final Random rand = new Random();
     private GrandmasterData data;
@@ -138,6 +155,20 @@ public final class GrandmasterDirector {
     private boolean stopped;
     @Nullable
     private Vec3d restAt;
+    @Nullable
+    private EntityMagus magus;
+    /** The Magus has named the cheat: the rules are off, and he moves what he likes, when he likes. */
+    private boolean seized;
+    /** Raiders he has moved out of turn, and how long until the next. */
+    private int outOfTurn;
+    private int nextSeize;
+    /** The player's move Warlock last said something about, so he says something only now and then. */
+    private int advisedAt = -2;
+    /** The squares Warlock has lit for them, until they move: from, to, and what it takes. */
+    @Nullable
+    private int[] hinted;
+    /** The board stood up on end around the Magus, block by block, for him to break. */
+    private final List<BlockPos> walls = new ArrayList<>();
 
     private static final class Beat {
         final int at;
@@ -177,6 +208,12 @@ public final class GrandmasterDirector {
         stopped = false;
         restAt = null;
         strikes = 0;
+        magus = null;
+        seized = false;
+        outOfTurn = 0;
+        advisedAt = -2;
+        hinted = null;
+        walls.clear();
     }
 
     // ------------------------------------------------------------------ geometry
@@ -250,17 +287,32 @@ public final class GrandmasterDirector {
 
     // ------------------------------------------------------------------ beginning
 
-    /** Whether he will come for this player, now or soon: five stones and no Mind Stone, and he is still alive. */
+    /**
+     * Whether he will come for this player, now or soon: five stones and no Mind Stone, and he is still alive. On the
+     * Magus's road the Power Stone is gone for good, so one fewer will do.
+     */
     private boolean due(EntityPlayerMP player) {
         int mask = InfinityStones.scan(player);
+        int need = EternityConfig.grandmaster.stonesToCome - (StoryDirector.INSTANCE.magusRisen(player) ? 1 : 0);
         return EternityConfig.grandmaster.enabled && !data().finished && !data().active() && player.dimension == 0
-                && !player.isSpectator() && InfinityStones.count(mask) >= EternityConfig.grandmaster.stonesToCome
+                && !player.isSpectator() && InfinityStones.count(mask) >= need
                 && (mask & InfinityStones.bit(EnumInfinityStone.MIND)) == 0 && !Relics.isClaimed(Relics.Kind.MIND_STONE);
     }
 
-    /** He lays his board out around the player. Returns why not, or null. */
+    /** He lays his board out around the player; the Magus comes to play if they saw him rise. Returns why not, or null. */
     @Nullable
     public String begin(EntityPlayerMP player) {
+        return begin(player, StoryDirector.INSTANCE.magusRisen(player));
+    }
+
+    /** As {@link #begin(EntityPlayerMP)}, with the Magus to play them whatever they have seen (for testing). */
+    @Nullable
+    public String beginMagus(EntityPlayerMP player) {
+        return begin(player, true);
+    }
+
+    @Nullable
+    private String begin(EntityPlayerMP player, boolean magusPlays) {
         GrandmasterData d = data();
         if (d.active()) {
             return "The Grandmaster is already playing " + d.playerName + ".";
@@ -290,13 +342,14 @@ public final class GrandmasterDirector {
         d.staked = false;
         d.pot.clear();
         d.warlock = GrandmasterData.Warlock.ABSENT;
+        d.magus = magusPlays;
         cover(world);
         game = Kingstable.opening(rand);
         d.game = game.save();
         d.markDirty();
         phaseTicks = 0;
         buildRing = 0;
-        Eternity.LOG.info("The Grandmaster lays his board out around {} at {}.", player.getName(), o);
+        Eternity.LOG.info("The Grandmaster lays his board out around {} at {}{}.", player.getName(), o, magusPlays ? ", for the Magus" : "");
         return null;
     }
 
@@ -452,6 +505,10 @@ public final class GrandmasterDirector {
             warlock.dismiss();
         }
         warlock = null;
+        if (magus != null && !magus.isDead) {
+            magus.setDead();
+        }
+        magus = null;
     }
 
     private void returnPot() {
@@ -573,6 +630,10 @@ public final class GrandmasterDirector {
                 break;
             case PLAYING:
                 stage = game.raidersToMove ? Stage.THINK : Stage.WAIT;
+                if (d.magus && d.cheats > 0) {
+                    // He had cheated in front of the Magus: the board is the Magus's again, from the first of it.
+                    seize();
+                }
                 break;
             case LOST:
                 newGame();
@@ -608,7 +669,8 @@ public final class GrandmasterDirector {
                 body.setManaged(true);
             }
         }
-        boolean wanted = d.warlock == GrandmasterData.Warlock.PLAYING || d.warlock == GrandmasterData.Warlock.WALKED;
+        boolean wanted = d.warlock == GrandmasterData.Warlock.PLAYING || d.warlock == GrandmasterData.Warlock.WALKED
+                || d.warlock == GrandmasterData.Warlock.ALLIED;
         if (wanted && (warlock == null || warlock.isDead || warlock.world != world || !warlock.addedToChunk)) {
             warlock = null;
             for (Entity e : world.loadedEntityList) {
@@ -618,17 +680,41 @@ public final class GrandmasterDirector {
             }
             if (warlock == null) {
                 warlock = new EntityAdamWarlock(world);
-                Vec3d post = d.warlock == GrandmasterData.Warlock.WALKED ? warlockAside() : warlockPost();
+                Vec3d post = d.warlock == GrandmasterData.Warlock.WALKED ? warlockAside()
+                        : d.warlock == GrandmasterData.Warlock.ALLIED ? warlockBeside() : warlockPost();
                 warlock.setPosition(post.x, post.y, post.z);
                 world.spawnEntity(warlock);
                 warlock.script(true);
-                if (d.warlock == GrandmasterData.Warlock.WALKED) {
+                if (d.warlock == GrandmasterData.Warlock.WALKED || d.warlock == GrandmasterData.Warlock.ALLIED) {
                     warlock.direct(EntityAdamWarlock.State.STAND, post, middle(), 0.1D);
                 } else {
                     warlock.direct(EntityAdamWarlock.State.HOVER, post, middle(), 0.1D);
                 }
             }
             warlock.script(true);
+        }
+        // The Magus, from the moment he has come down to the board until he leaves it.
+        boolean present = d.magus && (d.phase == GrandmasterData.Phase.STAKES || d.phase == GrandmasterData.Phase.RULES
+                || d.phase == GrandmasterData.Phase.PLAYING || d.phase == GrandmasterData.Phase.LOST);
+        if (present && (magus == null || magus.isDead || magus.world != world || !magus.addedToChunk)) {
+            magus = null;
+            for (Entity e : world.loadedEntityList) {
+                if (e instanceof EntityMagus && !e.isDead && e.getDistanceSq(middle().x, middle().y, middle().z) < 64D * 64D) {
+                    magus = (EntityMagus) e;
+                }
+            }
+            if (magus == null) {
+                magus = new EntityMagus(world);
+                Vec3d post = warlockPost();
+                magus.setPosition(post.x, post.y, post.z);
+                magus.rest(NorsePose.HOVER);
+                magus.act(NorsePose.HOVER);
+                magus.hoverTo(post, 0.1D);
+                magus.look(middle());
+                if (!world.spawnEntity(magus)) {
+                    magus = null;
+                }
+            }
         }
     }
 
@@ -642,6 +728,12 @@ public final class GrandmasterDirector {
     private Vec3d warlockAside() {
         BlockPos o = origin();
         return new Vec3d(o.getX() + WIDTH + 3.5D, o.getY() + 1D, o.getZ() + 3.5D);
+    }
+
+    /** Where he stands on their side of it: on the rim at the near edge, a little along from the walk to the pedestal. */
+    private Vec3d warlockBeside() {
+        BlockPos o = origin();
+        return new Vec3d(o.getX() + WIDTH / 2D + 3.5D, o.getY() + 1D, o.getZ() + WIDTH - 0.5D);
     }
 
     // ------------------------------------------------------------------ the script
@@ -689,6 +781,10 @@ public final class GrandmasterDirector {
 
     private void wl(String line) {
         lineToOthers(GrandmasterScenes.WARLOCK, warlock != null ? warlock.getEntityId() : -1, line, null);
+    }
+
+    private void ml(String line) {
+        lineToOthers(Speakers.MAGUS, magus != null ? magus.getEntityId() : -1, line, null);
     }
 
     /** A stage direction: what nobody says. */
@@ -786,7 +882,17 @@ public final class GrandmasterDirector {
         at(50, () -> walk(centre(Kingstable.at(2, 2)).add(1.5D, 0D, 0D)));
         at(90, () -> {
             act(State.LAUGH);
-            gm("Tryco said, \"Let them come.\" Ord said, \"Peace.\" I said, \"Game.\"");
+            // What became of Ord, the Gardener, if the story took them to him (chapter 5).
+            EntityPlayerMP p = player();
+            com.matoon.eternity.story.StoryData.Player sp = p == null || !com.matoon.eternity.EternityConfig.story.enabled ? null
+                    : com.matoon.eternity.story.StoryData.get().player(p.getUniqueID());
+            if (sp != null && sp.seen("took_time")) {
+                gm("Tryco said, \"Let them come.\" Ord said, \"Peace.\" I said, \"Game.\" And look. Ord got his peace.");
+            } else if (sp != null && sp.seen("left_gardener")) {
+                gm("Tryco said, \"Let them come.\" Ord said, \"Peace.\" You let him keep his. I said, \"Game.\"");
+            } else {
+                gm("Tryco said, \"Let them come.\" Ord said, \"Peace.\" I said, \"Game.\"");
+            }
         });
         at(150, () -> {
             walk(centre(Kingstable.at(4, 3)).add(0D, 0D, 1.5D));
@@ -805,6 +911,15 @@ public final class GrandmasterDirector {
             gm("It stays in play until the game ends. My rules.");
         });
         at(300, () -> gm("And my life's on the table, so you know I'm serious."));
+        if (data().magus) {
+            magusOpening();
+            play(() -> {
+                data().phase = GrandmasterData.Phase.STAKES;
+                data().markDirty();
+                stakesBegin();
+            });
+            return;
+        }
         at(360, () -> {
             WorldServer world = world();
             if (world == null) {
@@ -846,6 +961,83 @@ public final class GrandmasterDirector {
             data().phase = GrandmasterData.Phase.STAKES;
             data().markDirty();
             stakesBegin();
+        });
+    }
+
+    /**
+     * The opponent, on the Magus's road: somebody asked for this game. He comes down out of the
+     * sky over the far edge of the board to where Warlock would have hung, and Warlock streaks in
+     * after him and lands beside them, on their side of the table.
+     */
+    private void magusOpening() {
+        at(360, () -> {
+            act(State.PRESENT);
+            look(warlockPost().add(0D, 8D, 0D));
+            gm("And your opponent! A challenger who asked for you by name. I never say no to that.");
+            WorldServer world = world();
+            if (world == null) {
+                return;
+            }
+            // High over the far edge, in a chunk the board has already loaded: added anywhere else first, he can be refused.
+            Vec3d post = warlockPost();
+            magus = new EntityMagus(world);
+            magus.setPosition(post.x, post.y + 26D, post.z);
+            magus.rest(NorsePose.HOVER);
+            magus.act(NorsePose.HOVER);
+            magus.hoverTo(post, 0.035D);
+            magus.watch(player());
+            if (!world.spawnEntity(magus)) {
+                magus = null;
+            }
+            sound(SoundEvents.ENTITY_ILLAGER_PREPARE_MIRROR, post, 3F, 0.5F);
+            sound(EternitySounds.OMEN_SHIMMER, post, 2F, 0.6F);
+        });
+        at(440, () -> {
+            look(magus != null ? magus.getPositionEyes(1F) : warlockPost());
+            act(State.THINK, 50);
+            direction("He comes down slowly, as if the sky were lowering him, and stops where Warlock should have been.");
+        });
+        at(500, () -> {
+            WorldServer world = world();
+            if (world == null) {
+                return;
+            }
+            warlock = new EntityAdamWarlock(world);
+            warlock.script(true);
+            warlock.arriveAt(warlockBeside(), middle());
+            if (!world.spawnEntity(warlock)) {
+                // Wherever he would have streaked in from is not loaded: he is simply there.
+                Vec3d at = warlockBeside();
+                warlock.setPosition(at.x, at.y, at.z);
+                warlock.direct(EntityAdamWarlock.State.STAND, at, middle(), 0.1D);
+                if (!world.spawnEntity(warlock)) {
+                    warlock = null;
+                }
+            }
+            data().warlock = GrandmasterData.Warlock.ALLIED;
+            data().markDirty();
+        });
+        at(570, () -> {
+            if (warlock != null) {
+                warlock.direct(EntityAdamWarlock.State.STAND, warlockBeside(), magus != null ? magus.getPositionEyes(1F) : middle(), 0.1D);
+            }
+            act(State.LAUGH);
+            look(warlockBeside().add(0D, 1.6D, 0D));
+            gm("Oh, this is better. Two of you. One of him.");
+        });
+        at(640, () -> {
+            if (warlock != null) {
+                warlock.direct(EntityAdamWarlock.State.STAND, warlockBeside(), eyes(player()), 0.1D);
+            }
+            wl("Don't watch him. Watch the board.");
+        });
+        at(710, () -> {
+            if (magus != null) {
+                magus.look(middle());
+                magus.act(NorsePose.REGARD, 60);
+            }
+            look(eyes(player()));
+            ml("Begin.");
         });
     }
 
@@ -1050,6 +1242,45 @@ public final class GrandmasterDirector {
         rulesOver = true;
         script.clear();
         EntityPlayerMP player = player();
+        if (!skipped && player != null && body != null && !body.isDead) {
+            askAgain(player);
+            return;
+        }
+        startPlaying(skipped);
+    }
+
+    /**
+     * Told all the way through: he asks whether they have it, or want it again. He is enjoying
+     * this, and would happily tell it twice; he would rather they lost fairly.
+     */
+    private void askAgain(EntityPlayerMP player) {
+        EntityGrandmaster gm = body;
+        look(eyes(player));
+        act(State.PRESENT, 60);
+        com.matoon.eternity.story.Talk t = new com.matoon.eternity.story.Talk(player).at(gm, 48D);
+        t.line(GrandmasterScenes.GRANDMASTER, gm, "That's all of it. Do you want it again, or have you got it?")
+                .ask(GrandmasterScenes.GRANDMASTER, gm,
+                        com.matoon.eternity.story.Talk.say("Once more, from the start.", c -> c
+                                .line(GrandmasterScenes.GRANDMASTER, gm, "From the top, then. Watch the board, not me.")
+                                .run(() -> {
+                                    if (data().phase == GrandmasterData.Phase.RULES) {
+                                        rulesOver = false;
+                                        rules();
+                                    }
+                                })),
+                        com.matoon.eternity.story.Talk.say("I understand.", c -> c
+                                .line(GrandmasterScenes.GRANDMASTER, gm, "Do you. We'll see.")
+                                .run(() -> startPlaying(false))));
+        t.abandoned(() -> startPlaying(false));
+        com.matoon.eternity.story.StoryDirector.INSTANCE.talk(player, t);
+    }
+
+    /** The rules are told (or skipped): the book in their hands, and raiders first. */
+    private void startPlaying(boolean skipped) {
+        if (data().phase != GrandmasterData.Phase.RULES) {
+            return;
+        }
+        EntityPlayerMP player = player();
         if (player != null) {
             give(player, rulebook());
         }
@@ -1134,6 +1365,9 @@ public final class GrandmasterDirector {
                 break;
             case PAUSE:
                 break;
+            case SEIZED:
+                seizing();
+                break;
         }
         idle(player);
     }
@@ -1182,7 +1416,7 @@ public final class GrandmasterDirector {
         }
         if (d.phase != GrandmasterData.Phase.PLAYING || stage != Stage.WAIT) {
             if (d.phase == GrandmasterData.Phase.PLAYING && stage != Stage.WAIT) {
-                hint(player, "Not your move.");
+                hint(player, seized ? "Nobody is playing by the rules now." : "Not your move.");
             }
             return;
         }
@@ -1208,6 +1442,7 @@ public final class GrandmasterDirector {
             int from = selected;
             selected = -1;
             targets = new int[0];
+            unhint();
             d.playerMoves++;
             raiderMove = from * Kingstable.CELLS + square;
             animate(from, square, ANIM_SLIDE, PLAYER_SLIDE);
@@ -1245,7 +1480,10 @@ public final class GrandmasterDirector {
             return;
         }
         boolean warlockPlays = d.warlock == GrandmasterData.Warlock.PLAYING && warlock != null;
-        int depth = warlockPlays ? EternityConfig.grandmaster.warlockDepth : EternityConfig.grandmaster.grandmasterDepth;
+        boolean magusPlays = magusPlays();
+        // The Magus sees one move further than the house does.
+        int depth = warlockPlays ? EternityConfig.grandmaster.warlockDepth
+                : EternityConfig.grandmaster.grandmasterDepth + (magusPlays ? 1 : 0);
         int move = game.bestMove(depth, rand);
         if (move < 0) {
             // Nothing the raiders can do. The house does not lose that way.
@@ -1254,9 +1492,8 @@ public final class GrandmasterDirector {
         }
         Kingstable after = game.copy();
         after.play(move / Kingstable.CELLS, move % Kingstable.CELLS, null);
-        if (after.outcome == Kingstable.Outcome.KING_TAKEN && warlockPlays) {
-            // Too soon. He saves the king from Warlock, which Warlock sees.
-            save(move);
+        if (after.outcome == Kingstable.Outcome.KING_TAKEN && (warlockPlays || magusPlays) && save(move)) {
+            // Too soon. He saves the king from whoever is playing him, and they see it.
             return;
         }
         raiderMove = move;
@@ -1265,6 +1502,15 @@ public final class GrandmasterDirector {
             stageTicks = 0;
             Vec3d over = centre(move / Kingstable.CELLS).add(0D, PIECE_TOP + 0.6D, 0D);
             warlock.direct(EntityAdamWarlock.State.HOVER, over.add(0D, 0.4D, 0D), centre(move % Kingstable.CELLS), 0.22D);
+        } else if (magusPlays) {
+            // He comes down over it and carries it himself, as Warlock would have: in violet, where Warlock's light is gold.
+            stage = Stage.APPROACH;
+            stageTicks = 0;
+            Vec3d over = centre(move / Kingstable.CELLS).add(0D, PIECE_TOP + 0.6D, 0D);
+            magus.perform(EntityMagus.Pose.DESCEND);
+            magus.hoverTo(over.add(0D, 0.4D, 0D), 0.22D);
+            magus.look(centre(move % Kingstable.CELLS).add(0D, 1D, 0D));
+            sound(EternitySounds.OMEN_SHIMMER, magus.getPositionVector(), 1F, 0.8F);
         } else {
             stage = Stage.CARRY;
             stageTicks = 0;
@@ -1284,12 +1530,24 @@ public final class GrandmasterDirector {
     private static final double PIECE_TOP = 3.2D;
 
     private void approach() {
+        int from = raiderMove / Kingstable.CELLS;
+        Vec3d over = centre(from).add(0D, PIECE_TOP + 0.6D, 0D);
+        if (magusPlays()) {
+            if (magus.getPositionVector().distanceTo(over.add(0D, 0.4D, 0D)) < 0.8D || stageTicks > 50) {
+                stage = Stage.CARRY;
+                stageTicks = 0;
+                animate(from, raiderMove % Kingstable.CELLS, ANIM_CARRY, CARRY_TICKS);
+                magus.perform(EntityMagus.Pose.CARRY);
+                magusCarry(over, from, raiderMove % Kingstable.CELLS);
+                sound(SoundEvents.ENTITY_ILLAGER_CAST_SPELL, over, 1F, 0.6F);
+                sound(EternitySounds.OMEN_SHIMMER, over, 1F, 1.2F);
+            }
+            return;
+        }
         if (warlock == null) {
             stage = Stage.THINK;
             return;
         }
-        int from = raiderMove / Kingstable.CELLS;
-        Vec3d over = centre(from).add(0D, PIECE_TOP + 0.6D, 0D);
         if (warlock.getPositionVector().distanceTo(over) < 0.8D || stageTicks > 50) {
             stage = Stage.CARRY;
             stageTicks = 0;
@@ -1306,6 +1564,10 @@ public final class GrandmasterDirector {
         if (warlock != null && data().warlock == GrandmasterData.Warlock.PLAYING && anim != null && anim[2] == ANIM_CARRY) {
             Vec3d at = arc(from, to, f, ANIM_CARRY).add(0D, PIECE_TOP + 0.5D, 0D);
             warlock.direct(EntityAdamWarlock.State.CARRY, at, centre(to), 1D);
+        } else if (magusPlays() && anim != null && anim[2] == ANIM_CARRY) {
+            Vec3d at = arc(from, to, f, ANIM_CARRY).add(0D, PIECE_TOP + 0.5D, 0D);
+            magusCarry(at, from, to);
+            threads(arc(from, to, f, ANIM_CARRY).add(0D, 1.6D, 0D));
         } else if (body != null) {
             body.focus(arc(from, to, f, ANIM_CONDUCT).add(0D, 1.5D, 0D));
         }
@@ -1316,6 +1578,15 @@ public final class GrandmasterDirector {
             sound(SoundEvents.BLOCK_ANVIL_LAND, centre(to), 0.3F, 0.5F);
             if (warlock != null && data().warlock == GrandmasterData.Warlock.PLAYING) {
                 warlock.direct(EntityAdamWarlock.State.HOVER, warlockPost(), middle(), 0.12D);
+            }
+            if (magusPlays()) {
+                WorldServer w = world();
+                if (w != null) {
+                    w.spawnParticle(EnumParticleTypes.SPELL_WITCH, centre(to).x, centre(to).y + 0.3D, centre(to).z, 24, 0.7D, 0.1D, 0.7D, 0.02D);
+                }
+                magus.perform(EntityMagus.Pose.FLOAT);
+                magus.hoverTo(warlockPost(), 0.12D);
+                magus.look(middle());
             }
         }
     }
@@ -1357,13 +1628,14 @@ public final class GrandmasterDirector {
             return;
         }
         // The house never lets a game end before it is ready.
-        if (!game.raidersToMove && game.escapes() > 0) {
-            deny();
+        if (!game.raidersToMove && game.escapes() > 0 && deny()) {
             return;
         }
-        if (!game.raidersToMove && d.cheats == 0 && d.playerMoves >= 7 && rand.nextInt(3) == 0) {
-            bored();
+        if (!game.raidersToMove && d.cheats == 0 && d.playerMoves >= 7 && rand.nextInt(3) == 0 && bored()) {
             return;
+        }
+        if (d.warlock == GrandmasterData.Warlock.ALLIED) {
+            advise();
         }
         stage = game.raidersToMove ? Stage.THINK : Stage.WAIT;
         stageTicks = 0;
@@ -1393,8 +1665,14 @@ public final class GrandmasterDirector {
 
     // ------------------------------------------------------------------ cheating
 
-    /** The king has an open road to a refuge: the board shifts, and raiders stand in the way. */
-    private void deny() {
+    /**
+     * The king has an open road to a refuge: the board shifts, and raiders stand in the way.
+     * False if he can't any more (the Magus has taken the board off him), and nothing happened.
+     */
+    private boolean deny() {
+        if (seized) {
+            return false;
+        }
         cheats.clear();
         // Planned on a copy first, so that every road is shut by the time he is done: no raider is moved twice,
         // and none is taken off a road it was already shutting.
@@ -1430,9 +1708,10 @@ public final class GrandmasterDirector {
         if (cheats.isEmpty()) {
             stage = Stage.WAIT;
             stageTicks = 0;
-            return;
+            return true;
         }
         beginCheat(0);
+        return true;
     }
 
     /**
@@ -1461,8 +1740,11 @@ public final class GrandmasterDirector {
         return best;
     }
 
-    /** Warlock is about to take the king: the king steps aside, and nobody touched him. */
-    private void save(int killing) {
+    /** Warlock, or the Magus, is about to take the king: the king steps aside, and nobody touched him. False if he can't any more. */
+    private boolean save(int killing) {
+        if (seized) {
+            return false;
+        }
         cheats.clear();
         int k = game.king();
         int best = -1;
@@ -1492,10 +1774,14 @@ public final class GrandmasterDirector {
             cheats.add(new int[]{from, far, ANIM_CONDUCT});
         }
         beginCheat(1);
+        return true;
     }
 
-    /** Nothing has happened for too long. */
-    private void bored() {
+    /** Nothing has happened for too long. False if he can't do anything about it any more. */
+    private boolean bored() {
+        if (seized) {
+            return false;
+        }
         cheats.clear();
         int k = game.king();
         int raider = -1, far = -1;
@@ -1519,14 +1805,18 @@ public final class GrandmasterDirector {
         }
         if (raider < 0 || beside < 0) {
             stage = Stage.WAIT;
-            return;
+            return true;
         }
         cheats.add(new int[]{raider, beside, ANIM_CONDUCT});
         beginCheat(2);
+        return true;
     }
 
     /** The raiders have nowhere to go: one more appears where it can. */
     private void conjure(int square) {
+        if (seized) {
+            return;
+        }
         cheats.clear();
         int sq = square >= 0 ? square : game.randomFree(rand, game.stone);
         if (sq < 0) {
@@ -1546,7 +1836,8 @@ public final class GrandmasterDirector {
         cheatKind = kind;
         stage = Stage.CHEAT;
         stageTicks = 0;
-        boolean warlockPlays = d.warlock == GrandmasterData.Warlock.PLAYING;
+        // Against Warlock, or the Magus, he is offhand about it; against them alone, he enjoys it.
+        boolean warlockPlays = d.warlock == GrandmasterData.Warlock.PLAYING || d.magus;
         if (body != null) {
             body.walkTo(null);
         }
@@ -1660,6 +1951,11 @@ public final class GrandmasterDirector {
             deny();
             return;
         }
+        if (d.magus && !seized) {
+            // The first time, in front of the Magus. Once is enough.
+            magusNamesIt();
+            return;
+        }
         boolean warlockPlays = d.warlock == GrandmasterData.Warlock.PLAYING;
         if (warlockPlays && d.cheats >= 2 && !scene6b) {
             warlockWalks();
@@ -1729,6 +2025,11 @@ public final class GrandmasterDirector {
             d.warlockRefused = true;
             cheatsAtWalk = d.cheats;
             d.markDirty();
+            // He has refused them too, with the game: the story remembers it.
+            EntityPlayerMP p = player();
+            if (p != null) {
+                StoryDirector.INSTANCE.warlockRefused(p);
+            }
         });
         at(420, () -> {
             if (warlock != null) {
@@ -1746,6 +2047,567 @@ public final class GrandmasterDirector {
             stageTicks = 0;
             sync();
         });
+    }
+
+    // ------------------------------------------------------------------ the Magus's road
+
+    private boolean magusPlays() {
+        return data().magus && magus != null && !seized;
+    }
+
+    /** Him over the piece he carries, put there each tick and facing the way it goes. */
+    private void magusCarry(Vec3d at, int from, int to) {
+        Vec3d way = flat(centre(to).subtract(centre(from)));
+        if (way.lengthSquared() < 1.0E-4D) {
+            way = flat(middle().subtract(at));
+        }
+        magus.place(at, at.add(way.scale(6D)).add(0D, -1.5D, 0D));
+    }
+
+    /** His hand on a piece, from the air: a line of violet light to it, where the Grandmaster's would be gold. */
+    private void threads(Vec3d piece) {
+        WorldServer world = world();
+        if (world == null || magus == null || stageTicks % 2 != 0) {
+            return;
+        }
+        Vec3d hand = magus.getPositionVector().add(0D, magus.pose() == EntityMagus.Pose.CARRY ? 0.6D : 1.5D, 0D);
+        Vec3d step = piece.subtract(hand);
+        int n = (int) (step.length() * 2D);
+        for (int i = 0; i <= n; i++) {
+            Vec3d p = hand.add(step.scale(i / (double) Math.max(1, n)));
+            world.spawnParticle(EnumParticleTypes.SPELL_WITCH, p.x, p.y, p.z, 1, 0.03D, 0.03D, 0.03D, 0D);
+        }
+        world.spawnParticle(EnumParticleTypes.END_ROD, piece.x, piece.y, piece.z, 2, 0.15D, 0.15D, 0.15D, 0.01D);
+    }
+
+    /**
+     * Warlock, at their side and never touching a piece, every other move of theirs shows them one:
+     * he lights the piece and the square it should go to, and says why it is good, in a sentence.
+     * True if he said anything.
+     */
+    private boolean advise() {
+        GrandmasterData d = data();
+        if (warlock == null || seized || game.raidersToMove || d.playerMoves - advisedAt < 2) {
+            return false;
+        }
+        Coaching.Advice a = Coaching.advise(game, rand, d.playerMoves == 0);
+        if (a == null) {
+            return false;
+        }
+        advisedAt = d.playerMoves;
+        hinted = new int[]{a.from, a.to, a.takes.isEmpty() ? -1 : a.takes.get(0), a.takes.size() > 1 ? a.takes.get(1) : -1};
+        fx(MsgGrandmaster.FX_HINT, new Vec3d(hinted[0], hinted[1], 0D), new Vec3d(hinted[2], hinted[3], 0D), HINT_TICKS);
+        sound(SoundEvents.BLOCK_NOTE_CHIME, centre(a.to), 0.6F, 1.2F);
+        warlock.direct(EntityAdamWarlock.State.STAND, warlockBeside(), centre(a.to).add(0D, 1D, 0D), 0.1D);
+        wl(a.line);
+        return true;
+    }
+
+    /** How long his lit squares stay lit, at most: they go out sooner, the moment the player moves. */
+    private static final int HINT_TICKS = 20 * 90;
+
+    /** Whatever he lit goes out. */
+    private void unhint() {
+        if (hinted != null) {
+            fx(MsgGrandmaster.FX_HINT, new Vec3d(hinted[0], hinted[1], 0D), new Vec3d(hinted[2], hinted[3], 0D), 0);
+            hinted = null;
+        }
+    }
+
+    /** The first time the board shifts in front of him, the Magus says what it is, and stops playing by its rules. */
+    private void magusNamesIt() {
+        stage = Stage.SCENE;
+        script.clear();
+        at(10, () -> {
+            if (magus != null) {
+                magus.watch(body);
+                magus.act(NorsePose.REGARD);
+            }
+            ml("He moved his own board.");
+        });
+        at(60, () -> {
+            look(magus != null ? magus.getPositionEyes(1F) : warlockPost());
+            act(State.SHUFFLE);
+            gm("It's my board.");
+        });
+        at(110, () -> ml("Then the rules were never the game. Only the hand that enforces them."));
+        at(200, () -> {
+            WorldServer world = world();
+            if (magus != null && world != null) {
+                magus.act(NorsePose.BLAST, 0);
+                world.spawnParticle(EnumParticleTypes.DRAGON_BREATH, magus.posX, magus.posY + 1.2D, magus.posZ, 80, 2D, 1D, 2D, 0.05D);
+                sound(SoundEvents.ENTITY_ENDERDRAGON_GROWL, magus.getPositionVector(), 1.5F, 0.6F);
+            }
+            ml("I am no longer bound by them.");
+        });
+        play(this::seize);
+    }
+
+    /** From now on it is nobody's move: he moves raiders when he likes, and the Grandmaster can do nothing about it. */
+    private void seize() {
+        seized = true;
+        stage = Stage.SEIZED;
+        stageTicks = 0;
+        nextSeize = 30;
+        outOfTurn = 0;
+        anim = null;
+        raiderMove = -1;
+        selected = -1;
+        targets = new int[0];
+        sync();
+    }
+
+    /** The board is his: every so often he moves a raider out of turn, it takes what it takes, and the squares go white under it. */
+    private void seizing() {
+        GrandmasterData d = data();
+        if (anim == null) {
+            if (stageTicks < nextSeize) {
+                return;
+            }
+            int move = outOfTurnMove();
+            if (move < 0) {
+                // Nothing left for him to move: as good as three.
+                gmTurns();
+                return;
+            }
+            raiderMove = move;
+            int from = move / Kingstable.CELLS, to = move % Kingstable.CELLS;
+            Vec3d c = centre(from).add(0D, 1.5D, 0D);
+            if (magus != null) {
+                magus.look(c);
+                magus.act(NorsePose.BLAST, 0);
+            }
+            whiten(from);
+            animate(from, to, ANIM_CONDUCT, CONDUCT_TICKS);
+            stageTicks = 0;
+            sound(SoundEvents.ENTITY_ILLAGER_CAST_SPELL, c, 1.5F, 0.5F);
+            fright(outOfTurn);
+            return;
+        }
+        Vec3d piece = arc(anim[0], anim[1], Math.min(1F, stageTicks / (float) anim[3]), anim[2]).add(0D, 1.5D, 0D);
+        if (magus != null) {
+            magus.look(piece);
+        }
+        threads(piece);
+        if (stageTicks < anim[3]) {
+            return;
+        }
+        int from = anim[0], to = anim[1];
+        int stoneWas = game.stone;
+        // Played as if it were the raiders' move; it is still theirs after, as it was before.
+        game.raidersToMove = true;
+        Kingstable.Result r = game.play(from, to, rand);
+        game.raidersToMove = false;
+        game.outcome = Kingstable.Outcome.PLAYING;
+        anim = null;
+        raiderMove = -1;
+        for (int sq : r.taken) {
+            fx(MsgGrandmaster.FX_TAKEN, centre(sq), Vec3d.ZERO, Kingstable.GUARD);
+            sound(SoundEvents.BLOCK_GLASS_BREAK, centre(sq), 1.2F, 0.6F);
+        }
+        sound(SoundEvents.BLOCK_STONE_PLACE, centre(to), 1.2F, 0.5F);
+        leapFx(stoneWas, true);
+        whiten(to);
+        d.game = game.save();
+        d.markDirty();
+        sync();
+        outOfTurn++;
+        if (outOfTurn >= 3) {
+            gmTurns();
+            return;
+        }
+        stageTicks = 0;
+        nextSeize = 60 + rand.nextInt(21);
+    }
+
+    /** A raider's move for him to make out of turn: one that takes something if there is one, never the king (that would end it). -1 for none. */
+    private int outOfTurnMove() {
+        Kingstable plan = game.copy();
+        plan.raidersToMove = true;
+        List<Integer> takes = new ArrayList<>(), others = new ArrayList<>();
+        for (int move : plan.moves()) {
+            Kingstable test = plan.copy();
+            Kingstable.Result r = test.play(move / Kingstable.CELLS, move % Kingstable.CELLS, null);
+            if (r.outcome == Kingstable.Outcome.KING_TAKEN) {
+                continue;
+            }
+            (r.taken.isEmpty() ? others : takes).add(move);
+        }
+        List<Integer> pick = !takes.isEmpty() ? takes : others;
+        return pick.isEmpty() ? -1 : pick.get(rand.nextInt(pick.size()));
+    }
+
+    /** Where he has laid a hand on the board, it is not the Grandmaster's any more. */
+    private void whiten(int square) {
+        WorldServer world = world();
+        if (world == null || data().cracks[square] >= 3) {
+            return;
+        }
+        BlockPos o = origin();
+        int x0 = o.getX() + 1 + Kingstable.x(square) * SQ, z0 = o.getZ() + 1 + Kingstable.y(square) * SQ;
+        IBlockState white = EternityBlocks.BOARD.getDefaultState().withProperty(BlockBoard.COLOR, BlockBoard.Face.WHITE);
+        for (int dx = 0; dx < SQ; dx++) {
+            for (int dz = 0; dz < SQ; dz++) {
+                BlockPos pos = new BlockPos(x0 + dx, o.getY(), z0 + dz);
+                if (world.getBlockState(pos).getBlock() == EternityBlocks.BOARD) {
+                    set(world, pos, white);
+                }
+            }
+        }
+        Vec3d c = centre(square);
+        world.spawnParticle(EnumParticleTypes.SPELL_WITCH, c.x, c.y + 0.2D, c.z, 30, 0.9D, 0.1D, 0.9D, 0.02D);
+        world.spawnParticle(EnumParticleTypes.END_ROD, c.x, c.y + 0.3D, c.z, 8, 0.8D, 0.1D, 0.8D, 0.02D);
+        sound(SoundEvents.BLOCK_END_PORTAL_FRAME_FILL, c, 1F, 0.5F);
+    }
+
+    /** Watching someone else move his pieces, for the first time in a very long time, he is afraid. */
+    private void fright(int n) {
+        if (body == null) {
+            return;
+        }
+        Vec3d from = magus != null ? magus.getPositionEyes(1F) : warlockPost();
+        act(State.AFRAID, -1);
+        look(from);
+        backAway(from);
+        String[] lines = {"That's not- you can't- it's MY board.", "Stop. Stop that.", "Those are my pieces. Nobody has ever- NOBODY moves my-"};
+        gm(lines[Math.min(n, lines.length - 1)]);
+        if (n == 0) {
+            body.sound(EternitySounds.GRANDMASTER_FRUSTRATED, 2F, 1.1F);
+        }
+    }
+
+    /** A few steps back from something, never off his board. */
+    private void backAway(Vec3d from) {
+        if (body == null) {
+            return;
+        }
+        Vec3d to = body.getPositionVector().add(flat(body.getPositionVector().subtract(from)).scale(2.5D));
+        BlockPos o = origin();
+        double x = MathHelper.clamp(to.x, o.getX() + 1.5D, o.getX() + WIDTH - 1.5D);
+        double z = MathHelper.clamp(to.z, o.getZ() + 1.5D, o.getZ() + WIDTH - 1.5D);
+        body.walkTo(new Vec3d(x, body.posY, z), 0.06D);
+    }
+
+    /**
+     * Three moves out of turn, and the Grandmaster has had enough: he takes their side and
+     * throws everything he has at the Magus. The board stands up around him, and he breaks it;
+     * a storm of cards, and he stands in it; the whole table, square by square from the stone
+     * outward, and he is still there. They and Warlock may hit him while it lasts. None of it
+     * matters.
+     */
+    private void gmTurns() {
+        stage = Stage.SCENE;
+        anim = null;
+        script.clear();
+        walls.clear();
+        Vec3d cage = middle().add(0D, 2.2D, 0D);
+        int stone = game.stone;
+        at(10, () -> {
+            act(State.POINT, 40);
+            look(eyes(player()));
+            gm("Fine. FINE. You. With me.");
+        });
+        at(50, () -> {
+            if (magus != null) {
+                magus.hoverTo(cage, 0.08D);
+                magus.act(NorsePose.HOVER);
+                magus.watch(body);
+            }
+            act(State.CONDUCT, 80);
+            look(cage);
+            gm("Sit DOWN.");
+        });
+        // The board stands up around him, a layer at a time.
+        for (int layer = 0; layer < 3; layer++) {
+            int l = layer;
+            at(80 + layer * 6, () -> raiseWalls(l));
+        }
+        at(130, () -> {
+            if (magus != null) {
+                magus.act(NorsePose.BLAST, 0);
+            }
+            sound(SoundEvents.ENTITY_ILLAGER_PREPARE_MIRROR, cage, 2F, 0.5F);
+        });
+        at(142, this::breakWalls);
+        at(165, () -> {
+            EntityPlayerMP p = player();
+            if (magus != null && p != null) {
+                magus.fight(p, warlock);
+            }
+            if (warlock != null && magus != null) {
+                warlock.turnOn(magus);
+            }
+            wl("Now. While he's busy with the old man.");
+        });
+        // Cards: every one he has.
+        at(200, () -> {
+            act(State.SHUFFLE, 90);
+            look(magus != null ? magus.getPositionEyes(1F) : cage);
+            gm("Every card I have. Every one.");
+        });
+        for (int i = 0; i < 9; i++) {
+            at(210 + i * 9, this::cardStorm);
+        }
+        at(300, () -> direction("Not one of them touches him."));
+        // The table itself, square by square from the stone outward; the stone's own square is left, and the stone on it.
+        int from = stone >= 0 ? stone : Kingstable.THRONE;
+        at(340, () -> {
+            act(State.CONDUCT, 60);
+            look(centre(from).add(0D, 1.5D, 0D));
+            gm("Then have the whole TABLE.");
+            fx(MsgGrandmaster.FX_COLLAPSE, centre(from), Vec3d.ZERO, 50);
+            sound(EternitySounds.RIFT_IMPACT, middle(), 3F, 0.9F);
+        });
+        for (int sq = 0; sq < Kingstable.CELLS; sq++) {
+            if (sq == stone) {
+                continue;
+            }
+            int square = sq;
+            int ring = Math.max(Math.abs(Kingstable.x(sq) - Kingstable.x(from)), Math.abs(Kingstable.y(sq) - Kingstable.y(from)));
+            at(350 + ring * 6, () -> throwSquare(square));
+        }
+        at(420, () -> {
+            WorldServer world = world();
+            if (magus != null && world != null) {
+                world.spawnParticle(EnumParticleTypes.DRAGON_BREATH, magus.posX, magus.posY + 1.2D, magus.posZ, 120, 2.5D, 1.5D, 2.5D, 0.06D);
+            }
+        });
+        play(this::magusEnding);
+    }
+
+    /** One layer of the squares around him, stood up on end: the board's own blocks, in its own colours. */
+    private void raiseWalls(int layer) {
+        WorldServer world = world();
+        if (world == null) {
+            return;
+        }
+        BlockPos o = origin();
+        int cx = Kingstable.x(Kingstable.THRONE), cy = Kingstable.y(Kingstable.THRONE);
+        for (int sy = cy - 1; sy <= cy + 1; sy++) {
+            for (int sx = cx - 1; sx <= cx + 1; sx++) {
+                if (sx == cx && sy == cy) {
+                    continue;
+                }
+                for (int dz = 0; dz < SQ; dz++) {
+                    for (int dx = 0; dx < SQ; dx++) {
+                        int bx = 1 + sx * SQ + dx, bz = 1 + sy * SQ + dz;
+                        BlockPos pos = o.add(bx, 1 + layer, bz);
+                        // Never through anyone standing there.
+                        if (!world.isAirBlock(pos) || !world.getEntitiesWithinAABB(EntityLivingBase.class, new AxisAlignedBB(pos)).isEmpty()) {
+                            continue;
+                        }
+                        set(world, pos, face(bx, bz));
+                        walls.add(pos);
+                    }
+                }
+            }
+        }
+        sound(SoundEvents.BLOCK_PISTON_EXTEND, middle(), 2F, 0.5F + layer * 0.1F);
+        sound(SoundEvents.BLOCK_STONE_PLACE, middle(), 2F, 0.6F);
+    }
+
+    /** He throws his hands open, and the walls are gone. */
+    private void breakWalls() {
+        WorldServer world = world();
+        if (world == null) {
+            walls.clear();
+            return;
+        }
+        for (int i = 0; i < walls.size(); i++) {
+            BlockPos pos = walls.get(i);
+            IBlockState state = world.getBlockState(pos);
+            if (state.getBlock() != EternityBlocks.BOARD) {
+                continue;
+            }
+            set(world, pos, Blocks.AIR.getDefaultState());
+            if (i % 3 == 0) {
+                world.spawnParticle(EnumParticleTypes.BLOCK_CRACK, pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D, 6, 0.3D, 0.3D, 0.3D, 0.15D,
+                        Block.getStateId(state));
+            }
+        }
+        walls.clear();
+        Vec3d c = middle().add(0D, 2.2D, 0D);
+        world.spawnParticle(EnumParticleTypes.EXPLOSION_LARGE, c.x, c.y, c.z, 8, 3D, 1D, 3D, 0D);
+        world.spawnParticle(EnumParticleTypes.DRAGON_BREATH, c.x, c.y, c.z, 120, 3D, 1D, 3D, 0.08D);
+        sound(SoundEvents.ENTITY_GENERIC_EXPLODE, c, 3F, 0.55F);
+        sound(SoundEvents.BLOCK_GLASS_BREAK, c, 3F, 0.5F);
+        if (body != null) {
+            act(State.AFRAID, -1);
+            body.sound(EternitySounds.GRANDMASTER_FRUSTRATED, 2F, 0.9F);
+        }
+    }
+
+    private void cardStorm() {
+        if (magus == null) {
+            return;
+        }
+        Vec3d at = magus.getPositionVector().add(rand.nextGaussian() * 0.8D, 1.2D + rand.nextDouble(), rand.nextGaussian() * 0.8D);
+        fx(MsgGrandmaster.FX_CARDS, at, Vec3d.ZERO, 40);
+        sound(SoundEvents.ENTITY_ILLAGER_MIRROR_MOVE, at, 1.5F, 0.9F + rand.nextFloat() * 0.4F);
+    }
+
+    /** A square of his own board, thrown: it gives way, as it would under a blow, and all of it goes at him. */
+    private void throwSquare(int square) {
+        WorldServer world = world();
+        GrandmasterData d = data();
+        if (world == null || d.cracks[square] >= 3) {
+            return;
+        }
+        d.cracks[square] = 3;
+        shatter(world, square);
+        fx(MsgGrandmaster.FX_STRIKE, centre(square), new Vec3d(3D, 0D, 0D), square);
+        if (square % 4 == 0) {
+            sound(SoundEvents.BLOCK_GLASS_BREAK, centre(square), 1.5F, 0.5F);
+        }
+        d.game = game.save();
+        d.markDirty();
+        dirty = 2;
+    }
+
+    /**
+     * The board is still. The Magus comes down beside him, takes him by the throat and lifts him,
+     * and takes the stone; then lets him go, alive, and leaves. Warlock has one thing to say.
+     */
+    private void magusEnding() {
+        GrandmasterData d = data();
+        d.phase = GrandmasterData.Phase.COLLAPSE;
+        d.markDirty();
+        phaseTicks = 0;
+        stage = Stage.SCENE;
+        anim = null;
+        selected = -1;
+        targets = new int[0];
+        cheats.clear();
+        script.clear();
+        stopped = true;
+        restAt = null;
+        if (magus != null) {
+            magus.stand();
+            magus.act(NorsePose.HOVER);
+            magus.watch(body);
+        }
+        if (warlock != null) {
+            warlock.script(true);
+            warlock.direct(EntityAdamWarlock.State.HOVER, warlock.getPositionVector(), magus != null ? magus.getPositionEyes(1F) : middle(), 0.1D);
+        }
+        at(30, () -> {
+            act(State.AFRAID, -1);
+            look(magus != null ? magus.getPositionEyes(1F) : middle());
+            gm("...That was everything.");
+        });
+        at(90, () -> {
+            if (magus != null && body != null) {
+                Vec3d feet = body.getPositionVector();
+                Vec3d side = flat(magus.getPositionVector().subtract(feet));
+                // Level with the Grandmaster as he will be once he is held up: his hand at the height of the throat.
+                magus.hoverTo(feet.add(side.scale(1.6D)).add(0D, EntityGrandmaster.LIFT + 0.2D, 0D), 0.1D);
+                magus.watch(body);
+                body.walkTo(null);
+            }
+        });
+        at(150, () -> {
+            if (magus != null) {
+                magus.act(NorsePose.GRIP);
+            }
+            act(State.LIFTED, -1);
+            if (body != null) {
+                body.walkTo(null);
+                body.sound(EternitySounds.GRANDMASTER_FRUSTRATED, 2F, 1.3F);
+            }
+            direction("He takes the Grandmaster by the throat, and lifts him off his feet.");
+        });
+        at(210, () -> ml("You made a game out of the only thing that was ever real. Power."));
+        at(310, () -> {
+            if (magus != null) {
+                magus.act(NorsePose.TAKE, 0);
+            }
+            if (game.stone >= 0) {
+                Vec3d from = centre(game.stone).add(0D, 1.1D, 0D);
+                fx(MsgGrandmaster.FX_LEAP, from, magus != null ? magus.getPositionVector().add(0D, 1.4D, 0D) : from.add(0D, 4D, 0D), 1);
+                sound(EternitySounds.OMEN_SHIMMER, from, 3F, 0.4F);
+                game.stone = -1;
+                game.nextStone = -1;
+                d.game = game.save();
+                d.markDirty();
+            }
+            sync();
+            magusTakesMind();
+        });
+        at(350, () -> direction("The Mind Stone goes into his hand as if it had always been his."));
+        at(410, () -> {
+            if (magus != null) {
+                magus.act(NorsePose.HOVER);
+                magus.watch(player());
+            }
+            // Set down, not dropped: alive.
+            act(State.AFRAID, -1);
+        });
+        at(450, () -> {
+            if (magus != null) {
+                magus.hoverTo(magus.getPositionVector().add(0D, 40D, 0D), 0.03D);
+                sound(SoundEvents.ENTITY_ILLAGER_PREPARE_MIRROR, magus.getPositionVector(), 2F, 0.5F);
+            }
+        });
+        at(490, () -> {
+            look(eyes(player()));
+            gm("He didn't even want to PLAY.");
+        });
+        at(560, () -> {
+            if (magus != null) {
+                magus.setDead();
+                magus = null;
+            }
+        });
+        at(580, () -> {
+            returnPot();
+            sync();
+        });
+        at(600, () -> {
+            EntityPlayerMP player = player();
+            if (warlock != null && player != null) {
+                Vec3d front = player.getPositionVector().add(flat(player.getLookVec()).scale(3.5D));
+                warlock.direct(EntityAdamWarlock.State.HOVER, front.add(0D, 0.6D, 0D), player.getPositionEyes(1F), 0.12D);
+            }
+        });
+        at(650, () -> wl("Two stones, now. He'll come for yours."));
+        at(730, () -> {
+            if (warlock != null) {
+                warlock.dismiss();
+            }
+            d.warlock = GrandmasterData.Warlock.GONE;
+            d.markDirty();
+        });
+        at(770, () -> {
+            // He goes the way he came, in a burst of cards, and takes his board with him.
+            if (body != null) {
+                fx(MsgGrandmaster.FX_CARDS, body.getPositionVector().add(0D, 1.2D, 0D), Vec3d.ZERO, 80);
+                sound(SoundEvents.ENTITY_ILLAGER_MIRROR_MOVE, body.getPositionVector(), 2F, 0.8F);
+                body.setDead();
+                body = null;
+            }
+            restoreRing = 0;
+        });
+        play(() -> {
+        });
+        sync();
+    }
+
+    /** The Mind Stone is the Magus's now: claimed under him, so that no copy anyone picks up will ever count. */
+    private void magusTakesMind() {
+        SovereignData s = SovereignData.get();
+        if (s.magusHasMind) {
+            return;
+        }
+        if (anvil.infinity.items.Items.MIND_STONE != null) {
+            ItemStack stone = new ItemStack(anvil.infinity.items.Items.MIND_STONE);
+            Relics.release(Relics.Kind.MIND_STONE);
+            Relics.claim(stone, StoryDirector.magusId(), "The Magus");
+        }
+        s.magusHasMind = true;
+        s.markDirty();
+        if (StoryDirector.enabled()) {
+            StoryDirector.INSTANCE.sendStateToAll();
+        }
     }
 
     // ------------------------------------------------------------------ losing
@@ -1849,8 +2711,12 @@ public final class GrandmasterDirector {
     /** On his board, during the game, a hand is for the pieces: nothing in it is used. */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
+        // Fires on the client too, where a remote server leaves no overworld to load data from.
+        if (event.getWorld().isRemote) {
+            return;
+        }
         GrandmasterData d = data();
-        if (!event.getWorld().isRemote && d.active() && d.phase == GrandmasterData.Phase.PLAYING
+        if (d.active() && d.phase == GrandmasterData.Phase.PLAYING
                 && event.getWorld().provider.getDimension() == d.dimension && event.getEntityPlayer().getUniqueID().equals(d.player)
                 && onBoard(new BlockPos(event.getEntityPlayer()).down())) {
             event.setCanceled(true);
@@ -1859,8 +2725,11 @@ public final class GrandmasterDirector {
 
     @SubscribeEvent
     public void onPlace(BlockEvent.PlaceEvent event) {
+        if (event.getWorld().isRemote) {
+            return;
+        }
         GrandmasterData d = data();
-        if (!event.getWorld().isRemote && d.active() && event.getWorld().provider.getDimension() == d.dimension && onBoard(event.getPos())) {
+        if (d.active() && event.getWorld().provider.getDimension() == d.dimension && onBoard(event.getPos())) {
             event.setCanceled(true);
         }
     }
@@ -1871,6 +2740,13 @@ public final class GrandmasterDirector {
         int square = squareAt(pos);
         if (world == null || square < 0 || d.phase == GrandmasterData.Phase.ARRIVING || d.phase == GrandmasterData.Phase.COLLAPSE
                 || player.ticksExisted - lastStrike < 6 || d.cracks[square] >= 3) {
+            return;
+        }
+        if (d.magus) {
+            // Not today. With the Magus at the table, his board is the last thing anyone should be breaking.
+            if (body != null && body.sinceSpoke() > 80) {
+                gm(seized ? "Not the board. HIM." : "Not my board. Play him.");
+            }
             return;
         }
         lastStrike = player.ticksExisted;
@@ -2091,7 +2967,14 @@ public final class GrandmasterDirector {
 
     private void finish() {
         GrandmasterData d = data();
-        if (restAt == null && game != null && game.stone >= 0) {
+        if (d.magus) {
+            // The stone went with the Magus, not into the grass; if a restart cut that short, it went with him anyway.
+            magusTakesMind();
+            restAt = null;
+            if (!d.pot.isEmpty()) {
+                returnPot();
+            }
+        } else if (restAt == null && game != null && game.stone >= 0) {
             // After a restart in the middle of it: the stone was where the game left it.
             restAt = centre(game.stone);
         }
@@ -2113,8 +2996,13 @@ public final class GrandmasterDirector {
             warlock.dismiss();
         }
         warlock = null;
+        if (magus != null && !magus.isDead) {
+            magus.setDead();
+        }
+        magus = null;
         EternityNetwork.sendToAll(MsgGrandmaster.clear());
-        Eternity.LOG.info("The Grandmaster is dead, and his board is gone.");
+        Eternity.LOG.info(d.magus ? "The Grandmaster lives, and his board is gone; the Magus has his stone."
+                : "The Grandmaster is dead, and his board is gone.");
     }
 
     // ------------------------------------------------------------------ coming to them
@@ -2224,16 +3112,17 @@ public final class GrandmasterDirector {
     public String describe() {
         GrandmasterData d = data();
         if (d.finished && !d.active()) {
-            return "The Grandmaster is dead." + (d.warlockRefused ? " Warlock walked off his board." : "");
+            return d.magus ? "The Grandmaster lives. The Magus took his stone." : "The Grandmaster is dead." + (d.warlockRefused ? " Warlock walked off his board." : "");
         }
         if (!d.active()) {
             return "The Grandmaster has not come for anyone yet.";
         }
         return String.format("The Grandmaster is playing %s (%s, %s). Board at %d %d %d in dimension %d. %d cheats, Warlock %s, "
-                        + "board %d/%d, pot of %d%s.%n%s",
+                        + "board %d/%d, pot of %d%s%s.%n%s",
                 d.playerName, d.phase.name().toLowerCase(), stage.name().toLowerCase(), d.origin.getX(), d.origin.getY(), d.origin.getZ(),
                 d.dimension, d.cheats, d.warlock.name().toLowerCase(), d.integrity, EternityConfig.grandmaster.boardStrength, d.pot.size(),
-                d.potLost ? " (his)" : "", game != null ? game.toString() : "");
+                d.potLost ? " (his)" : "", d.magus ? ", the Magus plays" + (seized ? " (out of turn, " + outOfTurn + " moves)" : "") : "",
+                game != null ? game.toString() : "");
     }
 
     /** Skips the talking: straight to the game, nothing staked. */
@@ -2246,7 +3135,7 @@ public final class GrandmasterDirector {
         scriptDone = null;
         buildRing = buildRing >= 0 ? buildRing : -1;
         if (warlock == null && d.warlock == GrandmasterData.Warlock.ABSENT) {
-            d.warlock = GrandmasterData.Warlock.PLAYING;
+            d.warlock = d.magus ? GrandmasterData.Warlock.ALLIED : GrandmasterData.Warlock.PLAYING;
         }
         d.staked = true;
         d.phase = GrandmasterData.Phase.PLAYING;
@@ -2255,6 +3144,23 @@ public final class GrandmasterDirector {
         stageTicks = 0;
         sync();
         return "Straight to the game.";
+    }
+
+    /** Plays the move Warlock last showed them, or any legal one if he showed nothing, for testing. */
+    public String forceHint() {
+        if (game == null || data().phase != GrandmasterData.Phase.PLAYING || stage != Stage.WAIT) {
+            return "It is not the player's move.";
+        }
+        int[] h = hinted;
+        if (h == null) {
+            int[] moves = game.moves();
+            if (moves.length == 0) {
+                return "No moves.";
+            }
+            return force(moves[0] / Kingstable.CELLS, moves[0] % Kingstable.CELLS) + " (no hint up)";
+        }
+        unhint();
+        return force(h[0], h[1]) + " (his)";
     }
 
     /** Plays a move for the player, for testing: from and to as squares. */
@@ -2309,6 +3215,9 @@ public final class GrandmasterDirector {
     public String cheatNow() {
         if (game == null || data().phase != GrandmasterData.Phase.PLAYING) {
             return "There is no game.";
+        }
+        if (seized) {
+            return "He can't: the board is the Magus's now.";
         }
         bored();
         if (stage != Stage.CHEAT) {

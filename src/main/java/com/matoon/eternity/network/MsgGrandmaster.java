@@ -43,6 +43,8 @@ public class MsgGrandmaster implements IMessage {
     public static final byte LINE = 13;
     /** A cutscene begins for whoever receives this. value = which (0 the rules). */
     public static final byte CUTSCENE = 14;
+    /** Warlock shows them a move: a.x the piece's square, a.y where it goes, b.x/b.y what it takes (-1 none). value = ticks lit, 0 to put them out. */
+    public static final byte FX_HINT = 15;
 
     public byte type;
     public Vec3d a = Vec3d.ZERO, b = Vec3d.ZERO;

@@ -71,6 +71,10 @@ public final class EternitySounds {
     public static final SoundEvent MUSIC_GRANDMASTER = create("music.grandmaster");
     public static final SoundEvent MUSIC_GRANDMASTER_GAME = create("music.grandmaster_game");
     public static final SoundEvent MUSIC_GRANDMASTER_ALONE = create("music.grandmaster_alone");
+    /** The Magus's theme, while he is anywhere near. */
+    public static final SoundEvent MUSIC_SOVEREIGN = create("music.sovereign");
+    /** Under Warlock's going, and the title after it. */
+    public static final SoundEvent MUSIC_UPRISING = create("music.uprising");
     public static final SoundEvent GRANDMASTER_FRUSTRATED = create("entity.grandmaster.frustrated");
 
     private EternitySounds() {

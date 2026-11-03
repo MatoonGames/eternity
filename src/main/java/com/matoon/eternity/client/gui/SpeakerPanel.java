@@ -3,7 +3,8 @@ package com.matoon.eternity.client.gui;
 import com.matoon.eternity.client.Cutscene;
 import com.matoon.eternity.client.render.RenderAdamWarlock;
 import com.matoon.eternity.client.render.RenderGrandmaster;
-import com.matoon.eternity.world.GrandmasterScenes;
+import com.matoon.eternity.client.render.RenderNorse;
+import com.matoon.eternity.story.Speakers;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.ScaledResolution;
@@ -48,31 +49,100 @@ public final class SpeakerPanel {
     private Line current, leaving;
     private int tick;
 
-    /** Who each speaker is, and their colours: accent, the window's dark and light. */
+    /**
+     * Who each speaker is: their name and what they are, their colours (accent, the window's dark
+     * and light), the letter shown when they cannot be, and how far down the window their face sits.
+     */
     private static final class Who {
-        final String name, title;
+        final String name, title, initial;
         final int accent, deep, light;
+        final float face;
 
-        Who(String name, String title, int accent, int deep, int light) {
+        Who(String name, String title, int accent, int deep, int light, String initial, float face) {
             this.name = name;
             this.title = title;
             this.accent = accent;
             this.deep = deep;
             this.light = light;
+            this.initial = initial;
+            this.face = face;
         }
     }
 
-    private static final Who GRANDMASTER = new Who("THE GRANDMASTER", "En Dwi Gast, Elder of the Universe", 0xF2C24A, 0x081436, 0x2C64B4);
-    private static final Who WARLOCK = new Who("ADAM WARLOCK", "Son of the Sovereign", 0xF4A84A, 0x2A0408, 0x9A2A22);
+    private static final Who GRANDMASTER = new Who("THE GRANDMASTER", "En Dwi Gast, Elder of the Universe", 0xF2C24A, 0x081436, 0x2C64B4, "G", 1.98F);
+    private static final Who WARLOCK = new Who("ADAM WARLOCK", "Son of the Sovereign", 0xF4A84A, 0x2A0408, 0x9A2A22, "W", 1.72F);
+    private static final Who STRANGER = new Who("THE STRANGER", "A woman in mourning", 0xC9CED8, 0x050609, 0x2E323E, "?", 1.66F);
+    private static final Who RAGNA = new Who("RAGNA", "Eirik's daughter", 0x9CC4DE, 0x06121C, 0x2E5670, "R", 1.62F);
+    private static final Who HRAFN = new Who("HRAFN", "Keeper of the oath", 0xD09A56, 0x140B04, 0x5C3E20, "H", 1.66F);
+    private static final Who DEATH = new Who("DEATH", "", 0xE8E8EE, 0x000000, 0x24242C, "", 1.66F);
+    private static final Who STONE = new Who("CARVED IN THE STONE", "A keeper's grave", 0xA9B4BE, 0x0E1012, 0x3E464E, "", 1.7F);
+    private static final Who CHAMPION = new Who("THE CHAMPION", "Tryco Slatterus, Elder of the Universe", 0xE8A23A, 0x220806, 0x8A2A14, "C", 2.2F);
+    private static final Who PARTY = new Who("YOUR PARTY", "Chosen together", 0x8FD6A8, 0x04140C, 0x245A3C, "P", 1.62F);
+    private static final Who IN_BETWEENER = new Who("THE IN-BETWEENER", "Made by Order and Chaos", 0xD8D8E0, 0x0A0A10, 0x4A4A56, "I", 1.62F);
+    private static final Who GARDENER = new Who("THE GARDENER", "Ord Zyonz, Elder of the Universe", 0x9CCB62, 0x0A1606, 0x3E6A24, "G", 1.74F);
+    private static final Who MOTHER = new Who("AYESHA", "High Priestess of the Sovereign", 0xFFD670, 0x1E1404, 0xA07A22, "A", 1.86F);
+    private static final Who RECORD = new Who("A RECORD", "Her voice, kept by the station", 0x6FE0D2, 0x021412, 0x13706A, "", 1.7F);
+    private static final Who MAGUS = new Who("THE MAGUS", "", 0xC9A6FF, 0x0E0418, 0x5A2E8A, "M", 1.86F);
+    private static final Who CHAOS = new Who("LORD CHAOS", "One of two", 0x7FE0F0, 0x041418, 0x1A5A6A, "C", 1.9F);
+    private static final Who TRIBUNAL = new Who("THE LIVING TRIBUNAL", "Judge of all that is", 0xE8D9A8, 0x10100C, 0x5A5236, "T", 1.9F);
+    private static final Who EINHERJAR = new Who("EINHERJAR", "Odin's honoured dead", 0xC8D4E6, 0x0A0E16, 0x3E5270, "E", 1.7F);
+    private static final Who ORDER = new Who("MASTER ORDER", "One of two", 0xF2C24A, 0x1A1404, 0x7A5A12, "O", 1.9F);
+
+    private static Who who(byte speaker) {
+        switch (speaker) {
+            case Speakers.WARLOCK:
+                return WARLOCK;
+            case Speakers.STRANGER:
+                return STRANGER;
+            case Speakers.RAGNA:
+                return RAGNA;
+            case Speakers.HRAFN:
+                return HRAFN;
+            case Speakers.DEATH:
+                return DEATH;
+            case Speakers.STONE:
+                return STONE;
+            case Speakers.CHAMPION:
+                return CHAMPION;
+            case Speakers.PARTY:
+                return PARTY;
+            case Speakers.IN_BETWEENER:
+                return IN_BETWEENER;
+            case Speakers.GARDENER:
+                return GARDENER;
+            case Speakers.MOTHER:
+                return MOTHER;
+            case Speakers.RECORD:
+                return RECORD;
+            case Speakers.MAGUS:
+                return MAGUS;
+            case Speakers.CHAOS:
+                return CHAOS;
+            case Speakers.ORDER:
+                return ORDER;
+            case Speakers.EINHERJAR:
+                return EINHERJAR;
+            case Speakers.TRIBUNAL:
+                return TRIBUNAL;
+            default:
+                return GRANDMASTER;
+        }
+    }
+
+    /** A speaker's accent colour, for anything else drawn in their name. */
+    public static int accent(byte speaker) {
+        return who(speaker).accent;
+    }
 
     private static final class Line {
         final byte speaker;
         final int entity;
         final String text;
-        final int born;
+        int born;
         final int life;
         List<String> wrapped;
         int leftAt = -1;
+        boolean scene;
 
         Line(byte speaker, int entity, String text, int born) {
             this.speaker = speaker;
@@ -80,15 +150,30 @@ public final class SpeakerPanel {
             this.text = text;
             this.born = born;
             // Long enough to type, and to read twice over.
-            this.life = (int) (text.length() / CHARS_PER_TICK) + 50 + text.length();
+            this.life = (int) (text.length() / CHARS_PER_TICK) + 60 + (int) (text.length() * 1.4F);
         }
 
         Who who() {
-            return speaker == GrandmasterScenes.WARLOCK ? WARLOCK : GRANDMASTER;
+            return SpeakerPanel.who(speaker);
         }
     }
 
     private SpeakerPanel() {
+    }
+
+    /** A line from the story: the view settles on whoever says it (see DialogueCamera). */
+    public void sayInScene(byte speaker, int entity, String text) {
+        say(speaker, entity, text);
+        current.scene = true;
+    }
+
+    /** Whom a story scene is attending to: the speaker of the line being said, while it is said and a moment after; -1 for nobody. */
+    public int sceneFocus() {
+        Line l = current != null ? current : leaving;
+        if (l == null || !l.scene || l.entity < 0 || tick - l.born > l.life) {
+            return -1;
+        }
+        return l.entity;
     }
 
     /** Someone says something. */
@@ -98,6 +183,36 @@ public final class SpeakerPanel {
             leaving = current;
         }
         current = new Line(speaker, entity, text, tick);
+    }
+
+    /** How hard someone is talking this moment, 0 to 1: while their words are still being typed out, and easing off after. */
+    public float speaking(int entity) {
+        if (current == null || current.entity != entity || current.leftAt >= 0 || current.speaker == com.matoon.eternity.story.Speakers.DIRECTION
+                || current.speaker == com.matoon.eternity.story.Speakers.STONE) {
+            return 0F;
+        }
+        float typed = (tick - current.born) * CHARS_PER_TICK;
+        float left = current.text.length() - typed;
+        return left > 0F ? 1F : clamp(1F + left / 12F);
+    }
+
+    /**
+     * They have read enough: a line still typing out is shown whole at once; one already whole is
+     * let go. True if there was a line to skip (so the conversation is told they're done with it).
+     */
+    public boolean skip() {
+        if (current == null) {
+            return false;
+        }
+        int typedBy = current.born + (int) Math.ceil(current.text.length() / CHARS_PER_TICK);
+        if (tick < typedBy) {
+            current.born -= typedBy - tick;
+        } else {
+            current.leftAt = tick;
+            leaving = current;
+            current = null;
+        }
+        return true;
     }
 
     public void clear() {
@@ -145,7 +260,7 @@ public final class SpeakerPanel {
         if (current != null) {
             float in = clamp((tick - current.born + pt) / FADE_IN);
             float out = 1F - clamp((tick - current.born + pt - current.life + FADE_OUT) / FADE_OUT);
-            draw(res, current, Math.min(in, out), sameSpeaker ? 1F : Math.min(in, out), bottom, pt, !sameSpeaker || in >= 1F);
+            draw(res, current, Math.min(in, out), sameSpeaker ? 1F : Math.min(in, out), bottom, pt, true);
         }
         cut.drawOver(res, pt);
     }
@@ -160,20 +275,22 @@ public final class SpeakerPanel {
         }
         FontRenderer font = mc.fontRenderer;
         int w = res.getScaledWidth(), h = res.getScaledHeight();
-        if (line.speaker == GrandmasterScenes.DIRECTION) {
+        if (line.speaker == Speakers.DIRECTION) {
             direction(font, line, w, h - bottom - 14, alpha, pt);
             return;
         }
         Who who = line.who();
-        int panelW = Math.min(w - 24, 372), panelH = 62;
-        float rise = (1F - ease(frame)) * 14F;
+        int panelW = Math.min(w - 24, 372);
+        int portrait = 52;
         int x0 = (w - panelW) / 2;
-        float y0 = h - bottom - panelH + rise;
-        int portrait = panelH - 10;
         int textX = x0 + portrait + 16, textW = panelW - portrait - 26;
         if (line.wrapped == null) {
             line.wrapped = font.listFormattedStringToWidth(line.text, textW);
         }
+        // Three rows fit; a longer line makes the panel taller, upward, rather than spilling out of it.
+        int panelH = Math.max(62, 36 + line.wrapped.size() * 10);
+        float rise = (1F - ease(frame)) * 14F;
+        float y0 = h - bottom - panelH + rise;
 
         GlStateManager.pushMatrix();
         GlStateManager.translate(0F, y0, 0F);
@@ -269,9 +386,12 @@ public final class SpeakerPanel {
         if (e instanceof EntityLivingBase && alpha > 0.3F) {
             portrait((EntityLivingBase) e, cx, y + size * 0.47F, size, pt, line.speaker);
         } else {
-            // Nobody to show: their initial, in their colour.
+            // Nobody to show: their initial, in their colour; a carving for a stone, a hollow for her.
+            if (line.speaker == Speakers.STONE) {
+                rune(cx, cy, size, who.accent, alpha);
+            }
             GlStateManager.enableTexture2D();
-            String initial = who.name.equals(GRANDMASTER.name) ? "G" : "W";
+            String initial = who.initial;
             GlStateManager.pushMatrix();
             GlStateManager.translate(cx, cy, 0F);
             GlStateManager.scale(3F, 3F, 1F);
@@ -290,7 +410,7 @@ public final class SpeakerPanel {
 
     /** The speaker themself, drawn the way the inventory draws you, turned a little toward us, framed on the face. */
     private void portrait(EntityLivingBase e, float cx, float faceY, int size, float pt, byte speaker) {
-        float face = speaker == GrandmasterScenes.WARLOCK ? 1.72F : 1.98F;
+        float face = who(speaker).face;
         float scale = size * 0.78F;
         float yawWas = e.rotationYaw, prevYawWas = e.prevRotationYaw, bodyWas = e.renderYawOffset, prevBodyWas = e.prevRenderYawOffset;
         float headWas = e.rotationYawHead, prevHeadWas = e.prevRotationYawHead, pitchWas = e.rotationPitch, prevPitchWas = e.prevRotationPitch;
@@ -314,12 +434,12 @@ public final class SpeakerPanel {
         RenderManager rm = mc.getRenderManager();
         rm.setPlayerViewY(180F);
         rm.setRenderShadow(false);
-        RenderGrandmaster.portrait = RenderAdamWarlock.portrait = true;
+        RenderGrandmaster.portrait = RenderAdamWarlock.portrait = RenderNorse.portrait = com.matoon.eternity.client.render.RenderMagus.portrait = true;
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240F, 240F);
         try {
             rm.renderEntity(e, 0D, 0D, 0D, 0F, pt, false);
         } finally {
-            RenderGrandmaster.portrait = RenderAdamWarlock.portrait = false;
+            RenderGrandmaster.portrait = RenderAdamWarlock.portrait = RenderNorse.portrait = com.matoon.eternity.client.render.RenderMagus.portrait = false;
             rm.setRenderShadow(true);
             e.rotationYaw = yawWas;
             e.prevRotationYaw = prevYawWas;
@@ -331,6 +451,8 @@ public final class SpeakerPanel {
             e.prevRotationPitch = prevPitchWas;
         }
         GlStateManager.popMatrix();
+        // Some renderers (Order and Chaos) turn fog back on as they finish; in the HUD it would wash the whole screen out.
+        GlStateManager.disableFog();
         RenderHelper.disableStandardItemLighting();
         GlStateManager.disableRescaleNormal();
         GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit);
@@ -341,6 +463,24 @@ public final class SpeakerPanel {
         GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
                 GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
         GlStateManager.color(1F, 1F, 1F, 1F);
+    }
+
+    /** A rune cut into the window: a stave, two twigs off it, and the cut edges catching the light. */
+    private static void rune(float cx, float cy, int size, int rgb, float a) {
+        float s = size / 52F;
+        GlStateManager.disableTexture2D();
+        rect(cx - 1.5F * s, cy - 13F * s, cx + 1.5F * s, cy + 13F * s, rgb, 0.85F * a, rgb, 0.55F * a);
+        for (int i = 0; i < 2; i++) {
+            float y = cy - 11F * s + i * 7F * s;
+            Tessellator t = Tessellator.getInstance();
+            BufferBuilder b = t.getBuffer();
+            b.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR);
+            b.pos(cx + 1.5F * s, y, 0).color(r(rgb), g(rgb), bl(rgb), 0.8F * a).endVertex();
+            b.pos(cx + 1.5F * s, y + 3F * s, 0).color(r(rgb), g(rgb), bl(rgb), 0.8F * a).endVertex();
+            b.pos(cx + 10F * s, y + 8F * s, 0).color(r(rgb), g(rgb), bl(rgb), 0.6F * a).endVertex();
+            b.pos(cx + 10F * s, y + 5F * s, 0).color(r(rgb), g(rgb), bl(rgb), 0.6F * a).endVertex();
+            t.draw();
+        }
     }
 
     /** What nobody says: grey italics, centred, between two rules that fade into nothing. */

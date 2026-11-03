@@ -116,6 +116,12 @@ public class EntityOrderChaos extends EntityLiving {
             new TextComponentString("Master Order"), BossInfo.Color.YELLOW, BossInfo.Overlay.NOTCHED_10).setDarkenSky(true);
 
     private int stateTicks;
+    /** Out of the encounter, put somewhere for a scene (see puppet). */
+    private boolean puppet;
+    @Nullable
+    private Vec3d puppetAt;
+    @Nullable
+    private Entity puppetFace;
     private int cooldown = 40;
     private State last = State.IDLE;
     private double orbit;
@@ -341,7 +347,41 @@ public class EntityOrderChaos extends EntityLiving {
         move(MoverType.SELF, motionX, motionY, motionZ);
     }
 
+    /**
+     * One of them alone, out of their encounter, for a scene elsewhere: hanging where he is put,
+     * turned to whoever he is speaking to, until he withdraws.
+     */
+    public void puppet(@Nullable Vec3d at, @Nullable Entity face) {
+        puppet = true;
+        puppetAt = at;
+        puppetFace = face;
+        if (getState() != State.WITHDRAW) {
+            setState(State.TALK);
+        }
+    }
+
+    private void puppetTick() {
+        stateTicks++;
+        if (getState() == State.WITHDRAW) {
+            setPosition(posX, posY + 0.15D, posZ);
+            if (stateTicks >= WITHDRAW_TICKS) {
+                setDead();
+            }
+            return;
+        }
+        if (puppetAt != null) {
+            glide(puppetAt, 0.08D);
+        }
+        if (puppetFace != null && !puppetFace.isDead) {
+            face(puppetFace);
+        }
+    }
+
     private void serverTick() {
+        if (puppet) {
+            puppetTick();
+            return;
+        }
         OrderAndChaos encounter = OrderAndChaos.INSTANCE;
         if (!encounter.claim(this)) {
             setDead();
@@ -1187,7 +1227,7 @@ public class EntityOrderChaos extends EntityLiving {
      */
     @Override
     public boolean attackEntityFrom(DamageSource source, float amount) {
-        if (world.isRemote || isEntityInvulnerable(source)) {
+        if (world.isRemote || isEntityInvulnerable(source) || puppet) {
             return false;
         }
         State state = getState();

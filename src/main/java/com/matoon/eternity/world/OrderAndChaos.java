@@ -534,15 +534,16 @@ public final class OrderAndChaos {
         return false;
     }
 
-    /** One of them speaks to everyone in the Nexus. */
+    /** One of them speaks to everyone in the Nexus, in the story's panel, without taking anyone's eyes off the fight. */
     static void say(WorldServer nexus, boolean isOrder, String line) {
-        TextComponentString name = new TextComponentString(isOrder ? "<Master Order> " : "<Lord Chaos> ");
-        name.getStyle().setColor(isOrder ? TextFormatting.GOLD : TextFormatting.AQUA).setBold(true);
-        TextComponentString text = new TextComponentString(line);
-        text.getStyle().setColor(isOrder ? TextFormatting.YELLOW : TextFormatting.AQUA).setBold(false);
-        name.appendSibling(text);
+        EntityOrderChaos head = isOrder ? INSTANCE.order : INSTANCE.chaos;
+        byte who = isOrder ? com.matoon.eternity.story.Speakers.ORDER : com.matoon.eternity.story.Speakers.CHAOS;
+        if (head != null && !head.isDead && head.world == nexus) {
+            com.matoon.eternity.story.StoryDirector.shout(head, who, head.getEntityId(), line, 400D);
+            return;
+        }
         for (EntityPlayer player : nexus.playerEntities) {
-            player.sendMessage(name);
+            com.matoon.eternity.story.StoryDirector.shout(player, who, -1, line, 1D);
         }
     }
 

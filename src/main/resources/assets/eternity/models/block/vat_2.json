@@ -1,0 +1,258 @@
+{
+  "parent": "block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "metal": "eternity:blocks/vat_metal",
+    "glass": "eternity:blocks/vat_glass",
+    "broken": "eternity:blocks/vat_broken",
+    "liquid": "eternity:blocks/vat_liquid",
+    "particle": "eternity:blocks/vat_metal"
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        0,
+        3
+      ],
+      "to": [
+        13,
+        10,
+        13
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            3,
+            6,
+            13,
+            16
+          ],
+          "texture": "#liquid"
+        },
+        "south": {
+          "uv": [
+            3,
+            6,
+            13,
+            16
+          ],
+          "texture": "#liquid"
+        },
+        "east": {
+          "uv": [
+            3,
+            6,
+            13,
+            16
+          ],
+          "texture": "#liquid"
+        },
+        "west": {
+          "uv": [
+            3,
+            6,
+            13,
+            16
+          ],
+          "texture": "#liquid"
+        },
+        "up": {
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ],
+          "texture": "#liquid"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        0,
+        2
+      ],
+      "to": [
+        14,
+        12,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            4,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "south": {
+          "uv": [
+            2,
+            4,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "east": {
+          "uv": [
+            2,
+            4,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "west": {
+          "uv": [
+            2,
+            4,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        }
+      }
+    },
+    {
+      "from": [
+        1,
+        12,
+        1
+      ],
+      "to": [
+        15,
+        16,
+        15
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1,
+            0,
+            15,
+            4
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            1,
+            0,
+            15,
+            4
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            1,
+            0,
+            15,
+            4
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            1,
+            0,
+            15,
+            4
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            1,
+            1,
+            15,
+            15
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            1,
+            1,
+            15,
+            15
+          ],
+          "texture": "#metal"
+        }
+      }
+    },
+    {
+      "from": [
+        6,
+        16,
+        6
+      ],
+      "to": [
+        10,
+        16.01,
+        10
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            6,
+            0,
+            10,
+            0
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            6,
+            0,
+            10,
+            0
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            6,
+            0,
+            10,
+            0
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            6,
+            0,
+            10,
+            0
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ],
+          "texture": "#metal"
+        }
+      }
+    }
+  ]
+}

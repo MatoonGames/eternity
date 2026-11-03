@@ -1,0 +1,225 @@
+{
+  "parent": "block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "body": "eternity:blocks/console_body",
+    "screen": "eternity:blocks/console_screen",
+    "metal": "eternity:blocks/sovereign_plate",
+    "particle": "eternity:blocks/console_body"
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        0,
+        3
+      ],
+      "to": [
+        13,
+        2,
+        13
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            3,
+            14,
+            13,
+            16
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            3,
+            14,
+            13,
+            16
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            3,
+            14,
+            13,
+            16
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            3,
+            14,
+            13,
+            16
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ],
+          "texture": "#metal"
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        2,
+        6
+      ],
+      "to": [
+        11,
+        9,
+        11
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            5,
+            7,
+            11,
+            14
+          ],
+          "texture": "#body"
+        },
+        "south": {
+          "uv": [
+            5,
+            7,
+            11,
+            14
+          ],
+          "texture": "#body"
+        },
+        "east": {
+          "uv": [
+            5,
+            7,
+            10,
+            14
+          ],
+          "texture": "#body"
+        },
+        "west": {
+          "uv": [
+            6,
+            7,
+            11,
+            14
+          ],
+          "texture": "#body"
+        },
+        "up": {
+          "uv": [
+            5,
+            6,
+            11,
+            11
+          ],
+          "texture": "#body"
+        },
+        "down": {
+          "uv": [
+            5,
+            5,
+            11,
+            10
+          ],
+          "texture": "#body"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        8,
+        3
+      ],
+      "to": [
+        14,
+        10,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            6,
+            14,
+            8
+          ],
+          "texture": "#body"
+        },
+        "south": {
+          "uv": [
+            2,
+            6,
+            14,
+            8
+          ],
+          "texture": "#body"
+        },
+        "east": {
+          "uv": [
+            2,
+            6,
+            13,
+            8
+          ],
+          "texture": "#body"
+        },
+        "west": {
+          "uv": [
+            3,
+            6,
+            14,
+            8
+          ],
+          "texture": "#body"
+        },
+        "up": {
+          "uv": [
+            2,
+            3,
+            14,
+            14
+          ],
+          "texture": "#screen"
+        },
+        "down": {
+          "uv": [
+            2,
+            2,
+            14,
+            13
+          ],
+          "texture": "#body"
+        }
+      },
+      "rotation": {
+        "origin": [
+          8,
+          9,
+          8
+        ],
+        "axis": "x",
+        "angle": -22.5
+      }
+    }
+  ]
+}

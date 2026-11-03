@@ -1,0 +1,7 @@
+{
+  "parent": "block/cube_column",
+  "textures": {
+    "end": "eternity:blocks/sovereign_plate",
+    "side": "eternity:blocks/sovereign_rib"
+  }
+}

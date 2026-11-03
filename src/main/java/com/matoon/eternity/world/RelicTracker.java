@@ -172,7 +172,8 @@ public final class RelicTracker {
         if (stack.getItem() == HEItems.TESSERACT && Relics.mark(stack) == null) {
             boolean claimed = Relics.isClaimed(Relics.Kind.TESSERACT);
             if (fromNorseVillage()) {
-                if (claimed) {
+                // While the story runs, the only cube is the one under the oath's mound.
+                if (claimed || com.matoon.eternity.story.StoryDirector.INSTANCE.suppressesVillageTesseracts()) {
                     entity.setDead();
                 } else {
                     ItemStack copy = stack.copy();

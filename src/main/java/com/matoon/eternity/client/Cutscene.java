@@ -64,7 +64,7 @@ public final class Cutscene {
         final float t;
         final Runnable run;
 
-        Cue(float t, Runnable run) {
+        public Cue(float t, Runnable run) {
             this.t = t;
             this.run = run;
         }

@@ -7,6 +7,7 @@ import com.matoon.eternity.network.MsgTribunalFx;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.MoverType;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.player.EntityPlayer;
@@ -71,7 +72,13 @@ public class EntityAdamWarlock extends EntityLiving {
         COCOON, EMERGE,
         STAGGER, RETREAT,
         // Only when someone else is directing him: holding a piece up over a board, standing on the ground, walking on it.
-        CARRY, STAND, WALK
+        CARRY, STAND, WALK,
+        // Only in the Sovereign, against the Magus: everything he has, all at once; beaten flat; held up by the throat.
+        FLARE, DOWNED, HELD,
+        // His fist stopped dead in someone's hand, and held there.
+        CAUGHT,
+        // On his knees by her body; then what is in him has nowhere to go but out.
+        KNEEL
     }
 
     /** What he can be told to do, for testing. */
@@ -106,6 +113,14 @@ public class EntityAdamWarlock extends EntityLiving {
     public static final int STAGGER_TICKS = 34;
     public static final int RETREAT_LAUNCH = 50;
     public static final int RETREAT_TICKS = 90;
+    /** How much of himself he keeps against the Champion. */
+    private static final float HOLD_OUT = 0.3F;
+    /** Of his flare: how long he coils, and when it bursts out of him. */
+    public static final int FLARE_BURST = 26, FLARE_TICKS = 56;
+    /** Kneeling: when the grief turns, when he throws his head back, and when it goes up out of him. */
+    public static final int KNEEL_RAGE = 50, KNEEL_SCREAM = 95, KNEEL_BURST = 110;
+    /** Going up out of the Sovereign: how high he is when he is gone, how long it takes, and how long the whole of it is watched. */
+    public static final int ASCENT_HEIGHT = 70, ASCENT_RISE = 30, ASCENT_LENGTH = 480;
 
     /** How many points of each trail he keeps, client side. */
     public static final int TRAIL = 12;
@@ -115,6 +130,11 @@ public class EntityAdamWarlock extends EntityLiving {
     private static final DataParameter<Byte> STATE = EntityDataManager.createKey(EntityAdamWarlock.class, DataSerializers.BYTE);
     private static final DataParameter<Boolean> EVOLVED = EntityDataManager.createKey(EntityAdamWarlock.class, DataSerializers.BOOLEAN);
     private static final DataParameter<Float> COCOON = EntityDataManager.createKey(EntityAdamWarlock.class, DataSerializers.FLOAT);
+    private static final DataParameter<net.minecraft.util.math.Rotations> FACING = EntityDataManager.createKey(EntityAdamWarlock.class, DataSerializers.ROTATIONS);
+    /** Where he is, for the client (see syncSpot): three floats, not Rotations, which wraps every value to within 360. */
+    private static final DataParameter<Float> SPOT_X = EntityDataManager.createKey(EntityAdamWarlock.class, DataSerializers.FLOAT);
+    private static final DataParameter<Float> SPOT_Y = EntityDataManager.createKey(EntityAdamWarlock.class, DataSerializers.FLOAT);
+    private static final DataParameter<Float> SPOT_Z = EntityDataManager.createKey(EntityAdamWarlock.class, DataSerializers.FLOAT);
 
     private static final Move[] SHOWCASE = {Move.TAUNT, Move.FLYBY, Move.COMBO, Move.VOLLEY, Move.DIVE, Move.BEAM, Move.COCOON,
             Move.FLYBY, Move.COMBO, Move.VOLLEY, Move.BEAM, Move.DIVE};
@@ -134,6 +154,20 @@ public class EntityAdamWarlock extends EntityLiving {
     // ------------------------------------------------------------------ server state
     @Nullable
     private UUID targetId;
+    /**
+     * Someone other than a player he will fight as well (the Champion, in his own ring), and
+     * whether the move he is making now is aimed at them; he decides each time he picks one.
+     */
+    @Nullable
+    private EntityLivingBase foe;
+    private boolean onFoe;
+    /** The other one hit him, and he means to answer it with the next move he makes. */
+    private boolean grudge;
+    /** Whoever he came for is down; it is only him and the foe now, to the end. */
+    private boolean alone;
+    /** Whatever put him down, if it was not a player. */
+    @Nullable
+    private Entity beatenBy;
     /** Pulls his punches: nothing he does harms anyone. */
     private boolean calm;
     /** Runs through every move in turn, harmlessly, for looking at him. */
@@ -169,6 +203,8 @@ public class EntityAdamWarlock extends EntityLiving {
     @Nullable
     private Vec3d scriptAt, scriptFace;
     private double scriptRate = 0.1D;
+    /** Moved bodily by whoever is directing him, every tick; he only keeps facing where he is told. */
+    private boolean puppet;
 
     /** A bolt of quantum energy in flight. Clients draw it from where and how fast it left his hand. */
     private static final class Bolt {
@@ -223,6 +259,10 @@ public class EntityAdamWarlock extends EntityLiving {
         dataManager.register(STATE, (byte) State.ARRIVE.ordinal());
         dataManager.register(EVOLVED, false);
         dataManager.register(COCOON, 0F);
+        dataManager.register(FACING, new net.minecraft.util.math.Rotations(0F, 0F, 0F));
+        dataManager.register(SPOT_X, 0F);
+        dataManager.register(SPOT_Y, -1000F);
+        dataManager.register(SPOT_Z, 0F);
     }
 
     @Override
@@ -311,6 +351,11 @@ public class EntityAdamWarlock extends EntityLiving {
         playSound(EternitySounds.COMET_FLYBY, 6F, 1.3F);
     }
 
+    /** He arrives already evolved: brighter, faster, a quarter harder, as if he had hatched once already. */
+    public void evolve() {
+        dataManager.set(EVOLVED, true);
+    }
+
     public void setCalm(boolean calm) {
         this.calm = calm;
         if (!calm) {
@@ -320,6 +365,67 @@ public class EntityAdamWarlock extends EntityLiving {
 
     public boolean isCalm() {
         return calm;
+    }
+
+    /** Someone else he will turn on now and then, between going at the player; null for nobody. */
+    public void setFoe(@Nullable EntityLivingBase foe) {
+        this.foe = foe;
+        onFoe = false;
+    }
+
+    /** Whoever he came for has fallen: the foe is all that is left to fight, and he does not walk away from that. */
+    public void turnOn(EntityLivingBase foe) {
+        this.foe = foe;
+        onFoe = true;
+        alone = true;
+        targetId = null;
+        script(false);
+        setCalm(false);
+        if (foe instanceof EntityChampion) {
+            ((EntityChampion) foe).turnOn(this);
+        }
+    }
+
+    /** Whether he is fighting the foe alone, with nobody else left standing. */
+    public boolean fightingAlone() {
+        return alone && foeFair();
+    }
+
+    /** Out from under direction, and at someone, for real. */
+    public void engage(EntityPlayer player) {
+        targetId = player.getUniqueID();
+        alone = false;
+        onFoe = false;
+        script(false);
+        setCalm(false);
+        if (getState() == State.HOVER || getState() == State.STAND || getState() == State.WALK || getState() == State.CARRY) {
+            hover(20);
+        }
+    }
+
+    /** Knocked through the air by something big (the Champion's fist); a hard enough blow leaves him reeling. */
+    public void knocked(Vec3d direction, double strength, double lift) {
+        State s = getState();
+        if (scripted || s == State.ARRIVE || s == State.RETREAT || s == State.COCOON || s == State.EMERGE) {
+            return;
+        }
+        double far = Math.min(4D, strength * 1.4D);
+        Vec3d to = getPositionVector().add(direction.x * far, Math.min(2D, lift), direction.z * far);
+        RayTraceResult wall = world.rayTraceBlocks(chest(), to.add(0D, height * 0.6D, 0D), false, true, false);
+        if (wall == null || wall.typeOfHit != RayTraceResult.Type.BLOCK) {
+            setPosition(to.x, to.y, to.z);
+        }
+        if (strength >= 1.4D && s != State.STAGGER && s != State.SLAM) {
+            bolts.clear();
+            staggerFor = STAGGER_TICKS;
+            setState(State.STAGGER);
+        }
+    }
+
+    /** What beat him, if it was not a player; null if a player did, or nothing has. */
+    @Nullable
+    public Entity beatenBy() {
+        return beatenBy;
     }
 
     public boolean isShowcase() {
@@ -355,6 +461,8 @@ public class EntityAdamWarlock extends EntityLiving {
     @Override
     public void onUpdate() {
         super.onUpdate();
+        syncFacing();
+        syncSpot();
         renderYawOffset = rotationYaw;
         prevRenderYawOffset = prevRotationYaw;
         if (world.isRemote) {
@@ -373,7 +481,7 @@ public class EntityAdamWarlock extends EntityLiving {
             scriptedTick();
             return;
         }
-        EntityPlayerMP target = target();
+        EntityLivingBase target = target();
         tickBolts();
         if (ticksExisted % 5 == 0) {
             bossInfo.setPercent(getHealth() / getMaxHealth());
@@ -450,11 +558,28 @@ public class EntityAdamWarlock extends EntityLiving {
 
     /** Whoever he came for, while they are still here and still standing; failing that, whoever is nearest. */
     @Nullable
-    private EntityPlayerMP target() {
+    private EntityLivingBase target() {
+        if (foe != null && !foeFair()) {
+            foe = null;
+            onFoe = false;
+            alone = false;
+        }
+        if (alone && foe != null) {
+            return foe;
+        }
+        if (onFoe && foe != null) {
+            return foe;
+        }
         if (targetId != null) {
             EntityPlayer player = world.getPlayerEntityByUUID(targetId);
             if (player instanceof EntityPlayerMP && isFair(player) && player.getDistanceSq(this) < 96D * 96D) {
                 return (EntityPlayerMP) player;
+            }
+            if (player != null && (player.isDead || player.getHealth() <= 0F) && foeFair() && getState() != State.RETREAT) {
+                // They are down, and the old man is still standing. He won't leave that unfinished.
+                say("Then it's you and me, Elder.");
+                turnOn(foe);
+                return foe;
             }
             if (player != null && player.isDead && getState() != State.RETREAT) {
                 say("Pathetic.");
@@ -474,18 +599,35 @@ public class EntityAdamWarlock extends EntityLiving {
         }
         if (best != null) {
             targetId = best.getUniqueID();
+        } else if (foeFair()) {
+            // Nobody else near: the old man will do to be going on with.
+            return foe;
         }
         return best;
     }
 
-    private static boolean isFair(EntityPlayer player) {
-        return !player.isDead && !player.isSpectator() && player.getHealth() > 0F;
+    private static boolean isFair(EntityLivingBase victim) {
+        return !victim.isDead && !(victim instanceof EntityPlayer && ((EntityPlayer) victim).isSpectator()) && victim.getHealth() > 0F;
+    }
+
+    private boolean foeFair() {
+        return foe != null && foe.world == world && isFair(foe) && foe.getDistanceSq(this) < 64D * 64D
+                && !(foe instanceof EntityChampion && ((EntityChampion) foe).getState() == EntityChampion.State.DRIFT);
+    }
+
+    /** Everyone his blows can land on: the players, and whoever else he is fighting. */
+    private List<EntityLivingBase> victims() {
+        List<EntityLivingBase> all = new ArrayList<>(world.playerEntities);
+        if (foeFair()) {
+            all.add(foe);
+        }
+        return all;
     }
 
     // ------------------------------------------------------------------ arriving, hovering, taunting
 
     /** Streaking down out of the sky, then stopping dead in the air in front of you. */
-    private void arriving(@Nullable EntityPlayerMP target) {
+    private void arriving(@Nullable EntityLivingBase target) {
         if (arriveFrom == null || arriveTo == null) {
             hover(30);
             return;
@@ -525,7 +667,7 @@ public class EntityAdamWarlock extends EntityLiving {
     }
 
     /** Hanging in the air a little above and away from you, circling, sizing you up. */
-    private void hovering(@Nullable EntityPlayerMP target) {
+    private void hovering(@Nullable EntityLivingBase target) {
         if (target == null) {
             return;
         }
@@ -540,7 +682,23 @@ public class EntityAdamWarlock extends EntityLiving {
         }
     }
 
-    private void choose(EntityPlayerMP target) {
+    private void choose(EntityLivingBase target) {
+        // Now and then he goes for the other one instead, when they are close enough to reach.
+        boolean was = onFoe;
+        onFoe = alone && foeFair() || !showcase && pendingMove == null && foeFair() && foe.getDistance(this) < 36D
+                && (grudge || rand.nextInt(100) < (onFoe ? 30 : 45));
+        grudge = false;
+        if (onFoe != was) {
+            EntityLivingBase now = target();
+            if (now == null) {
+                hover(20);
+                return;
+            }
+            target = now;
+            if (onFoe && rand.nextInt(3) == 0) {
+                say(rand.nextBoolean() ? "And you. Don't think I've forgotten you, old man." : "Stay out of this, Elder.");
+            }
+        }
         Move next;
         if (pendingMove != null) {
             next = pendingMove;
@@ -553,7 +711,7 @@ public class EntityAdamWarlock extends EntityLiving {
             double d = target.getDistance(this);
             int flyby = d > 10D ? 40 : 25, combo = d < 9D ? 40 : 10, volley = d > 8D ? 25 : 12, dive = 18;
             int beam = isEvolved() ? 22 : 8;
-            int taunt = lastMove == Move.TAUNT ? 0 : 6;
+            int taunt = lastMove == Move.TAUNT || onFoe ? 0 : 6;
             do {
                 int roll = rand.nextInt(flyby + combo + volley + dive + beam + taunt);
                 next = (roll -= flyby) < 0 ? Move.FLYBY : (roll -= combo) < 0 ? Move.COMBO : (roll -= volley) < 0 ? Move.VOLLEY
@@ -564,7 +722,7 @@ public class EntityAdamWarlock extends EntityLiving {
         start(next, target);
     }
 
-    private void start(Move move, EntityPlayerMP target) {
+    private void start(Move move, EntityLivingBase target) {
         lastMove = move;
         switch (move) {
             case TAUNT:
@@ -602,7 +760,7 @@ public class EntityAdamWarlock extends EntityLiving {
         }
     }
 
-    private void taunting(@Nullable EntityPlayerMP target) {
+    private void taunting(@Nullable EntityLivingBase target) {
         if (target != null) {
             face(target, 0.2F);
         }
@@ -617,7 +775,7 @@ public class EntityAdamWarlock extends EntityLiving {
     // ------------------------------------------------------------------ the fly-by
 
     /** Coiling in the air, fist drawn back, before he goes. */
-    private void windup(@Nullable EntityPlayerMP target) {
+    private void windup(@Nullable EntityLivingBase target) {
         if (target == null) {
             hover(20);
             return;
@@ -646,7 +804,7 @@ public class EntityAdamWarlock extends EntityLiving {
         }
     }
 
-    private void launch(EntityPlayerMP target) {
+    private void launch(EntityLivingBase target) {
         Vec3d lead = new Vec3d(target.posX - target.prevPosX, 0D, target.posZ - target.prevPosZ).scale(5D);
         Vec3d at = chest(target).add(lead);
         if (calm) {
@@ -670,7 +828,7 @@ public class EntityAdamWarlock extends EntityLiving {
     }
 
     /** Fist first, faster than you can turn, straight through where you were standing. */
-    private void flyby(@Nullable EntityPlayerMP target) {
+    private void flyby(@Nullable EntityLivingBase target) {
         double top = isEvolved() ? 3.0D : 2.6D;
         speed = Math.min(top, speed + 0.7D);
         Vec3d from = getPositionVector();
@@ -681,7 +839,7 @@ public class EntityAdamWarlock extends EntityLiving {
             to = new Vec3d(to.x, ground + 0.3D, to.z);
         }
         if (!landed) {
-            for (EntityPlayer player : world.playerEntities) {
+            for (EntityLivingBase player : victims()) {
                 if (!isFair(player) || player.getDistanceSq(this) > 64D) {
                     continue;
                 }
@@ -714,7 +872,7 @@ public class EntityAdamWarlock extends EntityLiving {
     }
 
     /** Overshooting, bleeding off speed in a long banking turn that brings him back round to face you. */
-    private void turning(@Nullable EntityPlayerMP target) {
+    private void turning(@Nullable EntityLivingBase target) {
         Vec3d want = target != null ? chest(target).subtract(chest()).normalize() : dir;
         velocity = velocity.scale(0.82D).add(want.scale(0.12D)).add(0D, 0.03D, 0D);
         Vec3d to = getPositionVector().add(velocity);
@@ -740,7 +898,7 @@ public class EntityAdamWarlock extends EntityLiving {
     // ------------------------------------------------------------------ the combo
 
     /** In close: jab, cross, an uppercut that launches you, and the hammer that brings you back down. */
-    private void combo(@Nullable EntityPlayerMP target) {
+    private void combo(@Nullable EntityLivingBase target) {
         if (target == null) {
             hover(20);
             return;
@@ -802,7 +960,7 @@ public class EntityAdamWarlock extends EntityLiving {
     }
 
     /** One blow from the combo, at whatever is right in front of him. Returns whether it landed. */
-    private boolean strike(EntityPlayerMP target, float fraction, double knock, double lift, boolean big) {
+    private boolean strike(EntityLivingBase target, float fraction, double knock, double lift, boolean big) {
         Vec3d c = chest(target);
         Vec3d forward = facing();
         double reach = chest().distanceTo(c);
@@ -830,7 +988,7 @@ public class EntityAdamWarlock extends EntityLiving {
     // ------------------------------------------------------------------ quantum energy
 
     /** Bolts of quantum energy, from one palm and then the other. */
-    private void volley(@Nullable EntityPlayerMP target) {
+    private void volley(@Nullable EntityLivingBase target) {
         if (target == null) {
             hover(20);
             return;
@@ -882,7 +1040,7 @@ public class EntityAdamWarlock extends EntityLiving {
                 next = wall.hitVec;
                 burst = true;
             }
-            for (EntityPlayer player : world.playerEntities) {
+            for (EntityLivingBase player : victims()) {
                 if (isFair(player) && closest(bolt.pos, next, player.getPositionVector().add(0D, player.height * 0.5D, 0D))
                         .distanceTo(player.getPositionVector().add(0D, player.height * 0.5D, 0D)) < 1.1D) {
                     burst = true;
@@ -893,7 +1051,7 @@ public class EntityAdamWarlock extends EntityLiving {
                 it.remove();
                 fx(MsgTribunalFx.WARLOCK_BURST, next.x, next.y, next.z, 2.6D, 0, 0, bolt.id, 14);
                 world.playSound(null, next.x, next.y, next.z, SoundEvents.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 1.6F, 1.6F);
-                for (EntityPlayer player : world.playerEntities) {
+                for (EntityLivingBase player : victims()) {
                     double d = player.getDistance(next.x, next.y, next.z);
                     if (isFair(player) && d < 2.8D) {
                         harm(player, 0.09F);
@@ -905,7 +1063,7 @@ public class EntityAdamWarlock extends EntityLiving {
     }
 
     /** Palms together, a small sun between them; then the beam, following you. */
-    private void beam(@Nullable EntityPlayerMP target) {
+    private void beam(@Nullable EntityLivingBase target) {
         int t = stateTicks;
         if (target != null) {
             Vec3d want = chest(target);
@@ -954,7 +1112,7 @@ public class EntityAdamWarlock extends EntityLiving {
             Vec3d back = toward.scale(-0.03D);
             setPosition(posX + back.x, posY + back.y * 0.3D, posZ + back.z);
             if (t % 4 == 0) {
-                for (EntityPlayer player : world.playerEntities) {
+                for (EntityLivingBase player : victims()) {
                     Vec3d body = player.getPositionVector().add(0D, player.height * 0.5D, 0D);
                     if (isFair(player) && closest(from, end, body).distanceTo(body) < 1.5D) {
                         harm(player, 0.045F);
@@ -971,7 +1129,7 @@ public class EntityAdamWarlock extends EntityLiving {
     // ------------------------------------------------------------------ the meteor dive
 
     /** Climbing straight up out of sight, then hanging there, marking where he will land. */
-    private void rising(@Nullable EntityPlayerMP target) {
+    private void rising(@Nullable EntityLivingBase target) {
         int t = stateTicks;
         if (t == 1) {
             Vec3d c = chest();
@@ -1035,7 +1193,7 @@ public class EntityAdamWarlock extends EntityLiving {
         sound(EternitySounds.COMET_IMPACT, 6F, 0.9F);
         sound(SoundEvents.ENTITY_GENERIC_EXPLODE, 5F, 0.7F);
         sound(EternitySounds.RIFT_IMPACT, 4F, 1.3F);
-        for (EntityPlayer player : world.playerEntities) {
+        for (EntityLivingBase player : victims()) {
             double d = player.getDistance(posX, posY, posZ);
             if (isFair(player) && d < 8D) {
                 float near = (float) (1D - d / 8D);
@@ -1046,7 +1204,7 @@ public class EntityAdamWarlock extends EntityLiving {
     }
 
     /** Down on one knee, fist in the ground, the way heroes land. For a moment he is open. */
-    private void slammed(@Nullable EntityPlayerMP target) {
+    private void slammed(@Nullable EntityLivingBase target) {
         if (target != null && stateTicks > 12) {
             face(target, 0.2F);
         }
@@ -1058,7 +1216,7 @@ public class EntityAdamWarlock extends EntityLiving {
     // ------------------------------------------------------------------ the cocoon
 
     /** Wrapped in gold, mending. Break it before it hatches. */
-    private void cocooned(@Nullable EntityPlayerMP target) {
+    private void cocooned(@Nullable EntityLivingBase target) {
         int t = stateTicks;
         double y = Math.max(posY, floor(posX, posY + 2D, posZ) + 2.5D);
         glide(new Vec3d(posX, y, posZ), 0.1D, 0.2D);
@@ -1103,7 +1261,7 @@ public class EntityAdamWarlock extends EntityLiving {
         }
     }
 
-    private void emerging(@Nullable EntityPlayerMP target) {
+    private void emerging(@Nullable EntityLivingBase target) {
         if (stateTicks == 24) {
             say("I am Warlock. And now... I have evolved.");
         }
@@ -1115,7 +1273,7 @@ public class EntityAdamWarlock extends EntityLiving {
         }
     }
 
-    private void staggered(@Nullable EntityPlayerMP target) {
+    private void staggered(@Nullable EntityLivingBase target) {
         if (stateTicks < 8) {
             // Knocked back through the air.
             Vec3d back = facing().scale(-0.35D * (8 - Math.max(0, stateTicks)) / 8D);
@@ -1142,11 +1300,45 @@ public class EntityAdamWarlock extends EntityLiving {
         if (on) {
             calm = true;
             bolts.clear();
+            if (getState() == State.COCOON) {
+                // Taken out of the fight mid-cocoon: it falls away.
+                dataManager.set(COCOON, 0F);
+            }
         }
     }
 
     public boolean isScripted() {
         return scripted;
+    }
+
+    /** Puts him wholly in someone else's hands: they move him every tick and say what he is doing. */
+    public void puppet(boolean on) {
+        if (on) {
+            script(true);
+        }
+        puppet = on;
+    }
+
+    /** Exactly here this tick, turning to face there. */
+    public void place(Vec3d at, @Nullable Vec3d face) {
+        setPosition(at.x, at.y, at.z);
+        scriptFace = face;
+        if (face != null) {
+            faceToward(face, 1F);
+        }
+    }
+
+    /** Starts doing something from its beginning, even the thing he is already doing. */
+    public void perform(State state) {
+        if (getState() == state) {
+            dataManager.set(STATE, (byte) (state == State.HOVER ? State.STAND : State.HOVER).ordinal());
+        }
+        setState(state);
+    }
+
+    /** The gold goes out of him: no longer evolved. */
+    public void spent() {
+        dataManager.set(EVOLVED, false);
     }
 
     /**
@@ -1186,6 +1378,12 @@ public class EntityAdamWarlock extends EntityLiving {
 
     private void scriptedTick() {
         State s = getState();
+        if (puppet) {
+            if (scriptFace != null) {
+                faceToward(scriptFace, 0.5F);
+            }
+            return;
+        }
         switch (s) {
             case ARRIVE:
                 arriving(null);
@@ -1258,7 +1456,7 @@ public class EntityAdamWarlock extends EntityLiving {
     }
 
     /** Hanging there, hurt, one hand pressed to his side; then he is gone, straight up. */
-    private void retreating(@Nullable EntityPlayerMP target) {
+    private void retreating(@Nullable EntityLivingBase target) {
         int t = stateTicks;
         if (t < RETREAT_LAUNCH) {
             if (target != null) {
@@ -1282,19 +1480,40 @@ public class EntityAdamWarlock extends EntityLiving {
     // ------------------------------------------------------------------ harm
 
     /** A share of the victim's maximum health, through armour. Unlike the cosmic beings, he cannot touch creative mode. */
-    private void harm(EntityPlayer player, float fraction) {
-        if (calm || !isFair(player)) {
+    private void harm(EntityLivingBase victim, float fraction) {
+        if (calm || !isFair(victim)) {
             return;
         }
+        if (victim instanceof EntityChampion) {
+            ((EntityChampion) victim).struckBy(this, fraction);
+            return;
+        }
+        if (victim instanceof EntityMagus) {
+            victim.attackEntityFrom(EternityDamage.wielded("warlock", this), 1F);
+            return;
+        }
+        if (!(victim instanceof EntityPlayer)) {
+            return;
+        }
+        EntityPlayer player = (EntityPlayer) victim;
         float scale = (float) EternityConfig.warlock.damageScale * (isEvolved() ? 1.25F : 1F);
         EntityDestroyerArmor.strike(player, EternityDamage.warlock(this), fraction * scale);
     }
 
     /** Sends someone flying. Even pulled punches move the air around you. */
-    private void push(EntityPlayer player, Vec3d direction, double strength, double lift) {
-        if (player.isSpectator()) {
+    private void push(EntityLivingBase victim, Vec3d direction, double strength, double lift) {
+        if (victim instanceof EntityChampion) {
+            // He barely moves. He is the size of a house.
+            if (!calm) {
+                victim.motionX += direction.x * strength * 0.25D;
+                victim.motionZ += direction.z * strength * 0.25D;
+            }
             return;
         }
+        if (!(victim instanceof EntityPlayer) || ((EntityPlayer) victim).isSpectator()) {
+            return;
+        }
+        EntityPlayer player = (EntityPlayer) victim;
         double scale = calm ? 0.25D : 1D;
         if (EntityDestroyerArmor.carrier(player) != null) {
             EntityDestroyerArmor.shove(player, direction.x * strength * scale, (direction.y * strength + lift) * scale, direction.z * strength * scale);
@@ -1321,12 +1540,26 @@ public class EntityAdamWarlock extends EntityLiving {
             return false;
         }
         State state = getState();
-        if (!(source.getTrueSource() instanceof EntityPlayer) || state == State.ARRIVE || state == State.EMERGE || state == State.RETREAT) {
+        Entity by = source.getTrueSource();
+        if (!(by instanceof EntityPlayer || by instanceof EntityChampion) || state == State.ARRIVE || state == State.EMERGE || state == State.RETREAT) {
             return false;
+        }
+        if (by == foe && !onFoe && rand.nextInt(3) == 0) {
+            // Hit him, and he may well hit back.
+            grudge = true;
         }
         boolean open = state == State.SLAM || state == State.STAGGER;
         float cap = (float) (getMaxHealth() * EternityConfig.warlock.maxHitFraction) * (open ? 1.5F : 1F);
         float dealt = Math.min(amount * (open ? 1.5F : 1F), cap);
+        if (by instanceof EntityChampion) {
+            // The old man wears him down, but he does not go down to him: only whoever he came for
+            // can do that, and he is still at it when they get back.
+            dealt = Math.min(dealt, Math.max(0F, getHealth() - getMaxHealth() * HOLD_OUT));
+            if (!(dealt > 0F)) {
+                world.setEntityState(this, (byte) 2);
+                return true;
+            }
+        }
         if (!(dealt > 0F)) {
             return false;
         }
@@ -1340,7 +1573,8 @@ public class EntityAdamWarlock extends EntityLiving {
         float left = getHealth() - dealt;
         if (left <= 1F) {
             setHealth(1F);
-            retreat(true);
+            beatenBy = by instanceof EntityPlayer ? null : by;
+            retreat(beatenBy == null);
             return true;
         }
         setHealth(left);
@@ -1377,6 +1611,9 @@ public class EntityAdamWarlock extends EntityLiving {
             return;
         }
         lastSpoke = ticksExisted;
+        if (com.matoon.eternity.story.StoryDirector.shout(this, com.matoon.eternity.story.Speakers.WARLOCK, getEntityId(), line, 128D)) {
+            return;
+        }
         TextComponentString name = new TextComponentString("<Adam Warlock> ");
         name.getStyle().setColor(TextFormatting.GOLD).setBold(true);
         TextComponentString text = new TextComponentString(line);
@@ -1398,9 +1635,9 @@ public class EntityAdamWarlock extends EntityLiving {
         return new Vec3d(posX, posY + 1.35D, posZ);
     }
 
-    private static Vec3d chest(EntityPlayer player) {
+    private static Vec3d chest(EntityLivingBase victim) {
         // Inside the Destroyer Armor, the armour's chest is what he has to reach.
-        Entity body = EntityDestroyerArmor.mass(player);
+        Entity body = victim instanceof EntityPlayer ? EntityDestroyerArmor.mass((EntityPlayer) victim) : victim;
         return new Vec3d(body.posX, body.posY + body.height * 0.6D, body.posZ);
     }
 
@@ -1532,6 +1769,18 @@ public class EntityAdamWarlock extends EntityLiving {
             case WALK:
                 base = 0.12F;
                 break;
+            case FLARE:
+                base = t < FLARE_BURST ? 0.4F + 0.6F * t / FLARE_BURST : 1.5F - 0.3F * Math.min(1F, (t - FLARE_BURST) / 30F);
+                break;
+            case CAUGHT:
+                base = 0.9F;
+                break;
+            case KNEEL:
+                return t < KNEEL_RAGE ? 0.04F : 0.04F + 1.4F * Math.min(1F, (t - KNEEL_RAGE) / (float) (KNEEL_BURST - KNEEL_RAGE));
+            case DOWNED:
+            case HELD:
+                // Beaten, the gold goes out of him whatever he had become.
+                return 0.04F;
             default:
                 base = 0.3F;
                 break;
@@ -1616,6 +1865,70 @@ public class EntityAdamWarlock extends EntityLiving {
             } else {
                 cape[i] = cape[i - 1] + MathHelper.clamp(cape[i] - cape[i - 1], -0.55F, 0.85F);
             }
+        }
+    }
+
+
+    /**
+     * Which way he faces, carried in his synced data: turned bodily by a scene every tick, the
+     * vanilla rotation updates never reached anyone watching, and he stood facing wherever he
+     * was spawned facing.
+     */
+/**
+     * Where he is, carried in his synced data too while a scene moves him: in Galacticraft's
+     * space dimensions the vanilla tracker's small moves never arrived, and he was drawn
+     * wherever he was last moved a long way to.
+     */
+    private void syncSpot() {
+        Vec3d r = new Vec3d(dataManager.get(SPOT_X), dataManager.get(SPOT_Y), dataManager.get(SPOT_Z));
+        if (world.isRemote) {
+            if (r.y < -999D) {
+                return;
+            }
+            double dx = r.x - posX, dy = r.y - posY, dz = r.z - posZ;
+            double d = dx * dx + dy * dy + dz * dz;
+            if (d > 64D * 64D) {
+                // A jump, not a flight: no smear across the sky between the two.
+                setPosition(r.x, r.y, r.z);
+                prevPosX = lastTickPosX = posX;
+                prevPosY = lastTickPosY = posY;
+                prevPosZ = lastTickPosZ = posZ;
+            } else if (d > 36D) {
+                setPosition(r.x, r.y, r.z);
+            } else if (d > 1.0E-6) {
+                setPosition(posX + dx * 0.6D, posY + dy * 0.6D, posZ + dz * 0.6D);
+            }
+            return;
+        }
+        // Always, scripted or fighting, so the client never has two answers to where he is.
+        if (Math.abs(r.x - posX) + Math.abs(r.y - posY) + Math.abs(r.z - posZ) > 0.002D) {
+            dataManager.set(SPOT_X, (float) posX);
+            dataManager.set(SPOT_Y, (float) posY);
+            dataManager.set(SPOT_Z, (float) posZ);
+        }
+    }
+
+    /** Where the tracker says he is, the client does not listen: SPOT says it, and says it right. */
+    @Override
+    public void setPositionAndRotationDirect(double x, double y, double z, float yaw, float pitch, int increments, boolean teleport) {
+        if (dataManager.get(SPOT_Y) < -999F) {
+            super.setPositionAndRotationDirect(x, y, z, yaw, pitch, increments, teleport);
+        }
+    }
+
+    private void syncFacing() {
+        if (world.isRemote) {
+            net.minecraft.util.math.Rotations r = dataManager.get(FACING);
+            rotationYaw += MathHelper.wrapDegrees(r.getY() - rotationYaw) * 0.6F;
+            rotationYawHead += MathHelper.wrapDegrees(r.getZ() - rotationYawHead) * 0.6F;
+            rotationPitch += (r.getX() - rotationPitch) * 0.6F;
+            renderYawOffset = rotationYaw;
+            return;
+        }
+        net.minecraft.util.math.Rotations r = dataManager.get(FACING);
+        if (Math.abs(MathHelper.wrapDegrees(r.getY() - rotationYaw)) > 0.5F || Math.abs(MathHelper.wrapDegrees(r.getZ() - rotationYawHead)) > 0.5F
+                || Math.abs(r.getX() - rotationPitch) > 0.5F) {
+            dataManager.set(FACING, new net.minecraft.util.math.Rotations(rotationPitch, rotationYaw, rotationYawHead));
         }
     }
 
@@ -1704,9 +2017,8 @@ public class EntityAdamWarlock extends EntityLiving {
     @Override
     public void addTrackingPlayer(EntityPlayerMP player) {
         super.addTrackingPlayer(player);
-        if (!scripted) {
-            bossInfo.addPlayer(player);
-        }
+        // Added even while he is directed: the bar is hidden then, and shows again when he is let go.
+        bossInfo.addPlayer(player);
     }
 
     @Override

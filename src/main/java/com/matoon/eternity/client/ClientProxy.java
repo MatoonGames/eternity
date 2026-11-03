@@ -8,6 +8,7 @@ import com.matoon.eternity.client.render.EinherjarItemRenderer;
 import com.matoon.eternity.client.render.RegulatorItemRenderer;
 import com.matoon.eternity.client.render.RenderDestroyer;
 import com.matoon.eternity.client.render.RenderGrandmaster;
+import com.matoon.eternity.client.render.RenderNorse;
 import com.matoon.eternity.client.render.RenderEinherjar;
 import com.matoon.eternity.client.render.RenderAdamWarlock;
 import com.matoon.eternity.client.render.RenderAstralRegulator;
@@ -23,17 +24,20 @@ import com.matoon.eternity.entity.EntityAstralRegulator;
 import com.matoon.eternity.entity.EntityChampion;
 import com.matoon.eternity.entity.EntityCosmicComet;
 import com.matoon.eternity.entity.EntityDestroyer;
+import com.matoon.eternity.entity.EntityDraugr;
 import com.matoon.eternity.entity.EntityDestroyerArmor;
 import com.matoon.eternity.entity.EntityEinherjar;
 import com.matoon.eternity.entity.EntityEternity;
 import com.matoon.eternity.entity.EntityGrandmaster;
 import com.matoon.eternity.entity.EntityInBetweener;
 import com.matoon.eternity.entity.EntityLivingTribunal;
+import com.matoon.eternity.entity.EntityNorse;
 import com.matoon.eternity.entity.EntityOrderChaos;
 import com.matoon.eternity.item.EternityItems;
 import com.matoon.eternity.network.MsgComet;
 import com.matoon.eternity.network.MsgGrandmaster;
 import com.matoon.eternity.network.MsgInBetweener;
+import com.matoon.eternity.network.MsgStory;
 import com.matoon.eternity.network.MsgTribunal;
 import com.matoon.eternity.network.MsgTribunalFx;
 import lucraft.mods.heroesexpansion.items.HEItems;
@@ -69,6 +73,9 @@ public class ClientProxy extends CommonProxy {
         RenderingRegistry.registerEntityRenderingHandler(EntityDestroyer.class, RenderDestroyer::new);
         RenderingRegistry.registerEntityRenderingHandler(EntityDestroyerArmor.class, RenderDestroyer::new);
         RenderingRegistry.registerEntityRenderingHandler(EntityGrandmaster.class, RenderGrandmaster::new);
+        RenderingRegistry.registerEntityRenderingHandler(EntityNorse.class, RenderNorse::new);
+        RenderingRegistry.registerEntityRenderingHandler(EntityDraugr.class, RenderNorse::new);
+        RenderingRegistry.registerEntityRenderingHandler(com.matoon.eternity.entity.EntityMagus.class, com.matoon.eternity.client.render.RenderMagus::new);
         EternityItems.ASTRAL_REGULATOR.setTileEntityItemStackRenderer(new RegulatorItemRenderer());
         EternityItems.CASKET.setTileEntityItemStackRenderer(new CasketItemRenderer());
         EinherjarItemRenderer gear = new EinherjarItemRenderer();
@@ -91,6 +98,10 @@ public class ClientProxy extends CommonProxy {
         MinecraftForge.EVENT_BUS.register(GrandmasterClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(Cutscene.INSTANCE);
         MinecraftForge.EVENT_BUS.register(com.matoon.eternity.client.gui.SpeakerPanel.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(TitleCard.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(StoryClient.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(com.matoon.eternity.client.gui.StoryJournal.INSTANCE);
+        com.matoon.eternity.client.gui.StoryJournal.INSTANCE.register();
         ArmorClient.INSTANCE.register();
         EternityItems.RELIC_TRACKER.addPropertyOverride(new ResourceLocation("angle"), new RelicTrackerAngle());
     }
@@ -103,8 +114,17 @@ public class ClientProxy extends CommonProxy {
                 new ModelResourceLocation(EternityItems.ASTRAL_REGULATOR.getRegistryName(), "inventory"));
         ModelLoader.setCustomModelResourceLocation(EternityItems.CASKET, 0,
                 new ModelResourceLocation(EternityItems.CASKET.getRegistryName(), "inventory"));
+        ModelLoader.setCustomModelResourceLocation(EternityItems.CHAMPION_TICKET, 0,
+                new ModelResourceLocation(EternityItems.CHAMPION_TICKET.getRegistryName(), "inventory"));
         for (Item item : EternityItems.EINHERJAR_GEAR) {
             ModelLoader.setCustomModelResourceLocation(item, 0, new ModelResourceLocation(item.getRegistryName(), "inventory"));
+        }
+        ModelLoader.setCustomModelResourceLocation(com.matoon.eternity.block.EternityBlocks.RUNE_STONE_ITEM, 0,
+                new ModelResourceLocation(com.matoon.eternity.block.EternityBlocks.RUNE_STONE_ITEM.getRegistryName(), "inventory"));
+        for (int i = 0; i < com.matoon.eternity.block.BlockStrangeBloom.KINDS.length; i++) {
+            ModelLoader.setCustomModelResourceLocation(com.matoon.eternity.block.EternityBlocks.STRANGE_BLOOM_ITEM, i,
+                    new ModelResourceLocation(new net.minecraft.util.ResourceLocation(Eternity.MODID,
+                            "strange_bloom_" + com.matoon.eternity.block.BlockStrangeBloom.KINDS[i]), "inventory"));
         }
     }
 
@@ -122,12 +142,18 @@ public class ClientProxy extends CommonProxy {
     /** Packets arrive on the network thread; everything visual happens on the client thread. */
     @Override
     public void receive(IMessage message) {
+        if (message instanceof MsgStory) {
+            Minecraft.getMinecraft().addScheduledTask(() -> StoryClient.INSTANCE.handle((MsgStory) message));
+            return;
+        }
         if (message instanceof MsgGrandmaster) {
             Minecraft.getMinecraft().addScheduledTask(() -> GrandmasterClient.INSTANCE.handle((MsgGrandmaster) message));
             return;
         }
         if (message instanceof MsgTribunal) {
             Minecraft.getMinecraft().addScheduledTask(() -> TribunalClient.INSTANCE.handle((MsgTribunal) message));
+        } else if (message instanceof MsgTribunalFx && ((MsgTribunalFx) message).type >= MsgTribunalFx.MAGUS_IMPACT) {
+            Minecraft.getMinecraft().addScheduledTask(() -> WarlockClient.INSTANCE.magus((MsgTribunalFx) message));
         } else if (message instanceof MsgTribunalFx && ((MsgTribunalFx) message).type >= MsgTribunalFx.VAULT_STATE) {
             Minecraft.getMinecraft().addScheduledTask(() -> VaultClient.INSTANCE.effect((MsgTribunalFx) message));
         } else if (message instanceof MsgTribunalFx && ((MsgTribunalFx) message).type >= MsgTribunalFx.CHAMPION_IMPACT) {
@@ -148,6 +174,11 @@ public class ClientProxy extends CommonProxy {
     @Override
     public boolean tamarataBroken() {
         return ChampionClient.INSTANCE.broken();
+    }
+
+    @Override
+    public boolean nearHedge(net.minecraft.entity.Entity entity) {
+        return StoryClient.INSTANCE.nearHedge(entity);
     }
 
     @Override

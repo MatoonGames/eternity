@@ -1,0 +1,22 @@
+{
+  "variants": {
+    "flag=false,part=0": {
+      "model": "eternity:vat_0"
+    },
+    "flag=true,part=0": {
+      "model": "eternity:vat_broken_0"
+    },
+    "flag=false,part=1": {
+      "model": "eternity:vat_1"
+    },
+    "flag=true,part=1": {
+      "model": "eternity:vat_broken_1"
+    },
+    "flag=false,part=2": {
+      "model": "eternity:vat_2"
+    },
+    "flag=true,part=2": {
+      "model": "eternity:vat_broken_2"
+    }
+  }
+}

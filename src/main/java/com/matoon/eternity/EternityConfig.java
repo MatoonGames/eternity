@@ -36,11 +36,17 @@ public class EternityConfig {
     @Config.Comment("The Champion of the Universe, and Tamarata, the war-ruined planet he lives on.")
     public static Champion champion = new Champion();
 
+    @Config.Comment("The Sovereign: Warlock's home, a golden station in orbit beside the Earth, where he runs when he has taken something.")
+    public static Sovereign sovereign = new Sovereign();
+
     @Config.Comment("Odin's Treasure Room, the vault under Asgard's palace: its guards, the Destroyer, and the Casket of Ancient Winters.")
     public static Vault vault = new Vault();
 
     @Config.Comment("The Grandmaster, the last Elder with a stone, and his board.")
     public static GrandmasterSettings grandmaster = new GrandmasterSettings();
+
+    @Config.Comment("The story: the oath under the mound, and Odin's vault after it.")
+    public static Story story = new Story();
 
     @Config.Comment("Client-side presentation. Each player can change these.")
     public static Client client = new Client();
@@ -180,6 +186,47 @@ public class EternityConfig {
                 "Lower it if the server struggles; the breaking only takes longer."})
         @Config.RangeInt(min = 1, max = 256)
         public int chunksPerTick = 24;
+    }
+
+    public static class Sovereign {
+        @Config.Comment("Dimension id of the Sovereign station. Change it if another mod uses it. Galacticraft registers it.")
+        public int dimension = -1935;
+
+        @Config.Comment("Rocket tier needed to reach the station. It is in orbit beside the Earth, so the first rocket will do.")
+        @Config.RangeInt(min = 1, max = 10)
+        public int tierRequired = 1;
+    }
+
+    public static class Story {
+        @Config.Comment({"Master switch. When false the oath's ward never fails, nothing leaks, nobody is waiting for you,",
+                "and the vault keeps its Tesseract. Operators can still drive the story with /eternity story."})
+        public boolean enabled = true;
+
+        @Config.Comment("In-game days into a new world before pieces of the north start coming loose.")
+        @Config.RangeInt(min = 0, max = 100)
+        public int leakStartDays = 2;
+
+        @Config.Comment({"Minutes between pieces of the north landing somewhere near someone, at the least and at the most.",
+                "They come more often the nearer the village you are."})
+        @Config.RangeInt(min = 1, max = 120)
+        public int leakMinutesMin = 4;
+
+        @Config.RangeInt(min = 1, max = 240)
+        public int leakMinutesMax = 9;
+
+        @Config.Comment({"Pieces that must have landed before a person is caught in one. She comes to someone who has smelted",
+                "iron or been to the Nether, out under the sky."})
+        @Config.RangeInt(min = 0, max = 50)
+        public int ragnaAfterLeaks = 3;
+
+        @Config.Comment({"Pieces landed, after Ragna, before the leaks start reaching home: blocks round your bed turned to",
+                "snow and turf, villagers near it gone, animals penned near it gone. Nothing taken comes back.",
+                "-1 never."})
+        @Config.RangeInt(min = -1, max = 100)
+        public int leaksReachHome = 5;
+
+        @Config.Comment("While the Aether is in someone, the world round their home is rewritten a block at a time, for good.")
+        public boolean aetherChangesWorld = true;
     }
 
     public static class GrandmasterSettings {

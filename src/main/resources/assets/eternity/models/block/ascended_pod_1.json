@@ -1,0 +1,62 @@
+{
+  "parent": "block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "base": "eternity:blocks/pod_base",
+    "glass": "eternity:blocks/pod_glass",
+    "clear": "eternity:blocks/pod_glass_clear",
+    "particle": "eternity:blocks/pod_base"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        0,
+        2
+      ],
+      "to": [
+        14,
+        16,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            0,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "south": {
+          "uv": [
+            2,
+            0,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "east": {
+          "uv": [
+            2,
+            0,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "west": {
+          "uv": [
+            2,
+            0,
+            14,
+            16
+          ],
+          "texture": "#glass"
+        }
+      }
+    }
+  ]
+}

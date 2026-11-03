@@ -1,0 +1,22 @@
+{
+    "variants": {
+        "col=0,lit=false,row=0": { "model": "eternity:barrow_seal_00" },
+        "col=1,lit=false,row=0": { "model": "eternity:barrow_seal_01" },
+        "col=2,lit=false,row=0": { "model": "eternity:barrow_seal_02" },
+        "col=0,lit=false,row=1": { "model": "eternity:barrow_seal_10" },
+        "col=1,lit=false,row=1": { "model": "eternity:barrow_seal_11" },
+        "col=2,lit=false,row=1": { "model": "eternity:barrow_seal_12" },
+        "col=0,lit=false,row=2": { "model": "eternity:barrow_seal_20" },
+        "col=1,lit=false,row=2": { "model": "eternity:barrow_seal_21" },
+        "col=2,lit=false,row=2": { "model": "eternity:barrow_seal_22" },
+        "col=0,lit=true,row=0": { "model": "eternity:barrow_seal_00_lit" },
+        "col=1,lit=true,row=0": { "model": "eternity:barrow_seal_01_lit" },
+        "col=2,lit=true,row=0": { "model": "eternity:barrow_seal_02_lit" },
+        "col=0,lit=true,row=1": { "model": "eternity:barrow_seal_10_lit" },
+        "col=1,lit=true,row=1": { "model": "eternity:barrow_seal_11_lit" },
+        "col=2,lit=true,row=1": { "model": "eternity:barrow_seal_12_lit" },
+        "col=0,lit=true,row=2": { "model": "eternity:barrow_seal_20_lit" },
+        "col=1,lit=true,row=2": { "model": "eternity:barrow_seal_21_lit" },
+        "col=2,lit=true,row=2": { "model": "eternity:barrow_seal_22_lit" }
+    }
+}

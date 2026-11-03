@@ -50,6 +50,8 @@ public final class EternityNetwork {
         CHANNEL.registerMessage(new MsgArmorButton.Handler(), MsgArmorButton.class, id++, Side.SERVER);
         CHANNEL.registerMessage(handler, MsgGrandmaster.class, id++, Side.CLIENT);
         CHANNEL.registerMessage(new MsgGrandmasterAct.Handler(), MsgGrandmasterAct.class, id++, Side.SERVER);
+        CHANNEL.registerMessage(handler, MsgStory.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(new MsgStoryAct.Handler(), MsgStoryAct.class, id++, Side.SERVER);
     }
 
     public static void sendToServer(IMessage message) {

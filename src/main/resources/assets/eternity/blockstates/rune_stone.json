@@ -1,0 +1,12 @@
+{
+    "variants": {
+        "facing=north,fresh=false": { "model": "eternity:rune_stone", "y": 0 },
+        "facing=east,fresh=false": { "model": "eternity:rune_stone", "y": 90 },
+        "facing=south,fresh=false": { "model": "eternity:rune_stone", "y": 180 },
+        "facing=west,fresh=false": { "model": "eternity:rune_stone", "y": 270 },
+        "facing=north,fresh=true": { "model": "eternity:rune_stone_fresh", "y": 0 },
+        "facing=east,fresh=true": { "model": "eternity:rune_stone_fresh", "y": 90 },
+        "facing=south,fresh=true": { "model": "eternity:rune_stone_fresh", "y": 180 },
+        "facing=west,fresh=true": { "model": "eternity:rune_stone_fresh", "y": 270 }
+    }
+}

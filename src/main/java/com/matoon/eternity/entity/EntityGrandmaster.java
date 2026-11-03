@@ -22,7 +22,6 @@ import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Rotations;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextFormatting;
@@ -49,7 +48,9 @@ import javax.annotation.Nullable;
 public class EntityGrandmaster extends EntityLiving {
 
     public enum State {
-        ARRIVE, IDLE, PRESENT, SHUFFLE, POINT, CONDUCT, LAUGH, CLAP, THINK, WINCE, FALL, LIE, FADE, BOW
+        ARRIVE, IDLE, PRESENT, SHUFFLE, POINT, CONDUCT, LAUGH, CLAP, THINK, WINCE, FALL, LIE, FADE, BOW,
+        // Only for the Magus: backing away from him, hands up; and held off the ground by the throat.
+        AFRAID, LIFTED
     }
 
     // How long each gesture lasts, in ticks; the model times its frames to the same numbers.
@@ -64,11 +65,17 @@ public class EntityGrandmaster extends EntityLiving {
     public static final int FADE_TICKS = 90;
     public static final int BOW_TICKS = 36;
 
+    /** How far off the ground he is held, LIFTED. */
+    public static final double LIFT = 1.2D;
+
     /** Segments in his mane, his coat tails, and the chain of keys at his belt. */
     public static final int MANE = 3, TAILS = 3, KEYS = 2;
 
     private static final DataParameter<Byte> STATE = EntityDataManager.createKey(EntityGrandmaster.class, DataSerializers.BYTE);
-    private static final DataParameter<Rotations> FOCUS = EntityDataManager.createKey(EntityGrandmaster.class, DataSerializers.ROTATIONS);
+    // Three floats, not Rotations: Rotations wraps every value modulo 360, which turned a point far from the origin into nonsense.
+    private static final DataParameter<Float> FOCUS_X = EntityDataManager.createKey(EntityGrandmaster.class, DataSerializers.FLOAT);
+    private static final DataParameter<Float> FOCUS_Y = EntityDataManager.createKey(EntityGrandmaster.class, DataSerializers.FLOAT);
+    private static final DataParameter<Float> FOCUS_Z = EntityDataManager.createKey(EntityGrandmaster.class, DataSerializers.FLOAT);
     private static final DataParameter<Float> BROKEN = EntityDataManager.createKey(EntityGrandmaster.class, DataSerializers.FLOAT);
 
     private static final State[] SHOWCASE = {State.PRESENT, State.SHUFFLE, State.POINT, State.CONDUCT, State.LAUGH, State.THINK,
@@ -118,7 +125,9 @@ public class EntityGrandmaster extends EntityLiving {
     protected void entityInit() {
         super.entityInit();
         dataManager.register(STATE, (byte) State.IDLE.ordinal());
-        dataManager.register(FOCUS, new Rotations(0F, 0F, 0F));
+        dataManager.register(FOCUS_X, 0F);
+        dataManager.register(FOCUS_Y, 0F);
+        dataManager.register(FOCUS_Z, 0F);
         dataManager.register(BROKEN, 0F);
     }
 
@@ -149,8 +158,7 @@ public class EntityGrandmaster extends EntityLiving {
 
     /** The point he is attending to: the piece he is conducting, the player he points at. */
     public Vec3d getFocus() {
-        Rotations r = dataManager.get(FOCUS);
-        return new Vec3d(r.getX(), r.getY(), r.getZ());
+        return new Vec3d(dataManager.get(FOCUS_X), dataManager.get(FOCUS_Y), dataManager.get(FOCUS_Z));
     }
 
     /** How broken his board is, 0 to 1. His life goes with it. */
@@ -191,7 +199,9 @@ public class EntityGrandmaster extends EntityLiving {
     }
 
     public void focus(Vec3d at) {
-        dataManager.set(FOCUS, new Rotations((float) at.x, (float) at.y, (float) at.z));
+        dataManager.set(FOCUS_X, (float) at.x);
+        dataManager.set(FOCUS_Y, (float) at.y);
+        dataManager.set(FOCUS_Z, (float) at.z);
     }
 
     public void setBroken(float broken) {
@@ -237,6 +247,8 @@ public class EntityGrandmaster extends EntityLiving {
             case FALL:
             case LIE:
             case FADE:
+            case AFRAID:
+            case LIFTED:
             default:
                 return -1;
         }
@@ -281,7 +293,11 @@ public class EntityGrandmaster extends EntityLiving {
             act(State.LIE, -1);
         }
         boolean down = state == State.FALL || state == State.LIE || state == State.FADE;
-        if (walkTo != null && !down) {
+        // Held up by the throat, he goes nowhere and turns to nothing.
+        boolean held = state == State.LIFTED;
+        // Backing away, he never takes his eyes off what he is backing away from.
+        boolean backing = state == State.AFRAID && lookAt != null;
+        if (walkTo != null && !down && !held) {
             Vec3d to = new Vec3d(walkTo.x, posY, walkTo.z);
             Vec3d step = to.subtract(getPositionVector());
             double d = step.length();
@@ -291,9 +307,13 @@ public class EntityGrandmaster extends EntityLiving {
             } else {
                 step = step.scale(walkSpeed / d);
                 setPosition(posX + step.x, posY, posZ + step.z);
-                turnTo((float) Math.toDegrees(Math.atan2(step.z, step.x)) - 90F, 0.25F);
+                if (backing) {
+                    turnTo((float) Math.toDegrees(Math.atan2(lookAt.z - posZ, lookAt.x - posX)) - 90F, 0.25F);
+                } else {
+                    turnTo((float) Math.toDegrees(Math.atan2(step.z, step.x)) - 90F, 0.25F);
+                }
             }
-        } else if (lookAt != null && !down) {
+        } else if (lookAt != null && !down && !held) {
             turnTo((float) Math.toDegrees(Math.atan2(lookAt.z - posZ, lookAt.x - posX)) - 90F, 0.12F);
         }
         if (lookAt != null) {
@@ -305,8 +325,11 @@ public class EntityGrandmaster extends EntityLiving {
         } else {
             rotationYawHead = rotationYaw;
         }
-        // Feet on whatever is under him: the board, or the ground once it is gone.
-        if (!down || state == State.FALL) {
+        // Feet on whatever is under him: the board, or the ground once it is gone; or, held up, a long way off it.
+        if (held) {
+            double floor = floor(posX, posY + 0.3D, posZ);
+            setPosition(posX, posY + (floor + LIFT - posY) * 0.15D, posZ);
+        } else if (!down || state == State.FALL) {
             double floor = floor(posX, posY + 1.5D, posZ);
             setPosition(posX, posY + (floor - posY) * 0.35D, posZ);
         }
@@ -440,7 +463,9 @@ public class EntityGrandmaster extends EntityLiving {
         float jolt = state == State.WINCE && clientStateTicks < 6 ? 0.5F : state == State.LAUGH ? MathHelper.sin(t * 1.4F) * 0.05F : 0F;
         prevSway = sway;
         sway += ((float) MathHelper.clamp(-side * 3D, -0.4D, 0.4D) + MathHelper.sin(t * 0.06F) * 0.04F - sway) * 0.15F;
-        spring(mane, prevMane, maneSpin, lying ? -0.2F : 0.08F + lift * 0.6F + breeze + jolt, 0.75F, 0.18F);
+        // Afraid, the mane lies flat down his back, the way a cat's ears go back.
+        float flat = state == State.AFRAID ? 0.22F + MathHelper.sin(t * 2.1F) * 0.02F : 0F;
+        spring(mane, prevMane, maneSpin, lying ? -0.2F : 0.08F + lift * 0.6F + breeze + jolt - flat, 0.75F, 0.18F);
         spring(tails, prevTails, tailSpin, lying ? -0.6F : 0.05F + lift + breeze * 1.4F + jolt * 0.5F, 0.6F, 0.22F);
         prevKeySway = keySway;
         keySway += ((float) MathHelper.clamp(-side * 6D, -0.6D, 0.6D) + MathHelper.sin(t * 0.33F) * 0.12F * gait - keySway) * 0.3F;

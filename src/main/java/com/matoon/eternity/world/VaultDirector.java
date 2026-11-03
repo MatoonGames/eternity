@@ -126,6 +126,11 @@ public final class VaultDirector {
         Entity body = player.getRidingEntity() instanceof EntityDestroyerArmor ? player.getRidingEntity() : player;
         double reach = body == player ? 0D : body.width * 0.5D + 0.1D;
         if (OdinsVault.atDoors(body.posX, body.posY, body.posZ + reach) && !player.isSpectator()) {
+            if (com.matoon.eternity.story.StoryDirector.INSTANCE.holdsAtDoors(player)) {
+                // Someone is coming up the steps: they meet on them.
+                Teleport.player(player, OdinsVault.dimension(), OdinsVault.ARRIVE_X, OdinsVault.ARRIVE_Y, OdinsVault.ARRIVE_Z - 3D, false);
+                return;
+            }
             leave(player);
         }
     }
@@ -232,7 +237,8 @@ public final class VaultDirector {
                 data.markDirty();
             }
         }
-        if (!data.tesseractSet && !Relics.isClaimed(Relics.Kind.TESSERACT)) {
+        // While the story runs, the cube's stand holds the Aether, and the only cube is the one under the mound.
+        if (!data.tesseractSet && !Relics.isClaimed(Relics.Kind.TESSERACT) && !com.matoon.eternity.story.StoryDirector.INSTANCE.aetherInVault()) {
             Vec3d at = OdinsVault.Relic.TESSERACT.base().add(0D, OdinsVault.Relic.TESSERACT.height + 1D / 16D, 0D);
             if (world.isBlockLoaded(new BlockPos(at))) {
                 ItemStack stack = new ItemStack(HEItems.TESSERACT);
@@ -281,6 +287,7 @@ public final class VaultDirector {
         data.destroyerBack = DimensionManager.getWorld(0).getTotalWorldTime() + EternityConfig.vault.destroyerRepairMinutes * 1200L;
         data.markDirty();
         tell(destroyer.world, "The Destroyer has fallen. The fire in it is out, and its back has split open: there is room inside.");
+        com.matoon.eternity.story.StoryDirector.INSTANCE.destroyerFell();
     }
 
     /**

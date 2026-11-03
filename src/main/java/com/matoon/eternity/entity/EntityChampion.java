@@ -71,7 +71,9 @@ public class EntityChampion extends EntityLiving {
         JAB_CROSS, HOOK, UPPERCUT, HAYMAKER, GRAB, RUSH, POUND, COUNTER, ROAR, HAMMER,
         BREAKER, IMPACT,
         GUARD, SLIP, KNOCKDOWN, RISE,
-        DRIFT, BOARD
+        DRIFT, BOARD,
+        /** Without his stone: caught in the Gardener's hedge, straining against it, and tearing out of it. */
+        SNARED, STRAIN, TEAR
     }
 
     /** What he can be told to do, for testing. */
@@ -95,6 +97,10 @@ public class EntityChampion extends EntityLiving {
     public static final int GUARD_TICKS = 10, SLIP_TICKS = 11;
     public static final int KNOCKDOWN_TICKS = 70, RISE_TICKS = 44;
     public static final int BOARD_TICKS = 60;
+    /** Tearing out of the Gardener's vines: gathering himself, and the beat everything holding him snaps; then the roar. */
+    public static final int TEAR_RIP = 16, TEAR_TICKS = 62;
+    /** One heave against the vines, in beats: pulling, held at the top of it, slack. */
+    public static final int HEAVE = 40;
     /** How high he leaps before Planet Breaker. */
     public static final double BREAKER_HEIGHT = 58D;
 
@@ -132,6 +138,10 @@ public class EntityChampion extends EntityLiving {
             "The count never reaches ten. Not for me."};
     private static final String[] STAGE_UP = {"", "Alright. Now I'm paying attention.", "You don't want to win. You want to make me angry. It's working.",
             "Enough dancing. I'll break the floor out from under you."};
+    /** Said to whoever called him, now and then, when they speak to him or hit him by mistake. */
+    private static final String[] COMPANY = {"I'm here. Point at something.", "Quiet world. I don't trust quiet.", "Nothing's hit me yet. Find me something that will.",
+            "You've a light step. Don't get used to me carrying the heavy end."};
+    private static final String[] WRONG_WAY = {"Wrong way round, friend.", "Save that for something that deserves it.", "I felt that. Barely."};
     private static final String[] WON = {"Another name for the arms.", "Not bad. Not enough.", "Rest. You fought, which is more than most."};
 
     private final BossInfoServer bossInfo = (BossInfoServer) new BossInfoServer(
@@ -146,6 +156,20 @@ public class EntityChampion extends EntityLiving {
     private EntityLivingBase brawl;
     private boolean calm;
     private boolean showcase;
+    /** Held for a word before the bell: he stands his ground, guard down, and throws nothing. */
+    private boolean held;
+    @Nullable
+    private Entity heldFace;
+    /**
+     * Someone else in his ring he will fight as well (Warlock), whether he is turned on them
+     * now, and when he next thinks about it.
+     */
+    @Nullable
+    private EntityLivingBase foe;
+    private boolean onFoe;
+    private int foeRoll;
+    /** The challenger has fallen, and it is only the two of them now: he stays on the foe until one of them is done. */
+    private boolean alone;
     private int showIndex;
     @Nullable
     private Move pendingMove;
@@ -172,6 +196,17 @@ public class EntityChampion extends EntityLiving {
     /** Whether his planet is breaking under his fists, so he stays down in the crater until the director moves him. */
     private boolean holdImpact;
     private final Map<UUID, Boolean> sneaking = new HashMap<>();
+    /**
+     * Whose side he is on, called down by his ticket; null while he is nobody's but his own. On their side he has no
+     * stone, never fights them, and puts his fists into whatever comes for them.
+     */
+    @Nullable
+    private UUID companion;
+    /** Where the story wants him standing, while he is someone's companion; null to keep at their side. */
+    @Nullable
+    private Vec3d post;
+    /** Ticks since he was sent on his way, or -1. */
+    private int leaving = -1;
 
     // ------------------------------------------------------------------ client state (how he moves, worked out where he is drawn)
     /** Client: ticks since the synced state last changed. */
@@ -246,7 +281,7 @@ public class EntityChampion extends EntityLiving {
     private void setState(State state) {
         float tempo = 1F + 0.42F * (float) Math.pow(rage, 1.3D);
         if (state == State.BREAKER || state == State.KNOCKDOWN || state == State.RISE || state == State.DRIFT || state == State.BOARD
-                || state == State.FLEX || state == State.CHALLENGE || state == State.IMPACT) {
+                || state == State.SNARED || state == State.STRAIN || state == State.TEAR || state == State.FLEX || state == State.CHALLENGE || state == State.IMPACT) {
             tempo = 1F;
         }
         dataManager.set(TEMPO, tempo);
@@ -329,11 +364,81 @@ public class EntityChampion extends EntityLiving {
 
     /** He turns on someone and calls them out. */
     public void challenge(EntityPlayer player) {
+        challenge(player, false);
+    }
+
+    /** He turns on someone and calls them out; quietly, if the story has something to say first. */
+    public void challenge(EntityPlayer player, boolean quiet) {
         duelId = player.getUniqueID();
+        // A challenger again: whoever he was finishing it with goes back to being someone he turns on now and then.
+        alone = false;
+        onFoe = false;
         brawl = null;
         if (canAct()) {
-            say(CHALLENGES[rand.nextInt(CHALLENGES.length)]);
+            if (!quiet) {
+                say(CHALLENGES[rand.nextInt(CHALLENGES.length)]);
+            }
             setState(State.CHALLENGE);
+        }
+    }
+
+    /** Holds him where he stands, looking at {@code face} (or whoever he is fighting), until {@link #release}. */
+    public void hold(@Nullable Entity face) {
+        held = true;
+        heldFace = face;
+    }
+
+    /** The bell: he fights again, after a breath. */
+    public void release() {
+        if (held) {
+            held = false;
+            heldFace = null;
+            cooldown = Math.max(cooldown, 16);
+        }
+    }
+
+    public boolean isHeld() {
+        return held;
+    }
+
+    /** Someone else in his ring he will turn on now and then; null for nobody. */
+    public void setFoe(@Nullable EntityLivingBase foe) {
+        this.foe = foe;
+        onFoe = false;
+        foeRoll = ticksExisted + 60;
+    }
+
+    /** Whoever he was fighting is down; it is the foe he is fighting now, and nobody else, until it is finished. */
+    public void turnOn(EntityLivingBase foe) {
+        this.foe = foe;
+        onFoe = true;
+        alone = true;
+        duelId = null;
+        held = false;
+        heldFace = null;
+    }
+
+    /** Whether he is fighting the foe alone, with no challenger left standing. */
+    public boolean fightingAlone() {
+        return alone && foe != null && !foe.isDead;
+    }
+
+    /** Warlock's blows: they do not hurt him, much, but they get his attention. */
+    public void struckBy(EntityAdamWarlock warlock, float fraction) {
+        if (warlock != foe || held) {
+            return;
+        }
+        addRage(fraction * 0.04F);
+        if (!onFoe && canAct() && rand.nextInt(2) == 0) {
+            onFoe = true;
+            foeRoll = ticksExisted + 120 + rand.nextInt(80);
+            cooldown = Math.min(cooldown, 6);
+            if (rand.nextInt(2) == 0) {
+                say(rand.nextBoolean() ? "Wait your turn, boy." : "You want the next round? Have it.");
+            }
+        }
+        if (fraction >= 0.2F && getState() == State.IDLE && rand.nextInt(3) == 0) {
+            setState(State.GUARD);
         }
     }
 
@@ -373,6 +478,104 @@ public class EntityChampion extends EntityLiving {
     /** Planet Breaker has broken his planet: he stays down in the crater until it is gone from under him. */
     public void holdImpact() {
         holdImpact = true;
+    }
+
+    // ------------------------------------------------------------------ on someone's side
+
+    /** Called down by his ticket: on their side, without his stone, until they send him off. */
+    public void befriend(EntityPlayer owner) {
+        companion = owner.getUniqueID();
+        managed = false;
+        duelId = null;
+        foe = null;
+        brawl = null;
+        setStone(false);
+        setCalm(false, false);
+        setRage(0F);
+        bossInfo.setVisible(false);
+    }
+
+    public boolean isCompanion() {
+        return companion != null;
+    }
+
+    @Nullable
+    public UUID getCompanion() {
+        return companion;
+    }
+
+    /** Whoever called him, if they are here. */
+    @Nullable
+    public EntityPlayer owner() {
+        return companion == null ? null : world.getPlayerEntityByUUID(companion);
+    }
+
+    /** Where to go and stand, whatever else is happening; null to go back to their side. */
+    public void post(@Nullable Vec3d at) {
+        post = at;
+    }
+
+    /** Whether he is standing where he was posted. */
+    public boolean atPost() {
+        return post == null || getDistanceSq(post.x, posY, post.z) < 1.2D;
+    }
+
+    /** Where the hedge that has him is: he faces it the whole time it holds him. */
+    @Nullable
+    private Vec3d snaredBy;
+    /** Where the vines are dragging him to, hard up against the hedge, while they still are. */
+    @Nullable
+    private Vec3d yankTo;
+
+    /** The Gardener's hedge has him, from where it stands: arms pinned, legs bound, held standing where he is, facing it. */
+    public void snare(Vec3d hedge) {
+        held = true;
+        heldFace = null;
+        snaredBy = hedge;
+        Vec3d back = flat(getPositionVector().subtract(hedge));
+        yankTo = new Vec3d(hedge.x + back.x * 1.7D, posY, hedge.z + back.z * 1.7D);
+        faceAlong(hedge.subtract(getPositionVector()));
+        rotationYawHead = rotationYaw;
+        setState(State.SNARED);
+    }
+
+    /** Heaving against the vines, again and again; they creak, and hold. */
+    public void strain() {
+        held = true;
+        setState(State.STRAIN);
+    }
+
+    /** Down into himself, and then out: everything holding him snaps. {@link #TEAR_RIP} beats after this. */
+    public void burst() {
+        held = false;
+        heldFace = null;
+        setState(State.TEAR);
+    }
+
+    /** Let go quietly, the scene that had him snared over before he tore loose. */
+    public void free() {
+        held = false;
+        heldFace = null;
+        if (isSnared()) {
+            setState(State.IDLE);
+        }
+    }
+
+    public boolean isSnared() {
+        State state = getState();
+        return state == State.SNARED || state == State.STRAIN || state == State.TEAR;
+    }
+
+    /** Sent on his way: he turns his back, walks off, and is gone in one leap. */
+    public void leave() {
+        if (leaving < 0) {
+            leaving = 0;
+            post = null;
+        }
+    }
+
+    public boolean isLeaving() {
+        return leaving >= 0;
     }
 
     /** Pulling himself across to a rocket and climbing in. The director moves him. */
@@ -422,6 +625,9 @@ public class EntityChampion extends EntityLiving {
         }
         stateTicks++;
         bossBar();
+        if (companion != null && leaving >= 0 && depart()) {
+            return;
+        }
         State state = getState();
         boolean flying = state == State.DRIFT || state == State.BOARD || state == State.IMPACT || state == State.BREAKER && clock >= BREAKER_LEAP
                 || state == State.HAYMAKER && clock >= HAY_LEAP && clock < HAY_LAND;
@@ -444,7 +650,20 @@ public class EntityChampion extends EntityLiving {
         motionZ *= 0.5D;
 
         EntityLivingBase target = target();
-        if (target instanceof EntityPlayer && duelId != null && !showcase) {
+        if (held) {
+            // A word before the bell: he squares up and waits, finishing whatever he was in the middle of.
+            if ((state == State.IDLE || state == State.FLEX && clock >= FLEX_TICKS) && pendingMove != Move.ROAR) {
+                if (state != State.IDLE) {
+                    setState(State.IDLE);
+                }
+                Entity look = heldFace != null && !heldFace.isDead ? heldFace : target;
+                if (look != null) {
+                    face(look, 0.12F);
+                }
+                motionX = motionZ = 0D;
+                return;
+            }
+        } else if (target instanceof EntityPlayer && duelId != null && !showcase) {
             temper((EntityPlayer) target);
         } else if (duelId == null) {
             setRage(rage - 0.0008F * (float) EternityConfig.champion.rageDecay);
@@ -524,6 +743,64 @@ public class EntityChampion extends EntityLiving {
                 break;
             case BOARD:
                 break;
+            case SNARED:
+            case STRAIN:
+                bound(state);
+                break;
+            case TEAR:
+                tearing();
+                break;
+        }
+    }
+
+    /** Held in the vines: going nowhere; and when he heaves, the hedge creaks with him. */
+    private void bound(State state) {
+        motionX = motionZ = 0D;
+        if (snaredBy != null) {
+            faceToward(new Vec3d(snaredBy.x, posY + getEyeHeight(), snaredBy.z), 0.5F);
+        }
+        if (yankTo != null) {
+            // Dragged in by the vines, stumbling, until he is up against it.
+            double dx = yankTo.x - posX, dz = yankTo.z - posZ, d = Math.sqrt(dx * dx + dz * dz);
+            if (d < 0.1D) {
+                yankTo = null;
+            } else {
+                double step = Math.min(d, 0.3D);
+                setPosition(posX + dx / d * step, posY, posZ + dz / d * step);
+            }
+        }
+        if (state != State.STRAIN) {
+            return;
+        }
+        int beat = stateTicks % HEAVE;
+        if (beat == 2) {
+            sound(SoundEvents.ENTITY_PLAYER_BREATH, 1.5F, 0.45F);
+        } else if (beat == 12) {
+            sound(SoundEvents.BLOCK_WOOD_STEP, 2.5F, 0.35F);
+            sound(SoundEvents.BLOCK_GRASS_STEP, 2F, 0.5F);
+        } else if (beat == 22) {
+            sound(SoundEvents.ENTITY_IRONGOLEM_HURT, 0.8F, 0.4F);
+        }
+    }
+
+    /** Down into himself, and out: the vines go, all at once, and he roars at the hedge that held him. */
+    private void tearing() {
+        motionX = motionZ = 0D;
+        if (snaredBy != null) {
+            faceToward(new Vec3d(snaredBy.x, posY + getEyeHeight(), snaredBy.z), 0.5F);
+        }
+        if (at(2)) {
+            sound(SoundEvents.ENTITY_PLAYER_BREATH, 2F, 0.4F);
+        }
+        if (at(TEAR_RIP)) {
+            Vec3d chest = new Vec3d(posX, posY + 2.2D, posZ);
+            fx(MsgTribunalFx.CHAMPION_ROAR, chest.x, chest.y, chest.z, 7D, 0, 0, getEntityId(), 30);
+            sound(SoundEvents.ENTITY_ENDERDRAGON_GROWL, 3F, 0.6F);
+            sound(SoundEvents.ENTITY_ZOMBIE_BREAK_DOOR_WOOD, 2.5F, 0.5F);
+            sound(SoundEvents.BLOCK_WOOD_BREAK, 3F, 0.4F);
+        }
+        if (clock >= TEAR_TICKS) {
+            recover(10);
         }
     }
 
@@ -536,7 +813,7 @@ public class EntityChampion extends EntityLiving {
             return;
         }
         State state = getState();
-        boolean visible = state != State.DRIFT && state != State.BOARD && state != State.IMPACT;
+        boolean visible = state != State.DRIFT && state != State.BOARD && state != State.IMPACT && companion == null;
         bossInfo.setVisible(visible);
         int stage = stageOf(rage);
         bossInfo.setName(new TextComponentString("The Champion of the Universe — " + (state == State.KNOCKDOWN ? "Down!" : stageName(stage))));
@@ -547,6 +824,24 @@ public class EntityChampion extends EntityLiving {
     /** Whoever he is fighting: the one he challenged while they are here and standing; failing that, the nearest of the armies. */
     @Nullable
     private EntityLivingBase target() {
+        if (companion != null) {
+            return companionTarget();
+        }
+        if (foe != null && (foe.isDead || foe.world != world || foe.getHealth() <= 0F
+                || foe instanceof EntityAdamWarlock && ((EntityAdamWarlock) foe).getState() == EntityAdamWarlock.State.RETREAT)) {
+            foe = null;
+            onFoe = false;
+            alone = false;
+        }
+        if (foe != null && !alone && !held && canAct() && ticksExisted >= foeRoll) {
+            // Between moves, he thinks about which of them needs hitting more.
+            foeRoll = ticksExisted + 80 + rand.nextInt(100);
+            onFoe = foe.getDistanceSq(this) < 30D * 30D && rand.nextInt(100) < (onFoe ? 35 : 45);
+        }
+        if (onFoe && foe != null && (alone || foe.getDistanceSq(this) < 40D * 40D)) {
+            lonely = 0;
+            return foe;
+        }
         if (duelId != null) {
             EntityPlayer player = world.getPlayerEntityByUUID(duelId);
             if (player != null && isFair(player) && player.getDistanceSq(this) < 80D * 80D) {
@@ -585,6 +880,90 @@ public class EntityChampion extends EntityLiving {
             }
         }
         return brawl;
+    }
+
+    /**
+     * On someone's side: whatever is coming for them, or whatever they are fighting, if it is the kind of thing that
+     * comes for people; failing that, anything of that kind close to them. Nothing at all while he has been posted.
+     */
+    @Nullable
+    private EntityLivingBase companionTarget() {
+        EntityPlayer owner = owner();
+        if (owner == null || post != null || leaving >= 0) {
+            brawl = null;
+            return null;
+        }
+        if (brawl != null && (!sidesAgainst(brawl) || brawl.getDistanceSq(owner) > 24D * 24D)) {
+            brawl = null;
+        }
+        if (brawl == null) {
+            EntityLivingBase after = owner.getRevengeTarget(), struck = owner.getLastAttackedEntity();
+            if (after != null && sidesAgainst(after) && after.getDistanceSq(owner) < 20D * 20D) {
+                brawl = after;
+            } else if (struck != null && owner.ticksExisted - owner.getLastAttackedEntityTime() < 100 && sidesAgainst(struck)
+                    && struck.getDistanceSq(owner) < 20D * 20D) {
+                brawl = struck;
+            } else {
+                double best = 12D * 12D;
+                for (EntityLivingBase other : world.getEntitiesWithinAABB(EntityLivingBase.class, owner.getEntityBoundingBox().grow(12D, 6D, 12D))) {
+                    if (sidesAgainst(other) && other.getDistanceSq(owner) < best) {
+                        brawl = other;
+                        best = other.getDistanceSq(owner);
+                    }
+                }
+            }
+        }
+        return brawl;
+    }
+
+    /** What he will put his fists into, on someone's side: the things that come for people, and never a person. */
+    private boolean sidesAgainst(@Nullable Entity other) {
+        return other instanceof EntityLivingBase && other instanceof net.minecraft.entity.monster.IMob && other != this && other.isEntityAlive()
+                && ((EntityLivingBase) other).getHealth() > 0F && other.world == world;
+    }
+
+    /** At their side: close enough to be of use, not so close he treads on them. Or wherever the story has posted him. */
+    private void follow() {
+        if (post != null) {
+            if (getDistanceSq(post.x, posY, post.z) > 0.6D) {
+                faceToward(new Vec3d(post.x, posY + getEyeHeight(), post.z), 0.3F);
+                walkToward(post, 0.16D);
+            }
+            return;
+        }
+        EntityPlayer owner = owner();
+        if (owner == null) {
+            return;
+        }
+        double d = horizontal(owner);
+        if (d > 4.5D) {
+            faceToward(new Vec3d(owner.posX, posY + getEyeHeight(), owner.posZ), 0.3F);
+            walkToward(owner.getPositionVector(), d > 10D ? 0.26D : 0.15D);
+        } else if (d < 8D) {
+            face(owner, 0.08F);
+        }
+    }
+
+    /** Walking away from them, his back to them; then one leap, and he is gone. True once he is. */
+    private boolean depart() {
+        leaving++;
+        EntityPlayer owner = owner();
+        if (leaving < 46 && owner != null) {
+            Vec3d away = flat(getPositionVector().subtract(owner.getPositionVector()));
+            faceToward(getPositionVector().add(away.scale(4D)).add(0D, getEyeHeight(), 0D), 0.25F);
+            walkToward(getPositionVector().add(away), 0.15D);
+            motionY = onGround ? -0.08D : Math.max(-2.5D, motionY - 0.09D);
+            return true;
+        }
+        fx(MsgTribunalFx.CHAMPION_IMPACT, posX, posY + 0.2D, posZ, 0D, 1D, 0D, -1, 2);
+        sound(EternitySounds.COMET_IMPACT, 2F, 0.8F);
+        sound(SoundEvents.ENTITY_GENERIC_EXPLODE, 1.2F, 0.6F);
+        if (world instanceof net.minecraft.world.WorldServer) {
+            ((net.minecraft.world.WorldServer) world).spawnParticle(net.minecraft.util.EnumParticleTypes.CLOUD, posX, posY + 0.3D, posZ, 40,
+                    1.2D, 0.2D, 1.2D, 0.12D);
+        }
+        setDead();
+        return true;
     }
 
     private static boolean isFair(EntityPlayer player) {
@@ -646,6 +1025,10 @@ public class EntityChampion extends EntityLiving {
     /** Up on his toes, guard up, closing the distance, circling; then he picks his moment. */
     private void idle(@Nullable EntityLivingBase target) {
         if (target == null) {
+            if (companion != null) {
+                follow();
+                return;
+            }
             if (anchor != null && getDistanceSq(anchor.x, anchor.y, anchor.z) > 9D) {
                 walkToward(anchor, 0.12D);
             }
@@ -687,6 +1070,10 @@ public class EntityChampion extends EntityLiving {
         if (pendingMove != null) {
             next = pendingMove;
             pendingMove = null;
+        } else if (companion != null) {
+            // On someone's side he just fights: no showing off, no baiting, and nothing that breaks a world.
+            next = d <= 3.8D ? (rand.nextInt(3) == 0 ? Move.HOOK : rand.nextInt(4) == 0 ? Move.UPPERCUT : rand.nextInt(5) == 0 ? Move.GRAB
+                    : rand.nextInt(6) == 0 ? Move.POUND : Move.JAB_CROSS) : d < 14D && rand.nextInt(3) > 0 ? Move.RUSH : Move.HAYMAKER;
         } else if (rage >= 1F && player && duelId != null) {
             next = Move.BREAKER;
         } else if (showcase) {
@@ -697,7 +1084,8 @@ public class EntityChampion extends EntityLiving {
                 jab = 30;
                 hook = 22;
                 upper = 18;
-                grab = 14;
+                // Warlock does not stay still long enough to be taken hold of.
+                grab = target instanceof EntityAdamWarlock ? 0 : 14;
                 pound = 9;
                 counter = player ? 8 : 0;
                 haymaker = 0;
@@ -1128,7 +1516,9 @@ public class EntityChampion extends EntityLiving {
         if (at(ROAR_GO)) {
             Vec3d head = brow();
             fx(MsgTribunalFx.CHAMPION_ROAR, head.x, head.y, head.z, 14D, 0, 0, getEntityId(), 40);
-            fx(MsgTribunalFx.CHAMPION_ARCS, head.x, head.y, head.z, 0.9D, 0, 0, getEntityId(), 40);
+            if (wearsStone()) {
+                fx(MsgTribunalFx.CHAMPION_ARCS, head.x, head.y, head.z, 0.9D, 0, 0, getEntityId(), 40);
+            }
             sound(SoundEvents.ENTITY_ENDERDRAGON_GROWL, 4F, 0.5F);
             sound(SoundEvents.ENTITY_LIGHTNING_THUNDER, 2F, 0.6F);
             for (EntityLivingBase victim : victims(10D)) {
@@ -1262,7 +1652,7 @@ public class EntityChampion extends EntityLiving {
             setState(State.IDLE);
             // Having slipped you, he is already coming back with something.
             cooldown = slipped || rand.nextInt(3) == 0 ? 0 : 4;
-            if (rand.nextInt(3) == 0 && target != null && horizontal(target) < 3.6D) {
+            if (!held && rand.nextInt(3) == 0 && target != null && horizontal(target) < 3.6D) {
                 start(rand.nextBoolean() ? Move.HOOK : Move.JAB_CROSS, target);
             }
         }
@@ -1421,7 +1811,13 @@ public class EntityChampion extends EntityLiving {
             if (other == this || other.isDead || other.getHealth() <= 0F) {
                 continue;
             }
-            if (other instanceof EntityPlayer ? isFair((EntityPlayer) other) : ChampionDirector.isArmy(other)) {
+            if (companion != null) {
+                if (sidesAgainst(other)) {
+                    found.add(other);
+                }
+                continue;
+            }
+            if (other instanceof EntityPlayer ? isFair((EntityPlayer) other) : ChampionDirector.isArmy(other) || other == foe && !held) {
                 found.add(other);
             }
         }
@@ -1433,9 +1829,16 @@ public class EntityChampion extends EntityLiving {
         if (calm) {
             return;
         }
+        if (victim instanceof EntityAdamWarlock) {
+            // As hard as he hits anyone; Warlock takes no more of any one blow than he ever does.
+            victim.attackEntityFrom(EternityDamage.champion(this), victim.getMaxHealth() * fraction * 1.5F);
+            return;
+        }
         if (!(victim instanceof EntityPlayer)) {
             victim.hurtResistantTime = 0;
-            victim.attackEntityFrom(EternityDamage.champion(this), victim.getMaxHealth() * Math.max(1F, fraction * 6F));
+            float blow = victim.getMaxHealth() * Math.max(1F, fraction * 6F);
+            // On someone's side he hits like what he is now: an Elder, and strong. Not like a world-breaker.
+            victim.attackEntityFrom(EternityDamage.champion(this), companion != null ? Math.min(blow, 40F) : blow);
             return;
         }
         float scale = (float) EternityConfig.champion.damageScale * (stageOf(rage) >= 3 ? 1.5F : 1F);
@@ -1444,6 +1847,10 @@ public class EntityChampion extends EntityLiving {
 
     private void push(EntityLivingBase victim, Vec3d direction, double strength, double lift) {
         if (victim instanceof EntityPlayer && ((EntityPlayer) victim).isSpectator()) {
+            return;
+        }
+        if (victim instanceof EntityAdamWarlock) {
+            ((EntityAdamWarlock) victim).knocked(direction, strength * (calm ? 0.25D : 1D), lift);
             return;
         }
         double scale = calm ? 0.25D : 1D;
@@ -1473,6 +1880,14 @@ public class EntityChampion extends EntityLiving {
         }
         State state = getState();
         Entity attacker = source.getTrueSource();
+        if (companion != null) {
+            if (attacker instanceof EntityPlayer && state == State.IDLE && !held) {
+                say(WRONG_WAY[rand.nextInt(WRONG_WAY.length)]);
+            } else if (attacker instanceof EntityLivingBase && sidesAgainst(attacker)) {
+                brawl = (EntityLivingBase) attacker;
+            }
+            return false;
+        }
         if (!(attacker instanceof EntityPlayer)) {
             if (attacker instanceof EntityLivingBase && state == State.IDLE && rand.nextInt(4) == 0) {
                 guarded((EntityLivingBase) attacker, 0);
@@ -1483,6 +1898,9 @@ public class EntityChampion extends EntityLiving {
         EntityPlayer player = (EntityPlayer) attacker;
         if (state == State.KNOCKDOWN || state == State.RISE || state == State.BREAKER || state == State.IMPACT || state == State.DRIFT
                 || state == State.BOARD || state == State.CHALLENGE) {
+            return false;
+        }
+        if (held) {
             return false;
         }
         if (managed && duelId == null) {
@@ -1589,6 +2007,13 @@ public class EntityChampion extends EntityLiving {
     /** Right-clicked: with a rocket in hand, a trade; empty-handed, a slap in the face. */
     @Override
     protected boolean processInteract(EntityPlayer player, EnumHand hand) {
+        if (!world.isRemote && hand == EnumHand.MAIN_HAND && player instanceof EntityPlayerMP && companion != null) {
+            if (!held && post == null) {
+                face(player, 1F);
+                say(COMPANY[rand.nextInt(COMPANY.length)]);
+            }
+            return true;
+        }
         if (!world.isRemote && hand == EnumHand.MAIN_HAND && player instanceof EntityPlayerMP) {
             return ChampionDirector.INSTANCE.touched(this, (EntityPlayerMP) player);
         }
@@ -1611,6 +2036,10 @@ public class EntityChampion extends EntityLiving {
     // ------------------------------------------------------------------ helpers
 
     private void fx(byte type, double x, double y, double z, double a, double b, double c, int id, int time) {
+        if (!wearsStone() && (type == MsgTribunalFx.CHAMPION_IMPACT || type == MsgTribunalFx.CHAMPION_GUARD)) {
+            // Without the stone his blows land as what they are: force, with none of its purple in them.
+            time += MsgTribunalFx.PLAIN;
+        }
         EternityNetwork.sendToDimension(new MsgTribunalFx(type, x, y, z, a, b, c, id, time), dimension);
     }
 
@@ -1622,7 +2051,7 @@ public class EntityChampion extends EntityLiving {
 
     /** He speaks to everyone near enough to hear him. Never twice in two seconds. */
     public void say(String line) {
-        if (line.isEmpty() || ticksExisted - lastSpoke < 40) {
+        if (line.isEmpty() || held || ticksExisted - lastSpoke < 40) {
             return;
         }
         lastSpoke = ticksExisted;
@@ -1631,6 +2060,11 @@ public class EntityChampion extends EntityLiving {
 
     /** One of his lines, to everyone within range of where he is. */
     public static void speak(World world, Entity at, String line, double range) {
+        // In the panel at the foot of the screen, with his face, when the story is running; in chat when it is not.
+        if (com.matoon.eternity.story.StoryDirector.shout(at, com.matoon.eternity.story.Speakers.CHAMPION,
+                at instanceof EntityChampion ? at.getEntityId() : -1, line, range)) {
+            return;
+        }
         TextComponentString name = new TextComponentString("<The Champion> ");
         name.getStyle().setColor(TextFormatting.DARK_PURPLE).setBold(true);
         TextComponentString text = new TextComponentString(line);

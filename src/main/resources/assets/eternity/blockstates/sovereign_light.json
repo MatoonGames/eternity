@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=true": {
+      "model": "eternity:sovereign_light"
+    },
+    "lit=false": {
+      "model": "eternity:sovereign_light_dim"
+    }
+  }
+}

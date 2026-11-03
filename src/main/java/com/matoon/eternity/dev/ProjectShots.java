@@ -146,7 +146,7 @@ public final class ProjectShots {
     private static int savedW, savedH;
     private static boolean studio;
     /** Whether blows reach the camera player (it is still healed to full every tick). */
-    private static boolean harm;
+    private static boolean harm, mortal;
     /** Keys held down for the game, by name, and for how many more ticks. */
     private static final java.util.Map<String, Integer> held = new java.util.HashMap<>();
     private static float studioShade;
@@ -181,7 +181,7 @@ public final class ProjectShots {
             mc.displayGuiScreen(null);
         }
         if (locked && mc.world != null && mc.player != null && mc.currentScreen != null && !(mc.currentScreen instanceof GuiMainMenu)
-                && !(mc.currentScreen instanceof com.matoon.eternity.client.gui.GuiDestroyerArmor)) {
+                && !(mc.currentScreen instanceof com.matoon.eternity.client.gui.GuiDestroyerArmor) && !(mc.currentScreen instanceof com.matoon.eternity.client.gui.GuiStoryChoice)) {
             // Dialogue screens and the like would block the view.
             log("closed screen " + mc.currentScreen.getClass().getSimpleName());
             mc.displayGuiScreen(null);
@@ -355,9 +355,11 @@ public final class ProjectShots {
                     return true;
                 }
                 held.put(p[0], Integer.parseInt(p[1]));
+                net.minecraft.client.settings.KeyBinding.onTick(key(mc, p[0]).getKeyCode());
                 return true;
             case "harm":
-                harm = "on".equals(p[0]);
+                harm = "on".equals(p[0]) || "mortal".equals(p[0]);
+                mortal = "mortal".equals(p[0]);
                 return true;
             case "view":
                 // Vanilla's view: 0 first person, 1 from behind, 2 from in front. Only while the camera is free.
@@ -449,6 +451,16 @@ public final class ProjectShots {
                     spyCam.setInvisible(true);
                 }
                 return true;
+            case "journal":
+                mc.displayGuiScreen(new com.matoon.eternity.client.gui.GuiStoryJournal());
+                return true;
+            case "respawn":
+                // Out of the death screen, the way the button would.
+                if (mc.player != null && mc.player.isDead) {
+                    mc.player.respawnPlayer();
+                    mc.displayGuiScreen(null);
+                }
+                return true;
             case "close":
                 if (mc.player != null) {
                     mc.player.closeScreen();
@@ -494,6 +506,15 @@ public final class ProjectShots {
                     lucraft.mods.lucraftcore.superpowers.abilities.supplier.AbilityContainer container =
                             lucraft.mods.lucraftcore.superpowers.abilities.Ability.getAbilityContainer(com.matoon.eternity.compat.StoneAbilities.CONTEXT, player);
                     lucraft.mods.lucraftcore.superpowers.abilities.Ability ability = container == null ? null : container.getAbility(p[0]);
+                    if (ability == null) {
+                        // Or one of the stones' powers at the Gardener's hedge.
+                        lucraft.mods.lucraftcore.superpowers.abilities.supplier.AbilityContainer hedge =
+                                lucraft.mods.lucraftcore.superpowers.abilities.Ability.getAbilityContainer(com.matoon.eternity.ability.HedgeAbilities.CONTEXT, player);
+                        if (hedge != null && hedge.getAbility(p[0]) != null) {
+                            container = hedge;
+                            ability = hedge.getAbility(p[0]);
+                        }
+                    }
                     if (ability == null) {
                         StringBuilder keys = new StringBuilder();
                         if (container != null) {
@@ -722,7 +743,7 @@ public final class ProjectShots {
 
     @SubscribeEvent
     public static void heal(TickEvent.PlayerTickEvent event) {
-        if (active() && event.side == Side.SERVER && event.phase == TickEvent.Phase.END) {
+        if (active() && !mortal && event.side == Side.SERVER && event.phase == TickEvent.Phase.END) {
             event.player.setHealth(event.player.getMaxHealth());
             event.player.getFoodStats().setFoodLevel(20);
             event.player.extinguish();
@@ -733,7 +754,8 @@ public final class ProjectShots {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void gui(GuiOpenEvent event) {
         if (active() && event.getGui() != null && event.getGui().getClass().getName().startsWith("com.matoon.eternity")
-                && !(event.getGui() instanceof com.matoon.eternity.client.gui.GuiDestroyerArmor)) {
+                && !(event.getGui() instanceof com.matoon.eternity.client.gui.GuiDestroyerArmor) && !(event.getGui() instanceof com.matoon.eternity.client.gui.GuiStoryChoice)
+                && !(event.getGui() instanceof com.matoon.eternity.client.gui.GuiStoryJournal)) {
             log("blocked screen " + event.getGui().getClass().getSimpleName());
             event.setCanceled(true);
         }

@@ -1,0 +1,8 @@
+{
+    "variants": {
+        "kind=0": { "model": "eternity:strange_bloom_glass_bell" },
+        "kind=1": { "model": "eternity:strange_bloom_ember_fern" },
+        "kind=2": { "model": "eternity:strange_bloom_lantern_head" },
+        "kind=3": { "model": "eternity:strange_bloom_blackleaf" }
+    }
+}

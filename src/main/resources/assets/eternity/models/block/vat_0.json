@@ -1,0 +1,181 @@
+{
+  "parent": "block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "metal": "eternity:blocks/vat_metal",
+    "glass": "eternity:blocks/vat_glass",
+    "broken": "eternity:blocks/vat_broken",
+    "liquid": "eternity:blocks/vat_liquid",
+    "particle": "eternity:blocks/vat_metal"
+  },
+  "elements": [
+    {
+      "from": [
+        1,
+        0,
+        1
+      ],
+      "to": [
+        15,
+        3,
+        15
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1,
+            13,
+            15,
+            16
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            1,
+            13,
+            15,
+            16
+          ],
+          "texture": "#metal"
+        },
+        "east": {
+          "uv": [
+            1,
+            13,
+            15,
+            16
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            1,
+            13,
+            15,
+            16
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            1,
+            1,
+            15,
+            15
+          ],
+          "texture": "#metal"
+        },
+        "down": {
+          "uv": [
+            1,
+            1,
+            15,
+            15
+          ],
+          "texture": "#metal"
+        }
+      }
+    },
+    {
+      "from": [
+        3,
+        3,
+        3
+      ],
+      "to": [
+        13,
+        16,
+        13
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            3,
+            0,
+            13,
+            13
+          ],
+          "texture": "#liquid"
+        },
+        "south": {
+          "uv": [
+            3,
+            0,
+            13,
+            13
+          ],
+          "texture": "#liquid"
+        },
+        "east": {
+          "uv": [
+            3,
+            0,
+            13,
+            13
+          ],
+          "texture": "#liquid"
+        },
+        "west": {
+          "uv": [
+            3,
+            0,
+            13,
+            13
+          ],
+          "texture": "#liquid"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        3,
+        2
+      ],
+      "to": [
+        14,
+        16,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            0,
+            14,
+            13
+          ],
+          "texture": "#glass"
+        },
+        "south": {
+          "uv": [
+            2,
+            0,
+            14,
+            13
+          ],
+          "texture": "#glass"
+        },
+        "east": {
+          "uv": [
+            2,
+            0,
+            14,
+            13
+          ],
+          "texture": "#glass"
+        },
+        "west": {
+          "uv": [
+            2,
+            0,
+            14,
+            13
+          ],
+          "texture": "#glass"
+        }
+      }
+    }
+  ]
+}

@@ -29,6 +29,8 @@ minecraft {
     // overworld; see src/main/java/com/matoon/eternity/dev/RespawnFieldFix.java.
     clientJvmArgs += "-Dfml.coreMods.load=com.matoon.eternity.dev.DevFixesPlugin"
     serverJvmArgs += "-Dfml.coreMods.load=com.matoon.eternity.dev.DevFixesPlugin"
+    // The same name every launch, so the dev client is the same player in its saves (story progress is kept per player).
+    clientRunArgs += ["--username", "Dev"]
 }
 
 repositories {
@@ -58,6 +60,40 @@ processResources {
     }
     from(sourceSets.main.resources.srcDirs) {
         exclude 'mcmod.info'
+    }
+}
+
+// ForgeGradle 2.3 fetches assets from http://resources.download.minecraft.net, which now
+// rejects plain http, so its getAssets crawls through retries on every launch and never
+// caches anything. Fetch the missing objects over https instead; later runs find them all.
+getAssets {
+    actions.clear()
+    doLast {
+        def objects = new File(getAssetsDir(), 'objects')
+        def index = new groovy.json.JsonSlurper().parse(getAssetsIndex())
+        def hashes = index.objects.values()*.hash.unique()
+        def missing = hashes.findAll { !new File(objects, "${it.substring(0, 2)}/${it}").exists() }
+        if (missing.isEmpty()) return
+        logger.lifecycle("Downloading ${missing.size()} of ${hashes.size()} assets over https")
+        def pool = java.util.concurrent.Executors.newFixedThreadPool(16)
+        def failed = java.util.Collections.synchronizedList([])
+        missing.each { hash ->
+            pool.submit {
+                def file = new File(objects, "${hash.substring(0, 2)}/${hash}")
+                def part = new File(file.path + '.part')
+                try {
+                    file.parentFile.mkdirs()
+                    part.bytes = new URL("https://resources.download.minecraft.net/${hash.substring(0, 2)}/${hash}").bytes
+                    part.renameTo(file)
+                } catch (Exception e) {
+                    part.delete()
+                    failed << hash
+                }
+            }
+        }
+        pool.shutdown()
+        pool.awaitTermination(1, java.util.concurrent.TimeUnit.HOURS)
+        if (!failed.isEmpty()) logger.warn("${failed.size()} assets failed to download; the next run retries them")
     }
 }
 

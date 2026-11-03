@@ -395,8 +395,9 @@ than he is, and not so absolute. They do not simply unmake whoever is there.
 ## Adam Warlock
 
 Grown in a cocoon by the Sovereign to be perfect, and sure that he is. He wants the stones for
-himself, and whoever has been collecting them is in his way. For now he only comes when called
-(`/eternity warlock summon`); one day he will come on his own.
+himself, and whoever has been collecting them is in his way. He comes up the steps of Odin's vault in the
+story's second chapter, and after it for anyone who broke a promise to him; otherwise he comes when called
+(`/eternity warlock summon`).
 
 - **How he looks.** A man a little taller than you in crimson armour: plates over a dark mesh
   suit, a chevron of gold converging down his chest, a high collar, layered pauldrons,
@@ -741,6 +742,157 @@ came from.
   never changes the world inside the vault, the Star Chamber or the Nexus, nor anywhere with
   `casketChangesTerrain` off, and like the stones it cannot be destroyed.
 
+## The story: the Oath, the Vault, the Champion, the Nexus, the Garden
+
+The first five chapters of the story (see `docs/STORY.md`); the sixth is the Grandmaster's. Odin
+is in the Odinsleep, and his enchantments are weakening. Turn it all off with `story.enabled`.
+
+- **The journal.** Press J (rebindable) for the chapter you're in, what to do now, and what you've
+  been told that bears on it: every line of the oath you've read, under its keeper's whole name;
+  every direction you've been given. A note slides in at the top left whenever the goal moves on.
+- **Together.** A conversation belongs to everyone standing in it. Anyone within 14 blocks is drawn
+  in, and every answer is a vote:
+  - Each voter's face sits on the card they chose, and you can change yours until it settles.
+  - It settles on a majority, on everyone having voted, or 15 seconds after the first vote. A tie
+    goes to whoever started the conversation.
+  - The answer chosen is stamped with its count and said in the panel as **Your Party**.
+  - What it decides, it decides for everyone who voted.
+
+### Chapter 1: the Oath
+
+- **Pieces of the north.** A couple of in-game days into a new world (`story.leakStartDays`), the
+  ward on the cube a Norse village keeps for Odin starts failing. Every few minutes
+  (`story.leakMinutesMin` to `leakMinutesMax`) a piece of the north lands somewhere near
+  someone out under the sky: a disc of snowed-over turf and podzol, set into whatever is there,
+  with a thump you can hear a long way off and snow still coming down on it for a while after.
+  Some carry things: a spruce boat and a wet cod, a door standing open in its posts with no house
+  round it, a carved bowl, a split shield with a raven on it, a grave-stone. Each skids as it
+  lands, and the tail of torn turf and snow it leaves points away from where it was thrown from;
+  read a few together and they point back at the village. They come thicker the nearer you are.
+- **Home.** Leave it long enough (`story.leaksReachHome`) and they reach you instead: blocks round
+  your bed turned to snow and podzol, a villager who lived near it gone, an animal gone from its
+  pen. Nothing taken comes back. Pets are never taken.
+- **Ragna.** Once someone has smelted iron or been to the Nether, and a few pieces have landed
+  (`story.ragnaAfterLeaks`), a person is caught in one. It comes down somewhere behind them, out
+  of sight: a woman half inside a disc of northern ground, her legs gone into the stone she
+  arrived with, the washing line she was standing at beside her. Another woman, in mourning
+  clothes, is kneeling with her, holding her hand. Come close and the view eases over to them.
+  Ragna dies. The woman closes her eyes, and talks to you. What she tells you is true.
+- **Talking.** Everything anyone says appears in the panel at the foot of the screen, with a live
+  portrait of whoever is speaking. When you can answer, your answers rise above it on cards in the
+  asker's colours: click one, or press its number, or choose with up, down and enter. The game
+  doesn't pause and nothing marks an answer as right. Silence is sometimes one of them, and
+  sometimes simply taking too long is.
+- **The village.** The nearest Norse village (HeroesExpansion's) is the one. Its Tesseract is not
+  in its hall any more: it never left the burial mound outside the village, a grassed hill with a
+  door of carved stone in its side. Beside the path to it are the village's newer stones, and
+  Hrafn, Ragna's brother, at hers. The woman in mourning is among the stones. Read any stone by
+  using it; carry one off and it remembers whose it was.
+- **If you find the village first.** Come within about a hundred blocks of it before anyone has found Ragna, and she
+  was taken all the same, somewhere nobody saw: her stone is already standing, and Hrafn is at it.
+- **The barrow.** Its door opens to Hrafn's blood. Inside, a stair down to a long hall: four graves
+  cut into each wall, the dead lying in them, and at the head of three of them the stones of the
+  first keepers. At its end a second door, carved with the oath, which opens to the oath itself,
+  spoken oldest first. Every keeper added a line when they took it on and cut it on their stone;
+  nobody alive knows all of it. The order is in the names. Stand with Hrafn at the door and use
+  it, and tell him which words come next. Wrong words wake whoever's should have come. Ask him
+  "How does it go?" and he tells you the rule, plainer each time someone gets it wrong.
+- **The dead.** Draugr can be knocked down, but they get up again.
+- **The cube.** Past the second door it hangs over an altar in a ring of failing ward-light. Take
+  it, and the oath is broken. Get out.
+- **Afterwards.** The leaks stop. The barrow is shut until morning. Then go back down.
+- **The way on.** Hold the cube and now and then it shows you where it was kept before it came
+  here. Use it while it is showing you.
+
+### Chapter 2: the Vault
+
+- **The Aether.** While the story runs the vault keeps no Tesseract: its stand holds the Aether, a
+  sealed column of dark glass bound in iron with something red moving slowly inside it. Use it and
+  the column breaks, the Aether pours into you, and the Destroyer wakes.
+- **With it in you.** Red veins in from the edges of your sight, beating slowly. Blocks near you
+  turn into something else for an instant. Some creatures take you for one of their own and
+  leave you alone. And while you are in the overworld the ground round your home is rewritten a
+  block at a time into its red twin, for good (`story.aetherChangesWorld`). In the vault the veins
+  lean toward the one fire that can draw it out.
+- **The Eternal Flame.** Use the chalice with the Aether in you, and the Flame draws it out and
+  sets it into the Reality Stone, which is the true relic. The Flame doesn't burn again.
+- **The guards.** When an Einherjar falls, he stays where he fell, and someone comes and kneels by
+  him.
+- **Adam Warlock** comes up the steps once the Destroyer has fallen, or meets you at the doors if
+  you try to leave with the Aether before then. He has come for the same thing, and he sees
+  something nobody else in the room can. What you tell him decides what he is to you from then on:
+  a truce if you promise to stop (break it by taking another stone and he comes for you, evolved
+  from the start), a rival if you don't.
+- **After the vault**, the next time something dies at your hand, someone is standing over it.
+
+### Chapter 3: the Champion
+
+- **She is in the stands.** Once you know what she is, she sits in the Colosseum's seats whenever the Champion
+  calls you out, as she has at every fight he has ever had. He has noticed.
+- **Three in the ring.** If Adam Warlock is your rival he comes down onto the sand between you; the Champion makes
+  it a fight for both of you. Beaten, Warlock leaves with a question for you to ask her.
+- **The first loss.** Adrift in the wreck after Planet Breaker, the Champion sees her standing in what is left of
+  the stands.
+- **The debt.** When he has his rocket and you have his stone, he pays what he owes before he goes: where the next
+  stone is, and a warning about her.
+
+### Chapter 4: the Nexus
+
+- **Where all the worlds touch.** After the Champion's debt, with three stones on you, the world
+  starts giving way round you in the overworld: every few minutes a great rift tears open in front
+  of you onto the edge of the grey disc. It closes again before long. Go through.
+- **Two made things.** If Adam Warlock is your rival, he got to the glass first, and the
+  In-Betweener has worked out what he is.
+- **Behind you.** The In-Betweener can see who stands behind someone who carries her mark, and
+  can't resist telling them what the stones are for.
+- **Order and Chaos**, if they come, warn you first: at six stones, Eternity comes for you.
+- **After the Soul Stone**, at the next kill, she shows you the Comet, and something to hold what
+  it carries.
+
+### Chapter 5: the Garden
+
+- **Not from here.** Plants that don't exist start coming up near you in bare stone and sand:
+  glass bells, ember-ferns, lantern-heads, blackleaf. Each gives a little light. Someone is
+  seeding the inner worlds.
+- **The red planet.** At a kill, she lays her palm on the ground, and what grew there dies; then
+  she points at Mars. Come down anywhere on Galacticraft's Mars (or, without it, search the
+  overworld) and there is green on the horizon, and the stones you carry tick like a clock.
+- **The Gardener** tends a garden on the red plain: a pond, beds of grain, flowers in rows, old
+  trees. He's kind. He'll talk to you while he works. Then he'll try to kill you.
+- **The hedge.** Death won't let you in. When you come back, his garden is hedged with thorns
+  nothing breaks but the Power Stone held in your fist, and his roots throw back anyone who comes
+  in without it. Whatever you dropped, they put outside.
+- **The price.** He binds the Time Stone into himself. You can have it. You'll have to take it out
+  of him. Or leave, and the story waits until you come back.
+
+### Commands for the story
+
+| Command | Effect |
+| --- | --- |
+| `/eternity story [status]` | Where both chapters stand, and what each player is to Warlock |
+| `/eternity story begin` | The ward starts failing now: the village is found, and the leaks start |
+| `/eternity story leak [0-5]` | A piece of the north lands in front of you (turf, boat, door, bowl, shield, stone) |
+| `/eternity story home` | The north takes from round your bed |
+| `/eternity story ragna` | Ragna comes down somewhere behind you |
+| `/eternity story village` | The mound is put up if it isn't, and you are sent to its door |
+| `/eternity story goto <ragna\|mound\|graves\|hall\|door\|ward>` | Sends you there |
+| `/eternity story dress` | Puts the mound and the barrow up again, around the village |
+| `/eternity story words` / `open` / `inner` | Every keeper's words known; the outer door open; the oath door open |
+| `/eternity story lift` | The cube lifted out of the ward, with you in front of it |
+| `/eternity story fall` / `reopen` | Hrafn falls now; the barrow opens now |
+| `/eternity story vision` | The cube shows you the vault next, if you are holding it |
+| `/eternity story vault` / `aether` / `flame` / `warlock` | Into the vault; the Aether into you; the Flame sets it; Warlock comes up the steps |
+| `/eternity story betray` | Warlock comes for a broken promise |
+| `/eternity story relight` | The Flame burns and the Aether is in its column again |
+| `/eternity story death [champion\|regulator\|garden\|waiting]` | She comes to show you where the next stone is |
+| `/eternity story rift` / `glass [betrayed]` | A rift onto the Nexus opens in front of you; Warlock is at the glass (in the Nexus) |
+| `/eternity story bloom` | A strange bloom comes up near you |
+| `/eternity story garden [here\|hedge\|bound\|spared]` | The garden grows 26 blocks in front of you; or is put in that state |
+| `/eternity story roots` / `price` | The ground opens under you; the Gardener binds the stone (scene 5B) |
+| `/eternity story phantoms <n> [answer]` | n make-believe players join every vote, for testing a party with one client |
+| `/eternity story answer <n>` / `hush` | Gives answer n to whatever you are being asked; ends the conversation |
+| `/eternity story reset` | Forgets the whole story (nothing it built is taken down) |
+
 ## The Grandmaster
 
 The last Elder of the Universe with a stone, and the last stone. He comes to you: hold five
@@ -976,6 +1128,12 @@ shipped), and the dev client and server load it from there.
 Sounds are converted from the original WAV pack with
 `tools/convert_sounds.sh <wav dir> [ffmpeg]`. They come from Freesound; see the
 credits in `mcmod.info`.
+
+The people of the story (the stranger, Death, Ragna, Hrafn and the draugr) are painted by `tools/NorseSkin.java` onto
+the layouts `client/render/NorseBoxes.java` packs: `javac -d out tools/NorseSkin.java
+src/main/java/com/matoon/eternity/client/render/VaultBoxes.java src/main/java/com/matoon/eternity/client/render/NorseBoxes.java`
+then `java -cp out NorseSkin src/main/resources/assets/eternity/textures/entity`. The rune-stones and the barrow's carved
+doors are painted by `tools/BarrowArt.java` (`java -cp out BarrowArt src/main/resources/assets/eternity/textures/blocks`).
 
 The Living Tribunal's skin and glow layer are painted by `tools/TribunalSkin.java`:
 `javac -d out tools/TribunalSkin.java` then

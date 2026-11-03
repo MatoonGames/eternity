@@ -600,6 +600,12 @@ public class EntityEinherjar extends EntityLiving {
         if (deathTime >= FALL_TICKS && !world.isRemote) {
             if (spoils >= 0) {
                 leave(spoils);
+                spoils = -1;
+            }
+            // While the story has someone coming for the fallen, they lie where they fell.
+            if (com.matoon.eternity.story.StoryDirector.INSTANCE.keepsFallen(this)) {
+                deathTime = FALL_TICKS;
+                return;
             }
             setDead();
         }
@@ -698,17 +704,9 @@ public class EntityEinherjar extends EntityLiving {
         world.playSound(null, posX, posY + 1D, posZ, sound, SoundCategory.HOSTILE, volume, pitch);
     }
 
+    /** A guard's word, in the story's panel, to whoever is near enough to hear it. */
     private void say(String line) {
-        TextComponentString name = new TextComponentString("<Einherjar> ");
-        name.getStyle().setColor(TextFormatting.GOLD).setBold(true);
-        TextComponentString text = new TextComponentString(line);
-        text.getStyle().setColor(TextFormatting.YELLOW).setBold(false);
-        name.appendSibling(text);
-        for (EntityPlayer player : world.playerEntities) {
-            if (player.getDistance(this) < 48D) {
-                player.sendMessage(name);
-            }
-        }
+        com.matoon.eternity.story.StoryDirector.shout(this, com.matoon.eternity.story.Speakers.EINHERJAR, getEntityId(), line, 48D);
     }
 
     // ------------------------------------------------------------------ client: how his cloak moves

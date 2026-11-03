@@ -88,5 +88,23 @@ public final class EternityEntities {
                 .name(Eternity.MODID + ".grandmaster")
                 .tracker(200, 1, true)
                 .build());
+        event.getRegistry().register(EntityEntryBuilder.create()
+                .entity(EntityNorse.class)
+                .id(new ResourceLocation(Eternity.MODID, "norse"), 12)
+                .name(Eternity.MODID + ".norse")
+                .tracker(160, 1, true)
+                .build());
+        event.getRegistry().register(EntityEntryBuilder.create()
+                .entity(EntityDraugr.class)
+                .id(new ResourceLocation(Eternity.MODID, "draugr"), 13)
+                .name(Eternity.MODID + ".draugr")
+                .tracker(96, 2, true)
+                .build());
+        event.getRegistry().register(EntityEntryBuilder.create()
+                .entity(EntityMagus.class)
+                .id(new ResourceLocation(Eternity.MODID, "magus"), 14)
+                .name(Eternity.MODID + ".magus")
+                .tracker(160, 1, true)
+                .build());
     }
 }

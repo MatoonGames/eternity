@@ -57,7 +57,7 @@ import java.util.UUID;
 /** Operator tools for testing and running servers. Eternity himself never speaks in chat. */
 public class CommandEternity extends CommandBase {
 
-    private static final String[] SUBCOMMANDS = {"status", "summon", "travel", "hunt", "release", "omen", "stones", "relics", "wound", "slay", "doom", "restore", "reset", "comet", "tribunal", "nexus", "inbetweener", "warlock", "champion", "vault", "grandmaster"};
+    private static final String[] SUBCOMMANDS = {"status", "summon", "travel", "hunt", "release", "omen", "stones", "relics", "wound", "slay", "doom", "restore", "reset", "comet", "tribunal", "nexus", "inbetweener", "warlock", "champion", "vault", "grandmaster", "story"};
 
     @Override
     public String getName() {
@@ -66,7 +66,7 @@ public class CommandEternity extends CommandBase {
 
     @Override
     public String getUsage(ICommandSender sender) {
-        return "/eternity <status|summon|travel <dim>|hunt [player]|release|omen <1-6> [player]|stones [player]|relics [release <kind>]|wound <percent>|slay|doom [0-1]|restore|reset|comet ...|tribunal ...|nexus [player]|inbetweener ...|warlock ...|champion ...|vault ...|grandmaster ...>";
+        return "/eternity <status|summon|travel <dim>|hunt [player]|release|omen <1-6> [player]|stones [player]|relics [release <kind>]|wound <percent>|slay|doom [0-1]|restore|reset|comet ...|tribunal ...|nexus [player]|inbetweener ...|warlock ...|champion ...|vault ...|grandmaster ...|story ...>";
     }
 
     @Override
@@ -211,6 +211,9 @@ public class CommandEternity extends CommandBase {
                 break;
             case "grandmaster":
                 grandmaster(server, sender, args);
+                break;
+            case "story":
+                story(sender, args);
                 break;
             case "nexus": {
                 EntityPlayerMP player = args.length > 1 ? getPlayer(server, sender, args[1]) : getCommandSenderAsPlayer(sender);
@@ -603,6 +606,23 @@ public class CommandEternity extends CommandBase {
         return warlock;
     }
 
+    /** The story: /eternity story [status|begin|leak [kind]|home|ragna|village|dress|words|open|inner|lift|fall|reopen|vision|vault|aether|flame|warlock|betray|relight|death|hush|reset]. */
+    private static void story(ICommandSender sender, String[] args) throws CommandException {
+        com.matoon.eternity.story.StoryDirector director = com.matoon.eternity.story.StoryDirector.INSTANCE;
+        String action = args.length > 1 ? args[1] : "status";
+        if ("status".equals(action)) {
+            reply(sender, director.status());
+            return;
+        }
+        EntityPlayerMP player = getCommandSenderAsPlayer(sender);
+        String[] rest = args.length > 2 ? java.util.Arrays.copyOfRange(args, 2, args.length) : new String[0];
+        try {
+            reply(sender, director.command(player, action, rest));
+        } catch (NumberFormatException e) {
+            throw new CommandException("Not a number: " + e.getMessage());
+        }
+    }
+
     private static void grandmaster(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
         GrandmasterDirector director = GrandmasterDirector.INSTANCE;
         String action = args.length > 1 ? args[1] : "status";
@@ -616,6 +636,13 @@ public class CommandEternity extends CommandBase {
                 EntityPlayerMP player = args.length > 2 ? getPlayer(server, sender, args[2]) : getCommandSenderAsPlayer(sender);
                 String why = director.begin(player);
                 reply(sender, why != null ? why : "The Grandmaster lays his board out around " + player.getName() + ".");
+                break;
+            }
+            case "magus": {
+                // As if they had seen the Magus rise: he comes to play, and Warlock stands with them.
+                EntityPlayerMP player = args.length > 2 ? getPlayer(server, sender, args[2]) : getCommandSenderAsPlayer(sender);
+                String why = director.beginMagus(player);
+                reply(sender, why != null ? why : "The Grandmaster lays his board out around " + player.getName() + ", and the Magus is coming to play.");
                 break;
             }
             case "end":
@@ -634,8 +661,12 @@ public class CommandEternity extends CommandBase {
                 reply(sender, director.rulesNow());
                 break;
             case "move": {
+                if (args.length == 3 && "hint".equals(args[2])) {
+                    reply(sender, director.forceHint());
+                    break;
+                }
                 if (args.length < 6) {
-                    throw new WrongUsageException("/eternity grandmaster move <fromX> <fromY> <toX> <toY>");
+                    throw new WrongUsageException("/eternity grandmaster move <fromX> <fromY> <toX> <toY|hint>");
                 }
                 int from = Kingstable.at(parseInt(args[2], 0, 6), parseInt(args[3], 0, 6));
                 int to = Kingstable.at(parseInt(args[4], 0, 6), parseInt(args[5], 0, 6));
@@ -687,7 +718,7 @@ public class CommandEternity extends CommandBase {
                 break;
             }
             default:
-                throw new WrongUsageException("/eternity grandmaster <status|begin [player]|end|forget|skip|cheat|move fx fy tx ty|strike x y [n]|showcase [player]|act <state> [ticks]>");
+                throw new WrongUsageException("/eternity grandmaster <status|begin [player]|magus [player]|end|forget|skip|cheat|move fx fy tx ty|strike x y [n]|showcase [player]|act <state> [ticks]>");
         }
     }
 
@@ -825,7 +856,7 @@ public class CommandEternity extends CommandBase {
         if (args.length > 1 && "release".equals(args[1])) {
             Relics.Kind kind = args.length > 2 ? Relics.Kind.byName(args[2]) : null;
             if (kind == null) {
-                throw new WrongUsageException("/eternity relics release <tesseract|soul_stone|power_stone>");
+                throw new WrongUsageException("/eternity relics release <tesseract|soul_stone|power_stone|mind_stone|reality_stone|time_stone>");
             }
             Relics.release(kind);
             reply(sender, "Nobody holds " + kind.title + " any more. The next copy someone takes becomes the true one.");
@@ -903,13 +934,29 @@ public class CommandEternity extends CommandBase {
         if (args.length == 3 && "champion".equals(args[0]) && ("visit".equals(args[1]) || "summon".equals(args[1]) || "showcase".equals(args[1]))) {
             return getListOfStringsMatchingLastWord(args, server.getOnlinePlayerNames());
         }
+        if (args.length >= 2 && "story".equals(args[0])) {
+            return storyCompletions(args);
+        }
+        if (args.length == 2 && "omen".equals(args[0])) {
+            return getListOfStringsMatchingLastWord(args, "1", "2", "3", "4", "5", "6");
+        }
+        if (args.length == 3 && "omen".equals(args[0])) {
+            return getListOfStringsMatchingLastWord(args, server.getOnlinePlayerNames());
+        }
+        if (args.length == 2 && "travel".equals(args[0])) {
+            return getListOfStringsMatchingLastWord(args, java.util.Arrays.stream(net.minecraftforge.common.DimensionManager.getStaticDimensionIDs())
+                    .map(String::valueOf).toArray(String[]::new));
+        }
+        if (args.length == 3 && "grandmaster".equals(args[0]) && "move".equals(args[1])) {
+            return getListOfStringsMatchingLastWord(args, "hint");
+        }
         if (args.length == 2 && "grandmaster".equals(args[0])) {
-            return getListOfStringsMatchingLastWord(args, "status", "begin", "end", "forget", "skip", "rules", "cheat", "move", "strike", "showcase", "act");
+            return getListOfStringsMatchingLastWord(args, "status", "begin", "magus", "end", "forget", "skip", "rules", "cheat", "move", "strike", "showcase", "act");
         }
         if (args.length == 3 && "grandmaster".equals(args[0]) && "act".equals(args[1])) {
             return getListOfStringsMatchingLastWord(args, java.util.Arrays.stream(EntityGrandmaster.State.values()).map(s -> s.name().toLowerCase()).toArray(String[]::new));
         }
-        if (args.length == 3 && "grandmaster".equals(args[0]) && ("begin".equals(args[1]) || "showcase".equals(args[1]))) {
+        if (args.length == 3 && "grandmaster".equals(args[0]) && ("begin".equals(args[1]) || "magus".equals(args[1]) || "showcase".equals(args[1]))) {
             return getListOfStringsMatchingLastWord(args, server.getOnlinePlayerNames());
         }
         if (args.length == 2 && "vault".equals(args[0])) {
@@ -931,7 +978,7 @@ public class CommandEternity extends CommandBase {
             return getListOfStringsMatchingLastWord(args, "release");
         }
         if (args.length == 3 && "relics".equals(args[0])) {
-            return getListOfStringsMatchingLastWord(args, "tesseract", "soul_stone", "power_stone");
+            return getListOfStringsMatchingLastWord(args, lower(Relics.Kind.values()));
         }
         if (args.length == 2 && "comet".equals(args[0])) {
             return getListOfStringsMatchingLastWord(args, "status", "summon", "wound", "depart", "restore");
@@ -940,5 +987,79 @@ public class CommandEternity extends CommandBase {
             return getListOfStringsMatchingLastWord(args, server.getOnlinePlayerNames());
         }
         return Collections.emptyList();
+    }
+
+    /**
+     * Everything /eternity story takes, gathered from the handlers it passes on to: StoryDirector's own,
+     * then Oath, VaultStory, Presence, the arena, Glass, Garden and Sovereign. Kept here, so one added
+     * there needs adding here too.
+     */
+    private static final String[] STORY = {"status", "reset", "journal", "hush", "answer", "phantoms", "pose", "companion", "stance",
+            // Ch.1, the Oath
+            "begin", "leak", "home", "ragna", "village", "goto", "dress", "words", "open", "inner", "lift", "fall", "reopen", "vision",
+            // Ch.2, the Vault
+            "vault", "aether", "flame", "warlock", "betray", "relight",
+            // Death, between chapters
+            "death",
+            // Ch.3, the Champion, and the Sovereign
+            "champion", "arena", "debt", "sovereign",
+            // Ch.4, the Nexus
+            "rift", "glass",
+            // Ch.5, the Garden
+            "garden", "near", "outside", "roots", "price", "bloom"};
+
+    private static List<String> storyCompletions(String[] args) {
+        if (args.length == 2) {
+            return getListOfStringsMatchingLastWord(args, STORY);
+        }
+        String action = args[1];
+        if (args.length == 3) {
+            switch (action) {
+                case "pose":
+                    return getListOfStringsMatchingLastWord(args, "stranger", "death", "ragna", "hrafn", "draugr", "gardener", "ayesha", "magus", "spawn");
+                case "companion":
+                    return getListOfStringsMatchingLastWord(args, "ticket", "call", "dismiss");
+                case "stance":
+                    return getListOfStringsMatchingLastWord(args, lower(com.matoon.eternity.story.StoryData.Stance.values()));
+                case "answer":
+                    return getListOfStringsMatchingLastWord(args, "1", "2", "3", "4");
+                case "phantoms":
+                    return getListOfStringsMatchingLastWord(args, "0", "1", "2", "3");
+                case "leak":
+                    return getListOfStringsMatchingLastWord(args, "0", "1", "2", "3", "4", "5");
+                case "goto":
+                    return getListOfStringsMatchingLastWord(args, "mound", "ragna", "step", "graves", "hall", "door", "ward");
+                case "death":
+                    return getListOfStringsMatchingLastWord(args, "champion", "regulator", "garden", "waiting");
+                case "glass":
+                    return getListOfStringsMatchingLastWord(args, "betrayed");
+                case "garden":
+                    return getListOfStringsMatchingLastWord(args, "here", "reset", "near", "outside", "hedge", "bound", "spared");
+                case "sovereign":
+                    return getListOfStringsMatchingLastWord(args, "status", "visit", "stage", "open", "duel", "ascent", "look", "seen", "poses", "yaws");
+                default:
+                    return Collections.emptyList();
+            }
+        }
+        if (args.length == 4 && "pose".equals(action)) {
+            return getListOfStringsMatchingLastWord(args, lower(com.matoon.eternity.entity.NorsePose.values()));
+        }
+        if (args.length == 5 && "pose".equals(action)) {
+            return getListOfStringsMatchingLastWord(args, "walk", "shine", "both", "armed");
+        }
+        if (args.length == 4 && "phantoms".equals(action)) {
+            return getListOfStringsMatchingLastWord(args, "1", "2", "3", "4");
+        }
+        if (args.length == 4 && "sovereign".equals(action) && "open".equals(args[2])) {
+            return getListOfStringsMatchingLastWord(args, "atrium", "cocoons", "vats", "archive", "gallery", "sanctum");
+        }
+        if (args.length == 4 && "sovereign".equals(action) && "duel".equals(args[2])) {
+            return getListOfStringsMatchingLastWord(args, "death");
+        }
+        return Collections.emptyList();
+    }
+
+    private static String[] lower(Enum<?>[] values) {
+        return java.util.Arrays.stream(values).map(v -> v.name().toLowerCase()).toArray(String[]::new);
     }
 }
