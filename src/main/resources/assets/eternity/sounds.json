@@ -54,5 +54,11 @@
   "music.uprising":          { "sounds": [ { "name": "eternity:music/uprising", "stream": true } ] },
   "music.void":               { "sounds": [ { "name": "eternity:music/title_screen_waiting", "stream": true } ] },
 
-  "entity.grandmaster.frustrated": { "subtitle": "eternity.subtitle.grandmaster_frustrated", "sounds": [ "eternity:entity/grandmaster_frustrated" ] }
+  "entity.grandmaster.frustrated": { "subtitle": "eternity.subtitle.grandmaster_frustrated", "sounds": [ "eternity:entity/grandmaster_frustrated" ] },
+
+  "stones.time":     { "sounds": [ "eternity:stones/time" ] },
+  "stones.power_up": { "sounds": [ "eternity:stones/power_up" ] },
+  "stones.snap1":    { "sounds": [ "eternity:stones/snap1" ] },
+  "stones.snap2":    { "sounds": [ "eternity:stones/snap2" ] },
+  "stones.snap3":    { "sounds": [ "eternity:stones/snap3" ] }
 }

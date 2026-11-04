@@ -77,6 +77,13 @@ public final class EternitySounds {
     public static final SoundEvent MUSIC_UPRISING = create("music.uprising");
     public static final SoundEvent GRANDMASTER_FRUSTRATED = create("entity.grandmaster.frustrated");
 
+    // The stones' own powers (see com.matoon.eternity.stones): the Time Stone at work, the full gauntlet waking, the snap.
+    public static final SoundEvent STONES_TIME = create("stones.time");
+    public static final SoundEvent STONES_POWER_UP = create("stones.power_up");
+    public static final SoundEvent STONES_SNAP_1 = create("stones.snap1");
+    public static final SoundEvent STONES_SNAP_2 = create("stones.snap2");
+    public static final SoundEvent STONES_SNAP_3 = create("stones.snap3");
+
     private EternitySounds() {
     }
 

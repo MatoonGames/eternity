@@ -7,6 +7,8 @@ import com.matoon.eternity.ability.EternityAbilities;
 import com.matoon.eternity.ability.MastersAbilities;
 import com.matoon.eternity.ability.TribunalAbilities;
 import com.matoon.eternity.item.ItemAstralRegulator;
+import com.matoon.eternity.stones.SnapPowers;
+import com.matoon.eternity.stones.Stones;
 import com.matoon.eternity.entity.ArmorPowers;
 import com.matoon.eternity.entity.EntityDestroyerArmor;
 import lucraft.mods.heroesexpansion.abilities.AbilityBlackHole;
@@ -157,7 +159,7 @@ public final class StoneAbilities {
                 Ability ability = abilities.get(key);
                 if (ability.getClass() == AbilityGrabEntity.class) {
                     abilities.put(key, copy(ability, new Grip(entity)));
-                } else if (ability.getClass() == AbilitySnap.class) {
+                } else if (ability instanceof AbilitySnap && !(ability instanceof Snap)) {
                     abilities.put(key, copy(ability, new Snap(entity)));
                 }
             }
@@ -241,7 +243,7 @@ public final class StoneAbilities {
             entity.setHeldItem(EnumHand.MAIN_HAND, gauntlet);
             boolean done;
             try {
-                done = SnapHelper.snap(entity);
+                done = Stones.active() ? SnapPowers.snap(entity) : SnapHelper.snap(entity);
             } finally {
                 ItemStack after = entity.getHeldItemMainhand();
                 entity.setHeldItem(EnumHand.MAIN_HAND, held);

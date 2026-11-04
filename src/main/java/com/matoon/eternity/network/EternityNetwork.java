@@ -1,6 +1,17 @@
 package com.matoon.eternity.network;
 
 import com.matoon.eternity.Eternity;
+import com.matoon.eternity.stones.network.MsgMindControlAct;
+import com.matoon.eternity.stones.network.MsgMindControlAura;
+import com.matoon.eternity.stones.network.MsgMindControlEntries;
+import com.matoon.eternity.stones.network.MsgMindControlLock;
+import com.matoon.eternity.stones.network.MsgMindControlMenu;
+import com.matoon.eternity.stones.network.MsgMindControlResistance;
+import com.matoon.eternity.stones.network.MsgMindControlResult;
+import com.matoon.eternity.stones.network.MsgPowerUp;
+import com.matoon.eternity.stones.network.MsgSnapEffect;
+import com.matoon.eternity.stones.network.MsgScars;
+import com.matoon.eternity.stones.network.MsgTimeStoneCharge;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
@@ -52,6 +63,19 @@ public final class EternityNetwork {
         CHANNEL.registerMessage(new MsgGrandmasterAct.Handler(), MsgGrandmasterAct.class, id++, Side.SERVER);
         CHANNEL.registerMessage(handler, MsgStory.class, id++, Side.CLIENT);
         CHANNEL.registerMessage(new MsgStoryAct.Handler(), MsgStoryAct.class, id++, Side.SERVER);
+        // The stones' own powers (com.matoon.eternity.stones). Registered even while Beyonder runs them instead, so
+        // both sides always agree on the ids.
+        CHANNEL.registerMessage(handler, MsgTimeStoneCharge.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(handler, MsgPowerUp.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(handler, MsgSnapEffect.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(handler, MsgScars.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(handler, MsgMindControlEntries.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(handler, MsgMindControlAura.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(handler, MsgMindControlLock.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(handler, MsgMindControlMenu.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(handler, MsgMindControlResistance.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(handler, MsgMindControlResult.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(new MsgMindControlAct.Handler(), MsgMindControlAct.class, id++, Side.SERVER);
     }
 
     public static void sendToServer(IMessage message) {

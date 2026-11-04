@@ -40,6 +40,9 @@ import com.matoon.eternity.network.MsgInBetweener;
 import com.matoon.eternity.network.MsgStory;
 import com.matoon.eternity.network.MsgTribunal;
 import com.matoon.eternity.network.MsgTribunalFx;
+import com.matoon.eternity.stones.Stones;
+import com.matoon.eternity.stones.client.StonesClient;
+import com.matoon.eternity.stones.network.StoneMessage;
 import lucraft.mods.heroesexpansion.items.HEItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
@@ -99,10 +102,15 @@ public class ClientProxy extends CommonProxy {
         MinecraftForge.EVENT_BUS.register(Cutscene.INSTANCE);
         MinecraftForge.EVENT_BUS.register(com.matoon.eternity.client.gui.SpeakerPanel.INSTANCE);
         MinecraftForge.EVENT_BUS.register(TitleCard.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(HealthHud.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(HealthSync.INSTANCE);
         MinecraftForge.EVENT_BUS.register(StoryClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(com.matoon.eternity.client.gui.StoryJournal.INSTANCE);
         com.matoon.eternity.client.gui.StoryJournal.INSTANCE.register();
         ArmorClient.INSTANCE.register();
+        if (Stones.active()) {
+            StonesClient.INSTANCE.register();
+        }
         EternityItems.RELIC_TRACKER.addPropertyOverride(new ResourceLocation("angle"), new RelicTrackerAngle());
     }
 
@@ -142,6 +150,10 @@ public class ClientProxy extends CommonProxy {
     /** Packets arrive on the network thread; everything visual happens on the client thread. */
     @Override
     public void receive(IMessage message) {
+        if (message instanceof StoneMessage) {
+            Minecraft.getMinecraft().addScheduledTask(() -> StonesClient.INSTANCE.handle((StoneMessage) message));
+            return;
+        }
         if (message instanceof MsgStory) {
             Minecraft.getMinecraft().addScheduledTask(() -> StoryClient.INSTANCE.handle((MsgStory) message));
             return;

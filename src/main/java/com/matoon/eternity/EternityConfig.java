@@ -51,6 +51,51 @@ public class EternityConfig {
     @Config.Comment("Client-side presentation. Each player can change these.")
     public static Client client = new Client();
 
+    @Config.Comment({"The Infinity Stones' extra powers and fixes: the full gauntlet's power-up, the snap's flash,",
+            "the Time Stone's control of time and the Mind Stone's control of minds.",
+            "All of it stands aside while Beyonder (HeroSMP) is installed, which brings its own."})
+    public static StonesSettings stones = new StonesSettings();
+
+    public static class StonesSettings {
+        @Config.Comment({"Slotting the sixth stone plays the power-up: a sound, a screen overlay, and twenty seconds",
+                "in which the snap is locked and the gauntlet strains its wielder. Anyone without the strength",
+                "to lift Mjolnir dies of it."})
+        public boolean powerUp = true;
+
+        @Config.Comment("Limit the Time Stone's slowing and speeding of time to a charge that drains while time is bent.")
+        public boolean timeStoneCharge = false;
+
+        @Config.Comment("Seconds for an empty Time Stone charge to refill.")
+        @Config.RangeInt(min = 1, max = 3600)
+        public int timeStoneRechargeSeconds = 30;
+
+        @Config.Comment({"How fast slowed time drains the charge. Follows sqrt(20 / rate): the slowest time drains",
+                "about 4.5 times faster than a slight slow."})
+        @Config.RangeDouble(min = 0.01, max = 100)
+        public double timeStoneSlowDrain = 0.67;
+
+        @Config.Comment("How fast sped-up time drains the charge, in proportion to how far it is sped.")
+        @Config.RangeDouble(min = 0.01, max = 100)
+        public double timeStoneSpeedDrain = 1.0;
+
+        @Config.Comment("Seconds the Mind Stone holds a mind. Its thrall also breaks free at one heart.")
+        @Config.RangeInt(min = 1, max = 3600)
+        public int mindControlSeconds = 120;
+
+        @Config.Comment({"How deeply each snap burns the arm that makes it. Most snaps burn it a little; destroying the stones burns",
+                "it to the bone at once. 0 leaves no burns at all."})
+        @Config.RangeDouble(min = 0, max = 10)
+        public double scarSeverity = 1.0;
+
+        @Config.Comment({"How much of a snap's burn heals each Minecraft day the player is in the world. A burn of 1 is one snap;",
+                "an arm fused with the gauntlet's metal is 7, and heals at half this pace."})
+        @Config.RangeDouble(min = 0, max = 100)
+        public double scarHealPerDay = 0.75;
+
+        @Config.Comment("Whether deep burns weaken, slow and finally cripple the player, taking a share of their health.")
+        public boolean scarsCripple = true;
+    }
+
     public static class Vault {
         @Config.Comment("Dimension id of Odin's Vault. Change it if another mod uses it.")
         public int dimension = -1934;
@@ -546,6 +591,10 @@ public class EternityConfig {
         @Config.Comment({"In the Nexus of All Realities the horizon leans gently and the view slowly breathes.",
                 "Off, or with reduceFlashing on, the view holds still."})
         public boolean nexusWarp = true;
+
+        @Config.Comment({"Shows your true health and maximum in the bottom left of the screen. With more than ten hearts' worth,",
+                "the hearts above the hotbar always stay one row, showing how full you are, however much health you have."})
+        public boolean healthCounter = true;
     }
 
     @Mod.EventBusSubscriber(modid = Eternity.MODID)

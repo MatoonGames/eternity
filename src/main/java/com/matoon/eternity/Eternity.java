@@ -77,6 +77,7 @@ public class Eternity {
         MinecraftForge.EVENT_BUS.register(GrandmasterDirector.INSTANCE);
         MinecraftForge.EVENT_BUS.register(com.matoon.eternity.story.StoryDirector.INSTANCE);
         StoneAbilities.register();
+        com.matoon.eternity.stones.Stones.register();
         com.matoon.eternity.ability.HedgeAbilities.register();
         NetworkRegistry.INSTANCE.registerGuiHandler(this, new EternityGuis());
         StarChamber.register();
@@ -126,5 +127,9 @@ public class Eternity {
         VaultDirector.INSTANCE.reset();
         GrandmasterDirector.INSTANCE.reset();
         com.matoon.eternity.story.StoryDirector.INSTANCE.reset();
+        com.matoon.eternity.stones.InfinityPatches.reset();
+        com.matoon.eternity.stones.mind.MindControlManager.reset();
+        com.matoon.eternity.stones.SnapPowers.reset();
+        com.matoon.eternity.stones.SnapScars.reset();
     }
 }
