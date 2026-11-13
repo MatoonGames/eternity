@@ -1875,7 +1875,7 @@ public class EntityDestroyerArmor extends EntityLivingBase implements DestroyerB
     /** Whether it may break and burn things here: never in the vault or the other sealed places, and only where mobs may. */
     private boolean mayChange(BlockPos pos) {
         int dim = world.provider.getDimension();
-        return EternityConfig.vault.armorChangesTerrain && world.getGameRules().getBoolean("mobGriefing") && dim != OdinsVault.dimension()
+        return EternityConfig.destroyBlocks && EternityConfig.vault.armorChangesTerrain && world.getGameRules().getBoolean("mobGriefing") && dim != OdinsVault.dimension()
                 && dim != StarChamber.dimension() && dim != Nexus.dimension() && world.isBlockModifiable(pilot(), pos);
     }
 

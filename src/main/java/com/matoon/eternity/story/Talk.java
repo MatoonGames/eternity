@@ -122,6 +122,12 @@ public final class Talk {
     private boolean over;
     /** Said in the thick of a fight: the lines leave everyone's view where it is. */
     private boolean inAction;
+    /** How near it anyone has to come to be drawn in. */
+    double reach = JOIN;
+    /** The cutscene playing in it, and when it began, for anyone drawn in while it plays. */
+    @Nullable
+    private MsgStory scene;
+    private int sceneAt;
 
     public Talk(EntityPlayerMP player) {
         this.lead = player.getUniqueID();
@@ -135,6 +141,28 @@ public final class Talk {
         this.anchor = anchor;
         this.leash = leash;
         return this;
+    }
+
+    /**
+     * Draws in everyone who comes within {@code reach} of it, not just those standing close: for the
+     * story's turns that everyone nearby should be there for. Nobody that near drops out for straying.
+     */
+    public Talk reach(double reach) {
+        this.reach = Math.max(this.reach, reach);
+        this.leash = Math.max(this.leash, reach + 16D);
+        return this;
+    }
+
+    /** Whoever leads it now: whom it was begun with, unless they have dropped out. */
+    @Nullable
+    EntityPlayerMP leadNow() {
+        return StoryDirector.player(lead);
+    }
+
+    /** A cutscene has started in it. */
+    void playing(MsgStory scene) {
+        this.scene = scene;
+        this.sceneAt = age;
     }
 
     /** The conversation happens in the middle of a fight: nobody's view is turned toward who is talking. */
@@ -153,7 +181,7 @@ public final class Talk {
     public Talk line(byte who, @Nullable Entity speaker, String text) {
         return add((talk, player) -> {
             if (talk.stepTicks == 0) {
-                StoryDirector.line(player, speaker != null ? speaker : player, who, speaker != null ? speaker.getEntityId() : -1, text, talk.inAction);
+                StoryDirector.line(talk.present(), speaker != null ? speaker : player, who, speaker != null ? speaker.getEntityId() : -1, text, talk.inAction);
             }
             // Read, by everyone in it, and they have said so: on to the next, after a breath to see the last word land.
             return talk.stepTicks >= readTicks(text) || talk.skipped() && talk.stepTicks >= 6;
@@ -175,6 +203,14 @@ public final class Talk {
     /** What nobody says: an action, a silence, what someone does instead of answering. */
     public Talk direction(String text) {
         return line(Speakers.DIRECTION, null, text);
+    }
+
+    /** A direction shown without waiting for it to be read: for something happening too fast to stop for. */
+    public Talk note(String text) {
+        return add((talk, player) -> {
+            StoryDirector.line(talk.present(), player, Speakers.DIRECTION, -1, text, talk.inAction);
+            return true;
+        });
     }
 
     public Talk pause(int ticks) {
@@ -392,9 +428,18 @@ public final class Talk {
             String text = asking[chosen].text;
             String said = (text.startsWith("*") ? "§o" + text.substring(1) + "§r" : "“" + text + "”")
                     + "  §7" + n + " of " + voters.size();
-            StoryDirector.line(leader, anchor != null ? anchor : leader, Speakers.PARTY,
-                    (speaker != null ? speaker : leader).getEntityId(), said);
+            StoryDirector.line(present(), anchor != null ? anchor : leader, Speakers.PARTY,
+                    (speaker != null ? speaker : leader).getEntityId(), said, inAction);
         }
+        // Having decided something together, they are in this together.
+        List<EntityPlayerMP> together = new ArrayList<>();
+        for (UUID v : voters) {
+            EntityPlayerMP p = StoryDirector.player(v);
+            if (p != null) {
+                together.add(p);
+            }
+        }
+        StoryDirector.INSTANCE.together(together);
     }
 
     private boolean chosen(UUID who, int answer) {
@@ -455,6 +500,9 @@ public final class Talk {
         if (!members.add(player.getUniqueID())) {
             return;
         }
+        if (scene != null && age - sceneAt < 300) {
+            EternityNetwork.send(scene, player);
+        }
         if (asking != null) {
             voters.add(player.getUniqueID());
             EternityNetwork.send(MsgStory.ask(id, askWho, askEntity, texts(), voters.size()), player);
@@ -488,6 +536,10 @@ public final class Talk {
     /** Whether someone is no longer with it: gone, in another dimension, or too far from what it is tied to. */
     private boolean strayed(@Nullable EntityPlayerMP p) {
         if (p == null) {
+            return true;
+        }
+        if (!p.isEntityAlive() && members.size() > 1) {
+            // Lying dead, they can't answer anything: the rest go on without them.
             return true;
         }
         if (anchor == null) {
@@ -540,9 +592,16 @@ public final class Talk {
         }
         if (steps.isEmpty()) {
             over = true;
+            // Everyone who saw it through to the end saw it together.
+            StoryDirector.INSTANCE.together(present());
             return false;
         }
         return true;
+    }
+
+    /** Whether it has ended, one way or another. */
+    boolean isOver() {
+        return over;
     }
 
     /** Ends it now, as if everyone had walked away. */

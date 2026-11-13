@@ -49,7 +49,7 @@ import java.util.Random;
  * The story, as this player sees it: whoever is speaking, the answers they may give, the scenes
  * the camera plays; and what the story has done to the world and to them. The cube hanging in its
  * failing ward under the mound; snow still falling where a piece of the north came down; the
- * Aether in its column in the vault, and once it is in you, red veining in at the edges of your
+ * Aether in its lantern in the vault, and once it is in you, red veining in at the edges of your
  * sight (leaning toward the one fire that can draw it out) and the world flickering into
  * something else for an instant at a time. And, holding the cube once the chapter is done, the
  * room it was kept in, shown to you for a few heartbeats at a time.
@@ -396,7 +396,7 @@ public final class StoryClient {
         if (!aetherTaken && mc.player.dimension == OdinsVault.dimension()) {
             Vec3d foot = OdinsVault.Relic.TESSERACT.base().add(0D, OdinsVault.Relic.TESSERACT.height + 1D / 16D, 0D);
             if (foot.squareDistanceTo(camera) < 64D * 64D) {
-                StoryFx.aether(foot.subtract(camera), age);
+                com.matoon.eternity.client.render.AetherRenderer.draw(foot.subtract(camera), mc.world, new BlockPos(foot).up(), age);
             }
         }
         StoryFx.bursts(camera, pt);
@@ -622,7 +622,13 @@ public final class StoryClient {
 
     // ------------------------------------------------------------------ scenes
 
-    public static final int RAGNA = 1, VAULT_BEAT = 2, ASCENT = 3;
+    public static final int RAGNA = 1, VAULT_BEAT = 2, ASCENT = 3, ELEGY = 4, SNAPPED = 5, ODIN = 6, ODIN_WIN = 7;
+    /** How long the camera stays on Warlock's death; MagusFight times its lines to it. */
+    public static final int ELEGY_TICKS = 760;
+    /** How long the camera stays on the Magus after his snap, until he is gone; MagusFight times it the same way. */
+    public static final int SNAPPED_TICKS = 400;
+    /** How long the camera stays on Odin's coming, and on his taking it; MagusFight times them the same way. */
+    public static final int ODIN_TICKS = 700, ODIN_WIN_TICKS = 600;
 
     /**
      * Somewhere for the camera to stand to see a point: as near as can be to the way it would
@@ -675,25 +681,149 @@ public final class StoryClient {
             keys.add(new Key(80, wide, look, Math.min(fov, 62F)));
             keys.add(new Key(230, close, a.add(0D, 0.3D, 0D), Math.min(fov, 50F)));
             keys.add(cut.home(length));
-        } else if (id == VAULT_BEAT) {
-            // Round in front of the player, and hold on them a long moment.
-            Vec3d eye = a;
-            Vec3d toward = new Vec3d(b.x - eye.x, 0D, b.z - eye.z);
-            toward = toward.lengthSquared() < 1.0E-4 ? mc.player.getLookVec() : toward.normalize();
-            Vec3d side = new Vec3d(-toward.z, 0D, toward.x);
-            length = 130;
-            keys.add(cut.home(0));
-            keys.add(new Key(40, eye.add(toward.scale(2.4D)).add(side.scale(0.5D)).add(0D, 0.1D, 0D), eye, Math.min(fov, 45F)));
-            keys.add(new Key(95, eye.add(toward.scale(2.0D)).add(side.scale(0.4D)).add(0D, 0.05D, 0D), eye, Math.min(fov, 40F)));
-            keys.add(cut.home(length));
         } else if (id == ASCENT) {
             ascent(a, b);
             return;
+        } else if (id == ELEGY) {
+            // Warlock's death in the Magus's last fight (a, where he lies; b, where the Magus stands over him): wide on
+            // the two of them, up with the Magus as he lifts him, down close on Warlock for his last words, up after
+            // what goes out of him, and back across to the Magus.
+            Vec3d across = new Vec3d(-(a.z - b.z), 0D, a.x - b.x);
+            across = across.lengthSquared() < 1.0E-4 ? new Vec3d(1D, 0D, 0D) : across.normalize();
+            Vec3d eye = mc.player.getPositionEyes(1F);
+            if (across.dotProduct(eye.subtract(a)) < 0D) {
+                across = across.scale(-1D);
+            }
+            length = ELEGY_TICKS;
+            Vec3d pair = a.add(b).scale(0.5D).add(0D, 0.9D, 0D);
+            Vec3d him = b.add(0D, 2.2D, 0D);
+            Vec3d lying = a.add(0D, 0.35D, 0D);
+            Vec3d wide = vantage(pair, across.add(a.subtract(b).normalize().scale(0.3D)), 5.5D, 1.6D);
+            Vec3d lift = vantage(him, across.add(a.subtract(b).normalize().scale(0.4D)), 6.5D, 1.2D);
+            Vec3d close = vantage(lying, across, 3.8D, 2D);
+            Vec3d closer = vantage(lying, close.subtract(lying), 3.2D, 1.6D);
+            keys.add(cut.home(0));
+            hold(keys, new Key(30, wide, pair, Math.min(fov, 70F)));
+            keys.add(new Key(250, wide.add(wide.subtract(pair).normalize().scale(-0.8D)), pair.add(0D, 0.4D, 0D), Math.min(fov, 66F)));
+            keys.add(new Key(300, lift, him, Math.min(fov, 72F)));
+            keys.add(new Key(375, close, lying, Math.min(fov, 66F)));
+            keys.add(new Key(500, closer, lying, Math.min(fov, 58F)));
+            keys.add(new Key(560, close.add(close.subtract(lying).normalize().scale(1.5D)).add(0D, 0.4D, 0D), a.add(0D, 3.5D, 0D), Math.min(fov, 70F)));
+            keys.add(new Key(610, wide, him, Math.min(fov, 62F)));
+            hold(keys, new Key(740, wide.add(wide.subtract(him).normalize().scale(-0.6D)), him, Math.min(fov, 60F)));
+            keys.add(cut.home(length));
+        } else if (id == SNAPPED) {
+            // After his snap (a, where he stands; b, whoever asks him what he did): in on him, bent over his burnt
+            // arm; round behind them as they ask; low and wide as he looks up; up after him as he goes.
+            Vec3d toward = new Vec3d(b.x - a.x, 0D, b.z - a.z);
+            toward = toward.lengthSquared() < 1.0E-4 ? new Vec3d(1D, 0D, 0D) : toward.normalize();
+            Vec3d side = new Vec3d(-toward.z, 0D, toward.x);
+            length = SNAPPED_TICKS;
+            Vec3d him = a.add(0D, 1.7D, 0D), arm = a.add(0D, 1.1D, 0D).add(side.scale(-0.3D));
+            Vec3d close = vantage(arm, toward.add(side.scale(-0.8D)), 3.4D, 0.5D);
+            Vec3d closer = vantage(him, toward.add(side.scale(-0.5D)), 2.9D, 0.4D);
+            Vec3d shoulder = b.add(toward.scale(3.6D)).add(side.scale(1.7D)).add(0D, 2.1D, 0D);
+            Vec3d low = vantage(him, toward.add(side.scale(0.9D)), 6.5D, -0.2D);
+            keys.add(cut.home(0));
+            hold(keys, new Key(25, close, arm, Math.min(fov, 64F)));
+            keys.add(new Key(105, closer, him, Math.min(fov, 60F)));
+            keys.add(new Key(150, shoulder, him, Math.min(fov, 66F)));
+            keys.add(new Key(225, shoulder.subtract(toward.scale(0.8D)), him, Math.min(fov, 60F)));
+            keys.add(new Key(270, low, him.add(0D, 0.6D, 0D), Math.min(fov, 72F)));
+            keys.add(new Key(322, low, him.add(0D, 1.5D, 0D), Math.min(fov, 74F)));
+            keys.add(new Key(342, low, a.add(0D, 35D, 0D), Math.min(fov, 80F)));
+            hold(keys, new Key(357, low, a.add(0D, 70D, 0D), Math.min(fov, 80F)));
+            keys.add(cut.home(length));
+        } else if (id == ODIN) {
+            // Odin's coming (a, where the Bifrost comes down; b, where the Magus is): up from where you stand at the sky
+            // opening, down the Bifrost with him as it falls, wide as Sleipnir rears in its foot; then in on each of
+            // them as they speak, and wide on the three of them at the end.
+            length = ODIN_TICKS;
+            Vec3d eye = mc.player.getPositionEyes(1F);
+            Vec3d toYou = new Vec3d(eye.x - a.x, 0D, eye.z - a.z);
+            toYou = toYou.lengthSquared() < 1.0E-4 ? new Vec3d(1D, 0D, 0D) : toYou.normalize();
+            Vec3d side = new Vec3d(-toYou.z, 0D, toYou.x);
+            Vec3d toMagus = new Vec3d(b.x - a.x, 0D, b.z - a.z);
+            toMagus = toMagus.lengthSquared() < 1.0E-4 ? side : toMagus.normalize();
+            Vec3d head = a.add(0D, 3.3D, 0D), him = b.add(0D, 1.7D, 0D);
+            Vec3d look = eye.subtract(toYou.scale(0.4D)).add(0D, 0.2D, 0D);
+            Vec3d wide = vantage(a.add(0D, 1.5D, 0D), toYou, 13D, 1.2D);
+            Vec3d close = vantage(head, toYou.add(side.scale(0.4D)), 7.5D, 1.6D);
+            Vec3d magus = vantage(him, new Vec3d(a.x - b.x, 0D, a.z - b.z).normalize().add(side.scale(0.5D)), 6.5D, 0.6D);
+            Vec3d low = vantage(a.add(0D, 3D, 0D), toMagus.add(side.scale(0.5D)), 6.5D, -0.2D);
+            Vec3d shoulder = eye.add(toYou.scale(1.6D)).add(side.scale(0.8D)).add(0D, 0.3D, 0D);
+            Vec3d centre = a.add(b).add(eye.subtract(0D, 1.6D, 0D)).scale(1D / 3D);
+            Vec3d three = vantage(centre.add(0D, 1.5D, 0D), side, 16D, 3D);
+            keys.add(cut.home(0));
+            hold(keys, new Key(18, look, a.add(0D, 55D, 0D), Math.min(fov, 80F)));
+            keys.add(new Key(70, look, a.add(0D, 62D, 0D), Math.min(fov, 82F)));
+            keys.add(new Key(92, look, a.add(0D, 22D, 0D), Math.min(fov, 78F)));
+            keys.add(new Key(128, wide, a.add(0D, 2.2D, 0D), Math.min(fov, 72F)));
+            keys.add(new Key(165, close, head, Math.min(fov, 60F)));
+            keys.add(new Key(285, magus, him, Math.min(fov, 62F)));
+            keys.add(new Key(385, low, head, Math.min(fov, 62F)));
+            keys.add(new Key(495, shoulder, a.add(0D, 3D, 0D), Math.min(fov, 64F)));
+            keys.add(new Key(595, three, centre.add(0D, 1.2D, 0D), Math.min(fov, 74F)));
+            hold(keys, new Key(675, three, centre.add(0D, 1.2D, 0D), Math.min(fov, 74F)));
+            keys.add(cut.home(length));
+        } else if (id == ODIN_WIN) {
+            // Odin's taking it (a, where you lie; b, where he stands over you): up at him from the ground; wide as he
+            // throws; in on the Magus, run through; on Odin; on the gauntlet coming to him; up at him again; and up
+            // after him as the Bifrost takes him.
+            length = ODIN_WIN_TICKS;
+            Vec3d away = new Vec3d(a.x - b.x, 0D, a.z - b.z);
+            away = away.lengthSquared() < 1.0E-4 ? new Vec3d(1D, 0D, 0D) : away.normalize();
+            Vec3d side = new Vec3d(-away.z, 0D, away.x);
+            Vec3d m = b.add(side.scale(7D)).add(0D, 1.5D, 0D);
+            for (net.minecraft.entity.Entity e : mc.world.loadedEntityList) {
+                if (e instanceof com.matoon.eternity.entity.EntityMagus && !e.isDead && e.getDistanceSq(b.x, b.y, b.z) < 40D * 40D) {
+                    m = e.getPositionVector();
+                    break;
+                }
+            }
+            Vec3d head = b.add(0D, 3.2D, 0D);
+            Vec3d up = a.add(away.scale(1.6D)).add(side.scale(0.7D)).add(0D, 0.6D, 0D);
+            Vec3d upCloser = a.add(away.scale(1.2D)).add(side.scale(0.4D)).add(0D, 0.5D, 0D);
+            Vec3d pair = b.add(m).scale(0.5D);
+            Vec3d across = new Vec3d(-(m.z - b.z), 0D, m.x - b.x);
+            across = across.lengthSquared() < 1.0E-4 ? side : across.normalize();
+            if (across.dotProduct(a.subtract(pair)) < 0D) {
+                across = across.scale(-1D);
+            }
+            Vec3d wide = vantage(pair.add(0D, 2D, 0D), across, 11D, 2D);
+            Vec3d toOdin = new Vec3d(b.x - m.x, 0D, b.z - m.z);
+            toOdin = toOdin.lengthSquared() < 1.0E-4 ? side : toOdin.normalize();
+            Vec3d pinned = vantage(m.add(0D, 1.4D, 0D), toOdin.add(across.scale(0.6D)), 4.6D, 0.3D);
+            Vec3d onOdin = vantage(head, toOdin.scale(-1D).add(across.scale(0.4D)), 6D, 0.4D);
+            Vec3d unravel = vantage(m.add(0D, 1.2D, 0D), toOdin.add(across.scale(0.3D)), 7D, 1D);
+            Vec3d pull = vantage(b.add(0D, 2.6D, 0D), away.add(side.scale(0.6D)), 6.5D, 0.8D);
+            Vec3d gone = vantage(b.add(0D, 1D, 0D), away, 13D, 0.5D);
+            keys.add(cut.home(0));
+            hold(keys, new Key(15, up, head, Math.min(fov, 70F)));
+            keys.add(new Key(40, wide, pair.add(0D, 1.5D, 0D), Math.min(fov, 72F)));
+            keys.add(new Key(70, pinned, m.add(0D, 1.3D, 0D), Math.min(fov, 60F)));
+            keys.add(new Key(140, onOdin, head, Math.min(fov, 60F)));
+            keys.add(new Key(262, unravel, m.add(0D, 1.2D, 0D), Math.min(fov, 68F)));
+            keys.add(new Key(300, pull, b.add(0D, 2.6D, 0D), Math.min(fov, 64F)));
+            keys.add(new Key(345, upCloser, head, Math.min(fov, 64F)));
+            keys.add(new Key(500, gone, b.add(0D, 8D, 0D), Math.min(fov, 76F)));
+            keys.add(new Key(530, gone, b.add(0D, 55D, 0D), Math.min(fov, 80F)));
+            hold(keys, new Key(548, gone, b.add(0D, 110D, 0D), Math.min(fov, 80F)));
+            keys.add(cut.home(length));
         } else {
             return;
         }
         int scene = id;
         cut.play(keys, new ArrayList<>(), 6, length, () -> EternityNetwork.sendToServer(new MsgStoryAct(MsgStoryAct.SCENE_DONE, scene, 0)));
+    }
+
+    /**
+     * A shot the camera settles on: the key, and the same again a tick later. The path is a spline through every key,
+     * so a shot next to where your own view starts or ends was bent off its mark by it; doubled, it holds.
+     */
+    private static void hold(List<Key> keys, Key key) {
+        keys.add(key);
+        keys.add(new Key(key.t + 1F, key.pos, key.look, key.fov));
     }
 
     /** Warlock going, seen from your own eyes: see TitleCard. */

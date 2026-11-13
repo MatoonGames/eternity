@@ -31,6 +31,8 @@ final class Journal {
 
     private final List<String> notes = new ArrayList<>();
     private String chapter = "", goal = "";
+    /** Changed without a word: nothing on the screen says so. */
+    private boolean quiet;
 
     private Journal() {
     }
@@ -39,10 +41,15 @@ final class Journal {
         Journal j = new Journal();
         if (StoryDirector.enabled()) {
             j.write(story, player);
+            String others = player.getServer() != null ? Fellowship.others(player.getServer(), player) : "";
+            if (!others.isEmpty() && !j.chapter.isEmpty()) {
+                j.note("Questing with " + others + ".");
+            }
         }
         NBTTagCompound tag = new NBTTagCompound();
         tag.setString("chapter", j.chapter);
         tag.setString("goal", j.goal);
+        tag.setBoolean("quiet", j.quiet);
         NBTTagList list = new NBTTagList();
         for (String n : j.notes) {
             list.appendTag(new NBTTagString(n));
@@ -88,6 +95,8 @@ final class Journal {
 
         if (count >= 6 || mind && count >= 5) {
             at("The Finale", "Six stones. Eternity is coming for you.");
+            // He gives no warning, and neither does the journal: it is there when they look.
+            quiet = true;
             note("Order and Chaos: \"He won't talk. He can't. You'll just see the sky go.\"");
             note("Death needs you to live through him without killing him: kill him, and everything goes with him.");
             warlock(p);
@@ -95,8 +104,47 @@ final class Journal {
         }
         // On the Magus's road the Power Stone is gone for good: four will bring him.
         boolean magus = p.seen("magus_risen");
+        if (magus && SovereignData.get().fight == SovereignData.Fight.TAKEN) {
+            at("Odin", "The Allfather took it. All six, and the Magus's life, and he left you yours.");
+            note("He woke from the Odinsleep to an empty vault, and came down the Bifrost for what was taken from it.");
+            note("Gungnir went through the Magus. The gauntlet went up the Bifrost with Odin, held against him.");
+            note("Nothing is coming for you now. Asgard has the stones.");
+            return;
+        }
+        if (magus && SovereignData.get().fight == SovereignData.Fight.LOST) {
+            at("The Magus", "He snapped. All six are his, and he is gone.");
+            note("He never said a word. He looked at what it had done to his arm, and then he went up, and away, with it on his hand.");
+            note("Half of everything that lived around you went to dust after him.");
+            note("Nothing is coming for you now. There is nothing left here to come for.");
+            return;
+        }
         int need = magus ? 4 : 5;
         if (p.seen("took_time") || count >= need && !mind) {
+            SovereignData sov = SovereignData.get();
+            if (magus && sov.fight == SovereignData.Fight.FIGHTING && sov.odinCame) {
+                at("The Magus, and Odin", "Odin has come down the Bifrost into it. He means to have the stones, and neither of you alive.");
+                note("Whatever he does, the Magus still wants the gauntlet. Odin wants it too, and you both dead.");
+                note("Fall while the Allfather is in it, and it is his. Only all six, on your hand, will end the Magus.");
+                note("Nobody here can kill Odin. Drive him back, and he comes again.");
+                warlock(p);
+                return;
+            }
+            if (magus && sov.fight == SovereignData.Fight.FIGHTING) {
+                boolean his = !sov.fightGauntlet.isEmpty();
+                at("The Magus", his ? "He has the gauntlet. Get to him before he can put it on, and take it off him."
+                        : "Keep the gauntlet from him. With all six stones in it, on your hand, snap.");
+                note(his ? "He means to set his two stones in it, put it on, and let it come up through him. If he gets as far as the snap, it is over."
+                        : "Close enough to reach it, he will try to take it. Pull (jump), again and again.");
+                note("Only all six will end him. He has two; let him put them in, then take it.");
+                warlock(p);
+                return;
+            }
+            if (magus && sov.magusHasMind && sov.fight == SovereignData.Fight.HUNTING) {
+                at("Chapter 6: The Game", "The Magus holds two stones now. He'll come for the rest, once they are in a gauntlet, on you.");
+                note("Set every stone you have in an Infinity Gauntlet and carry it. He will come out of nowhere for it; Warlock will be close behind.");
+                warlock(p);
+                return;
+            }
             if (magus && SovereignData.get().magusHasMind) {
                 at("Chapter 6: The Game", "The Magus holds two stones now. He'll come for yours.");
                 note("He took the Mind Stone off the Grandmaster's board, and the Grandmaster by the throat. He didn't even want to play.");
@@ -122,9 +170,10 @@ final class Journal {
         }
         if (p.seen("champion_debt")) {
             at("Chapter 4: The Nexus", "");
-            note("The Champion: \"There's a thing in a glass jar, where all the worlds touch. Order and Chaos put it there.\"");
+            note(p.seen("dir_glass") ? "Death: \"Somebody's sitting in a glass jar where all the worlds touch, with one of my stones on his head.\""
+                    : "The Champion: \"There's a thing in a glass jar, where all the worlds touch. Order and Chaos put it there.\"");
             if (soul) {
-                goal = "Death will show you the way on. She comes when something dies at your hand.";
+                goal = "Death will show you the way on. She comes when something living dies at your hand.";
                 if (p.seen("imbalance")) {
                     note("The In-Betweener: \"About half. Half of every living thing, on every world, all at once. Your hand. Her idea.\"");
                 }
@@ -142,12 +191,11 @@ final class Journal {
             return;
         }
         if (player.dimension == OdinsVault.dimension() && !p.seen("dir_champion")) {
-            vault(d, p, true);
+            vault(d, p, player, true);
             return;
         }
         if (p.seen("death_revealed")) {
-            champion(player, p, held, here);
-            note("Warlock: \"Ask her what for.\" Death: \"Balance.\"");
+            champion(d, player, p, held, here);
             if (p.aether && !d.flameSpent) {
                 note("The Aether is still in you. The Eternal Flame in the vault can set it into a stone: when the vault flickers in front of you, reach for it.");
             }
@@ -155,7 +203,7 @@ final class Journal {
             return;
         }
         if (p.seen("vault_by_cube") || d.oath == StoryData.Oath.DONE || d.aetherTaken || player.dimension == OdinsVault.dimension()) {
-            vault(d, p, player.dimension == OdinsVault.dimension());
+            vault(d, p, player, player.dimension == OdinsVault.dimension());
             return;
         }
         oath(d, p, here, player);
@@ -163,22 +211,29 @@ final class Journal {
 
     // ------------------------------------------------------------------ chapter 3
 
-    private void champion(EntityPlayerMP player, StoryData.Player p, int held, Vec3d here) {
+    private void champion(StoryData d, EntityPlayerMP player, StoryData.Player p, int held, Vec3d here) {
         at("Chapter 3: The Champion", "");
         ChampionData c = ChampionDirector.INSTANCE.data();
         boolean power = (held & InfinityStones.bit(EnumInfinityStone.POWER)) != 0;
         boolean onTamarata = player.dimension == Tamarata.dimension();
         if (!p.seen("dir_champion") && !onTamarata && !p.seen("arena_called") && !power) {
-            goal = "Death will show you the way on. She comes when something dies at your hand, under an open sky.";
+            goal = "Death will show you the way on. She comes when something living dies at your hand, under an open sky.";
             return;
         }
-        if (power) {
+        boolean robbed = "Adam Warlock".equals(c.stoneHolder) || d.seen(Arena.DISARMED);
+        if (Presence.unpaid(held) && !Betrayal.absent()) {
+            goal = "The Champion won't be telling you where to go next. Death will: she comes when something living dies at your hand.";
+        } else if (power) {
             goal = "The Power Stone is yours. The Champion owes you a word before he goes: hear it.";
+        } else if (d.seen(Arena.EMPOWERED)) {
+            goal = "Warlock tore the Power Stone out of the Champion's brow and set it in his own. Beat him, and it comes out of him.";
+            note("With the stone in him only your hardest blows get through, and his land like the Champion's. Fall, and he takes it home.");
         } else if (c.phase == ChampionData.Phase.BREAKING) {
             goal = "Tamarata is coming apart under you. Hold on to something.";
         } else if (c.phase == ChampionData.Phase.STRANDED) {
             goal = "He's adrift in what's left of Tamarata, and can't go anywhere. He wants a rocket: right-click him with one.";
-            note("The Champion: \"Bring me a rocket and the stone in my brow is yours.\"");
+            note(robbed ? "The Champion: \"The boy took it out of my head. Bring me a rocket anyway.\""
+                    : "The Champion: \"Bring me a rocket and the stone in my brow is yours.\"");
         } else if (c.phase == ChampionData.Phase.DEPARTED) {
             goal = "The Champion has left the wreck in someone's rocket, with the stone gone from his brow.";
         } else if (onTamarata && p.seen("arena_called")) {
@@ -265,6 +320,9 @@ final class Journal {
     }
 
     private void warlock(StoryData.Player p) {
+        if (p.seen("death_revealed")) {
+            note("Death wants all six stones on one hand, yours, and then the snap: half of everything that breathes, gone at once. \"I'm only asking for sooner.\"");
+        }
         if (p.seen("magus_risen")) {
             note("The Magus has the Power Stone in the gem at his brow. He will want the rest, and what you carry.");
         }
@@ -381,12 +439,25 @@ final class Journal {
 
     // ------------------------------------------------------------------ chapter 2
 
-    private void vault(StoryData d, StoryData.Player p, boolean inVault) {
+    private void vault(StoryData d, StoryData.Player p, EntityPlayerMP player, boolean inVault) {
+        String carrier = null;
+        for (java.util.UUID id : d.fellows(player.getUniqueID())) {
+            if (!id.equals(player.getUniqueID()) && d.player(id).aether && player.getServer() != null) {
+                carrier = Fellowship.name(player.getServer(), id);
+            }
+        }
+        if (d.aetherTaken && !p.aether && !d.flameSpent && carrier != null) {
+            // It went into one of them: the rest are in this with them.
+            at("Chapter 2: The Vault", d.seen("vault_warlock") ? "The Aether is in " + carrier + ". Go with them to the Eternal Flame, in the deepest bay on the right."
+                    : "The Aether is in " + carrier + ", and it has woken something in the vault.");
+            warlock(p);
+            return;
+        }
         at("Chapter 2: The Vault", "");
         if (!d.aetherTaken) {
             goal = "In Odin's Vault: find the cube's old stand.";
             note("The stranger said there was another one in there.");
-            note("Something dark sits on the stand now, in a bay on the right: a column of black glass with red moving inside it.");
+            note("Something dark sits on the stand now, in a bay on the right: a lantern of old bronze and black stone, with a seam of red light moving round its middle.");
         } else if (p.aether && !d.flameSpent && !inVault) {
             goal = "The Aether in you wants to go back to the vault. When the vault flickers in front of you, reach for it: right-click with the cube, or with an empty hand.";
             note("It happens every half a minute or so, wherever you are.");
@@ -408,7 +479,7 @@ final class Journal {
             note("Plants that don't exist are coming up in bare rock and sand. Someone is seeding the inner worlds.");
         }
         if (!p.seen("dir_garden")) {
-            goal = "Death will show you the way on. She comes when something dies at your hand.";
+            goal = "Death will show you the way on. She comes when something living dies at your hand.";
             note("She showed you the Comet, and something to hold what it carries.");
             warlock(p);
             return;

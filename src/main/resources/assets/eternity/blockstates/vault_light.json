@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "kind=lattice": {
+      "model": "eternity:vault_light_lattice"
+    },
+    "kind=panel": {
+      "model": "eternity:vault_light_panel"
+    },
+    "kind=uplight": {
+      "model": "eternity:vault_light_uplight"
+    },
+    "kind=lamp": {
+      "model": "eternity:vault_light_lamp"
+    }
+  }
+}

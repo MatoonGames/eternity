@@ -2,11 +2,11 @@ package com.matoon.eternity.item;
 
 import com.google.common.collect.Multimap;
 import com.matoon.eternity.Eternity;
+import com.matoon.eternity.EternityTab;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.network.MsgTribunalFx;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.EnumCreatureAttribute;
 import net.minecraft.enchantment.EnumEnchantmentType;
@@ -58,7 +58,7 @@ public class ItemEinherjarSpear extends Item {
     public ItemEinherjarSpear() {
         setRegistryName(Eternity.MODID, "einherjar_spear");
         setTranslationKey(Eternity.MODID + ".einherjar_spear");
-        setCreativeTab(CreativeTabs.COMBAT);
+        setCreativeTab(EternityTab.INSTANCE);
         setMaxStackSize(1);
         setMaxDamage(1200);
         setFull3D();

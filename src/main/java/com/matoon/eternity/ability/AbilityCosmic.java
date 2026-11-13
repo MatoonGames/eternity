@@ -20,8 +20,13 @@ public abstract class AbilityCosmic extends AbilityAction {
     private final ResourceLocation icon;
 
     protected AbilityCosmic(EntityLivingBase entity, String name) {
+        this(entity, new ResourceLocation(Eternity.MODID, "textures/abilities/" + name + ".png"));
+    }
+
+    /** With its 16x16 bar icon anywhere, for addons (see api.CosmicAbility). */
+    protected AbilityCosmic(EntityLivingBase entity, ResourceLocation icon) {
         super(entity);
-        this.icon = new ResourceLocation(Eternity.MODID, "textures/abilities/" + name + ".png");
+        this.icon = icon;
     }
 
     @Override

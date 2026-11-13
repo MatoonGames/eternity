@@ -42,6 +42,8 @@ public final class Speakers {
     public static final byte EINHERJAR = 17;
     /** The Living Tribunal, in judgement. */
     public static final byte TRIBUNAL = 18;
+    /** Odin Borson, the Allfather, woken. */
+    public static final byte ODIN = 19;
 
     private Speakers() {
     }

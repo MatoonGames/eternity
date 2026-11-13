@@ -20,7 +20,7 @@ final class VaultParts {
 
     /** The same, every box swollen by grow more than the sheet says: worn over a body, it must stand clear of the skin. */
     static ModelRenderer part(ModelBase model, VaultBoxes.Sheet sheet, String name, ModelRenderer parent, float x, float y, float z, float grow) {
-        ModelRenderer part = new ModelRenderer(model, name);
+        ModelRenderer part = new Peel(model, name);
         part.setTextureSize(sheet.width, sheet.height);
         for (VaultBoxes.Box b : sheet.of(name)) {
             part.cubeList.add(new ModelBox(part, b.u, b.v, b.x, b.y, b.z, b.w, b.h, b.d, b.delta + grow, false));

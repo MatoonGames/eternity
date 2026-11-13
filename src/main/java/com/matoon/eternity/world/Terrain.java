@@ -22,7 +22,7 @@ public final class Terrain {
     }
 
     public static boolean enabled() {
-        return EternityConfig.combat.destroyTerrain;
+        return EternityConfig.destroyBlocks && EternityConfig.combat.destroyTerrain;
     }
 
     /** Removes one block if it can be broken at all. Returns the removed state, or null. */

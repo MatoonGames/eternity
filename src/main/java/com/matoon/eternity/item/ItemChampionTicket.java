@@ -1,9 +1,9 @@
 package com.matoon.eternity.item;
 
 import com.matoon.eternity.Eternity;
+import com.matoon.eternity.EternityTab;
 import com.matoon.eternity.story.StoryDirector;
 import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.EnumRarity;
@@ -31,7 +31,7 @@ public class ItemChampionTicket extends Item {
         setRegistryName(Eternity.MODID, "champion_ticket");
         setTranslationKey(Eternity.MODID + ".champion_ticket");
         setMaxStackSize(1);
-        setCreativeTab(CreativeTabs.MISC);
+        setCreativeTab(EternityTab.INSTANCE);
     }
 
     @Override

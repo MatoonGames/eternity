@@ -1014,13 +1014,13 @@ public final class InBetweenerDialogue {
                 "Oh.",
                 "Oh, she's right behind you.",
                 "Has she told you what you're doing?"),
-                a("Balance.", IMB_BALANCE),
+                a("She wants half of everything dead.", IMB_BALANCE),
                 a("She said she needs something done.", IMB_DONE),
                 a("I know who she is.", IMB_KNOW));
         tell(IMB_BALANCE, B_LAUGH, IMB_HALF, FX_NONE, say(
-                "Balance.",
-                "I'm the gap between the living and the dead. I don't guess at it. I feel it.",
-                "One side of me has never been this heavy. Everything that breathes, pushing."));
+                "And she told you so. To your face. And you're still carrying them for her.",
+                "She must have looked very pretty saying it. She always does, for the ones she wants.",
+                "I'm the gap between the living and the dead. I feel it. One side of me has never been this heavy."));
         tell(IMB_DONE, B_LAUGH, IMB_HALF, FX_NONE, say(
                 "Something done. She does say that.",
                 "I'm the gap between the living and the dead. I feel it. One side of me has never been this heavy.",

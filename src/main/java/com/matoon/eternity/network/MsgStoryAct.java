@@ -23,6 +23,8 @@ public class MsgStoryAct implements IMessage {
     public static final byte REACH = 3;
     /** Done reading the line on screen: move on. Everyone in the conversation has to be. */
     public static final byte SKIP = 4;
+    /** Pulling, in a struggle for the gauntlet: one press. */
+    public static final byte STRUGGLE = 5;
 
     public byte type;
     public int id, value;

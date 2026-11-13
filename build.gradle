@@ -30,7 +30,8 @@ minecraft {
     clientJvmArgs += "-Dfml.coreMods.load=com.matoon.eternity.dev.DevFixesPlugin"
     serverJvmArgs += "-Dfml.coreMods.load=com.matoon.eternity.dev.DevFixesPlugin"
     // The same name every launch, so the dev client is the same player in its saves (story progress is kept per player).
-    clientRunArgs += ["--username", "Dev"]
+    // A second client for multiplayer passes -Pplayer=Dev2 (the runClient2 configuration does), so the two don't clash.
+    clientRunArgs += ["--username", project.findProperty("player") ?: "Dev"]
 }
 
 repositories {
@@ -101,4 +102,26 @@ tasks.withType(JavaExec) {
     if (name == "runClient") {
         ignoreExitValue = true
     }
+}
+
+// For addons (see docs/API.md): the whole mod unobfuscated, to compile and run a dev client against, and the API
+// package on its own with its sources, to compile against alone.
+task deobfJar(type: Jar) {
+    from sourceSets.main.output
+    classifier = 'dev'
+}
+
+task apiJar(type: Jar) {
+    from(sourceSets.main.output) {
+        include 'com/matoon/eternity/api/**'
+    }
+    from(sourceSets.main.allJava) {
+        include 'com/matoon/eternity/api/**'
+    }
+    classifier = 'api'
+}
+
+artifacts {
+    archives deobfJar
+    archives apiJar
 }

@@ -19,10 +19,10 @@ import java.util.Random;
 
 /**
  * What the story leaves in the world that is not a block or a body: the cube under the mound,
- * hanging over its altar in a ring of ward-light that keeps failing; the Aether in the vault, a
- * sealed column of dark glass with something red moving slowly inside it; and the moments that
- * pass: the ward going out, the column breaking and the Aether pouring into someone, the Flame
- * drawing it out of them and going dark, a rune of the oath door taking light.
+ * hanging over its altar in a ring of ward-light that keeps failing (the Aether in the vault is
+ * {@link AetherRenderer}'s); and the moments that pass: the ward going out, the lantern breaking
+ * and the Aether pouring into someone, the Flame drawing it out of them and going dark, a rune
+ * of the oath door taking light.
  * <p>
  * Everything is drawn camera-relative, additively unless said otherwise, and puts the GL state
  * back as it found it.
@@ -32,7 +32,6 @@ public final class StoryFx {
 
     static final float[] WARD = {0.55F, 0.75F, 1F};
     static final float[] AETHER = {0.85F, 0.06F, 0.08F};
-    static final float[] AETHER_DEEP = {0.35F, 0.0F, 0.04F};
     static final float[] WHITE = {1F, 0.97F, 0.92F};
     static final float[] RUNE = {0.6F, 0.85F, 1F};
 
@@ -183,80 +182,6 @@ public final class StoryFx {
         return MathHelper.clamp(v, 0F, 1F);
     }
 
-    // ------------------------------------------------------------------ the Aether
-
-    /**
-     * The Aether, sealed: a column of dark glass bound top, middle and foot in iron, and inside it
-     * something red that moves too slowly to be a liquid and too much to be anything else.
-     */
-    public static void aether(Vec3d foot, float age) {
-        begin();
-        Tessellator t = Tessellator.getInstance();
-        BufferBuilder b = t.getBuffer();
-        double r = 0.24D, h = 1.15D;
-        // The red inside, first: slow bands of it drifting up and folding back.
-        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-        int sides = 12, rows = 14;
-        b.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR);
-        for (int j = 0; j < rows; j++) {
-            double y0 = foot.y + 0.08D + h * j / rows, y1 = foot.y + 0.08D + h * (j + 1) / rows;
-            for (int i = 0; i < sides; i++) {
-                double a0 = i * Math.PI * 2D / sides, a1 = (i + 1) * Math.PI * 2D / sides;
-                float swirl0 = 0.5F + 0.5F * MathHelper.sin((float) (a0 * 2D) + age * 0.03F - j * 0.6F + MathHelper.sin(age * 0.011F + j) * 2F);
-                float swirl1 = 0.5F + 0.5F * MathHelper.sin((float) (a1 * 2D) + age * 0.03F - j * 0.6F + MathHelper.sin(age * 0.011F + j) * 2F);
-                double ri = r * 0.82D;
-                color(b, foot.x + Math.cos(a0) * ri, y0, foot.z + Math.sin(a0) * ri, swirl0);
-                color(b, foot.x + Math.cos(a1) * ri, y0, foot.z + Math.sin(a1) * ri, swirl1);
-                color(b, foot.x + Math.cos(a1) * ri, y1, foot.z + Math.sin(a1) * ri, swirl1);
-                color(b, foot.x + Math.cos(a0) * ri, y1, foot.z + Math.sin(a0) * ri, swirl0);
-            }
-        }
-        t.draw();
-        // The glass round it: dark, with the light catching its edges.
-        b.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR);
-        for (int i = 0; i < sides; i++) {
-            double a0 = i * Math.PI * 2D / sides, a1 = (i + 1) * Math.PI * 2D / sides;
-            float edge = 0.18F + 0.1F * (float) Math.max(0D, Math.cos(a0 - 0.8D));
-            b.pos(foot.x + Math.cos(a0) * r, foot.y, foot.z + Math.sin(a0) * r).color(0.05F, 0.03F, 0.04F, 0.55F).endVertex();
-            b.pos(foot.x + Math.cos(a1) * r, foot.y, foot.z + Math.sin(a1) * r).color(0.05F, 0.03F, 0.04F, 0.55F).endVertex();
-            b.pos(foot.x + Math.cos(a1) * r, foot.y + h + 0.16D, foot.z + Math.sin(a1) * r).color(0.2F, 0.16F, 0.18F, edge).endVertex();
-            b.pos(foot.x + Math.cos(a0) * r, foot.y + h + 0.16D, foot.z + Math.sin(a0) * r).color(0.2F, 0.16F, 0.18F, edge).endVertex();
-        }
-        t.draw();
-        // Iron bands: foot, waist and crown.
-        for (double y : new double[]{0D, h * 0.5D, h + 0.08D}) {
-            band(b, t, foot.add(0D, y, 0D), r + 0.03D, 0.09D);
-        }
-        // What leaks out of it, a little, into the dark.
-        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
-        float breathe = 0.5F + 0.5F * MathHelper.sin(age * 0.04F);
-        WarlockFx.glow(foot.add(0D, h * 0.5D, 0D), 1.2D, AETHER, 0.12F + 0.08F * breathe);
-        WarlockFx.glow(foot.add(0D, h * 0.5D, 0D), 0.45D, AETHER, 0.18F);
-        end();
-    }
-
-    private static void color(BufferBuilder b, double x, double y, double z, float swirl) {
-        float r = AETHER_DEEP[0] + (AETHER[0] - AETHER_DEEP[0]) * swirl;
-        float g = AETHER_DEEP[1] + (AETHER[1] - AETHER_DEEP[1]) * swirl * swirl;
-        float bl = AETHER_DEEP[2] + (AETHER[2] - AETHER_DEEP[2]) * swirl;
-        b.pos(x, y, z).color(r, g, bl, 0.92F).endVertex();
-    }
-
-    private static void band(BufferBuilder b, Tessellator t, Vec3d c, double r, double h) {
-        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-        b.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR);
-        int sides = 12;
-        for (int i = 0; i < sides; i++) {
-            double a0 = i * Math.PI * 2D / sides, a1 = (i + 1) * Math.PI * 2D / sides;
-            float lit = 0.12F + 0.1F * (float) Math.max(0D, Math.cos(a0 - 0.8D));
-            b.pos(c.x + Math.cos(a0) * r, c.y, c.z + Math.sin(a0) * r).color(lit, lit, lit * 1.05F, 1F).endVertex();
-            b.pos(c.x + Math.cos(a1) * r, c.y, c.z + Math.sin(a1) * r).color(lit, lit, lit * 1.05F, 1F).endVertex();
-            b.pos(c.x + Math.cos(a1) * r, c.y + h, c.z + Math.sin(a1) * r).color(lit * 1.4F, lit * 1.4F, lit * 1.45F, 1F).endVertex();
-            b.pos(c.x + Math.cos(a0) * r, c.y + h, c.z + Math.sin(a0) * r).color(lit * 1.4F, lit * 1.4F, lit * 1.45F, 1F).endVertex();
-        }
-        t.draw();
-    }
-
     // ------------------------------------------------------------------ the moments
 
     /** Everything passing, drawn where it happens; the camera is at the origin. */
@@ -280,7 +205,7 @@ public final class StoryFx {
                     break;
                 }
                 case AETHER_TAKEN: {
-                    // Shards outward; the red pours out of the broken column and into whoever touched it.
+                    // Shards outward; the red pours out of the broken lantern and into whoever touched it.
                     net.minecraft.entity.Entity host = mc.world.getEntityByID(burst.entity);
                     Vec3d to = host != null ? host.getPositionEyes(pt).add(0D, -0.4D, 0D).subtract(camera) : c;
                     WarlockFx.glow(c, 0.8D + 1.6D * k, AETHER, 0.4F * (1F - k));

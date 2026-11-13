@@ -106,5 +106,11 @@ public final class EternityEntities {
                 .name(Eternity.MODID + ".magus")
                 .tracker(160, 1, true)
                 .build());
+        event.getRegistry().register(EntityEntryBuilder.create()
+                .entity(EntityOdin.class)
+                .id(new ResourceLocation(Eternity.MODID, "odin"), 15)
+                .name(Eternity.MODID + ".odin")
+                .tracker(192, 1, true)
+                .build());
     }
 }

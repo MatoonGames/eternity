@@ -23,8 +23,6 @@ import java.util.List;
  */
 public class ChunkGeneratorVault implements IChunkGenerator {
 
-    private static final int MIN_Y = 50, MAX_Y = 100;
-
     private final World world;
 
     public ChunkGeneratorVault(World world) {
@@ -34,11 +32,19 @@ public class ChunkGeneratorVault implements IChunkGenerator {
     @Override
     public Chunk generateChunk(int chunkX, int chunkZ) {
         ChunkPrimer primer = new ChunkPrimer();
+        if (!OdinsVault.touches(chunkX, chunkZ)) {
+            // The nothing outside the vault: every chunk anyone's view distance reaches past its walls.
+            Chunk chunk = new Chunk(world, primer, chunkX, chunkZ);
+            Arrays.fill(chunk.getBiomeArray(), (byte) Biome.getIdForBiome(Biomes.VOID));
+            chunk.generateSkylightMap();
+            chunk.setLightPopulated(true);
+            return chunk;
+        }
         for (int lx = 0; lx < 16; lx++) {
             for (int lz = 0; lz < 16; lz++) {
                 int x = chunkX * 16 + lx;
                 int z = chunkZ * 16 + lz;
-                for (int y = MIN_Y; y <= MAX_Y; y++) {
+                for (int y = OdinsVault.MIN_Y; y <= OdinsVault.MAX_Y; y++) {
                     IBlockState state = OdinsVault.blockAt(x, y, z);
                     if (state != null) {
                         primer.setBlockState(lx, y, lz, state);
@@ -52,7 +58,7 @@ public class ChunkGeneratorVault implements IChunkGenerator {
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         for (int lx = 0; lx < 16; lx++) {
             for (int lz = 0; lz < 16; lz++) {
-                for (int y = MIN_Y; y <= MAX_Y; y++) {
+                for (int y = OdinsVault.MIN_Y; y <= OdinsVault.MAX_Y; y++) {
                     int light = OdinsVault.lightAt(chunkX * 16 + lx, y, chunkZ * 16 + lz);
                     if (light > 0) {
                         chunk.setLightFor(EnumSkyBlock.BLOCK, pos.setPos(chunkX * 16 + lx, y, chunkZ * 16 + lz), light);

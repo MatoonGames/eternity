@@ -30,6 +30,7 @@ import net.minecraft.item.EnumDyeColor;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -45,6 +46,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
+import static com.matoon.eternity.story.Speakers.DEATH;
 import static com.matoon.eternity.story.Speakers.STRANGER;
 import static com.matoon.eternity.story.Speakers.WARLOCK;
 import static com.matoon.eternity.story.Talk.act;
@@ -52,8 +54,8 @@ import static com.matoon.eternity.story.Talk.say;
 
 /**
  * Chapter 2, the vault. Odin sleeps; his treasure room is kept by the Einherjar and the
- * Destroyer. The cube's stand holds the Aether now, a column of dark glass with something red
- * moving in it; touch it and it breaks, and the Aether goes into whoever touched it.
+ * Destroyer. The cube's stand holds the Aether now, sealed in a lantern of bronze and black stone with
+ * red moving in the slit round its middle; touch it and it breaks, and the Aether goes into whoever touched it.
  * <p>
  * When the guards die, the woman in mourning is there, kneeling by each in turn. Then Adam
  * Warlock comes up the steps, sent for the same thing, and sees what nobody else in the room
@@ -63,8 +65,6 @@ import static com.matoon.eternity.story.Talk.say;
  * and it takes all the fire it has.
  */
 final class VaultStory {
-
-    private static final int BEAT_SCENE = 2;
 
     private final StoryDirector story;
     private final Random rand = new Random();
@@ -76,6 +76,9 @@ final class VaultStory {
     /** The guards who have fallen, in the order they fell. */
     private final List<EntityEinherjar> fallen = new ArrayList<>();
     private long warlockAt = -1;
+    /** What he came up the steps to say, while he is saying it. */
+    @Nullable
+    private Talk warlockTalk;
     @Nullable
     private UUID warlockFor;
     private boolean wasCalm;
@@ -92,6 +95,7 @@ final class VaultStory {
         fallen.clear();
         warlockAt = -1;
         warlockFor = null;
+        warlockTalk = null;
         ignoring.clear();
         nextRewrite.clear();
     }
@@ -199,7 +203,7 @@ final class VaultStory {
                 && pos.getY() >= OdinsVault.STAND - 1 && pos.getY() <= OdinsVault.STAND + relic.height + 1;
     }
 
-    /** The column breaks, and the Aether finds a host. */
+    /** The lantern breaks, and the Aether finds a host. */
     void takeAether(EntityPlayerMP player) {
         StoryData d = data();
         d.aetherTaken = true;
@@ -272,6 +276,28 @@ final class VaultStory {
         }
     }
 
+    /**
+     * Someone leaves the vault, or comes back to the world, after Warlock and Death have been and
+     * gone without them there to hear it (out of the vault at the time, and questing with nobody who
+     * was): what was found out there is no secret, and the story goes on for them too.
+     */
+    void caughtUp(EntityPlayerMP player) {
+        StoryData d = data();
+        StoryData.Player p = d.player(player.getUniqueID());
+        if (!StoryDirector.enabled() || !d.seen("vault_warlock") || p.seen("death_revealed") || player.dimension == OdinsVault.dimension()
+                || warlockTalk != null && !warlockTalk.isOver()) {
+            return;
+        }
+        p.beats.add("death_revealed");
+        if (p.warlock == StoryData.Stance.UNMET) {
+            p.warlock = StoryData.Stance.RIVAL;
+        }
+        d.markDirty();
+        EternityNetwork.send(MsgStory.line(Speakers.DIRECTION, -1,
+                "Whatever was said in the vault, it reaches you anyway: the woman in mourning is Death, and Adam Warlock means to take the stones."), player);
+        story.sendState(player);
+    }
+
     /** Someone at the doors with the Aether in them, before he has come: he comes through them. */
     boolean holdsAtDoors(EntityPlayerMP player) {
         StoryData d = data();
@@ -322,7 +348,8 @@ final class VaultStory {
         Entity lastBody = fallen.isEmpty() ? null : fallen.get(fallen.size() - 1);
         boolean cubeKilled = d.oath != StoryData.Oath.SKIPPED && d.oath.ordinal() >= StoryData.Oath.BROKEN.ordinal();
 
-        Talk t = new Talk(player).at(w, 48D);
+        // The whole hall is in it: nobody in the vault drops out of this for being at the far end.
+        Talk t = new Talk(player).at(w, 48D).reach(160D);
         t.run(() -> {
             her.walkTo(null, 0D);
             her.rest(NorsePose.STAND).act(NorsePose.STAND);
@@ -345,30 +372,50 @@ final class VaultStory {
                 .run(() -> w.direct(EntityAdamWarlock.State.STAND, land, her.getPositionEyes(1F), 0.1D))
                 .pause(10)
                 .line(WARLOCK, w, "You're Death.")
-                .pause(24)
+                .pause(16)
+                .run(() -> closeIn(world, her, lead(t, player)))
+                .pause(14)
                 .run(() -> her.watch(player))
                 .line(STRANGER, her, "Yes.")
-                .run(() -> story.scene(player, BEAT_SCENE, player.getPositionEyes(1F), her.getPositionEyes(1F)))
-                .pause(90)
-                .line(STRANGER, her, "You've died, since you came into this world. A fall. Something in the dark.")
-                .line(STRANGER, her, "Each time you came back. You never asked why.")
                 .pause(24)
-                .line(STRANGER, her, "I sent you back.")
-                .ask(STRANGER, her,
-                        say("Why?", c -> c.line(STRANGER, her, "Because I need something done that I'm not allowed to do.")),
-                        say("What do you want?", c -> c.line(STRANGER, her, "The stones. All of them, in one hand.")),
-                        say("Get away from me.", c -> c.direction("She doesn't move. Her eyes don't leave you.")))
+                .line(STRANGER, her, "But you'd rather not look at a woman in mourning. Nobody ever does.");
+        Presence.beguile(t, her)
+                .line(DEATH, her, "There. Isn't this better?")
+                .pause(16)
+                .line(DEATH, her, "You've died, since you came into this world. A fall. Something in the dark.")
+                .line(DEATH, her, "And every time, you woke up. You never once asked why.")
+                .pause(20)
+                .direction("She comes closer, unhurried, as if she had all the time there is. She has.")
+                .line(DEATH, her, "I sent you back, sweetheart. Every single time.")
+                .ask(DEATH, her,
+                        say("Why?", c -> c.line(DEATH, her, "Because I want something only living hands can do. And yours are such good hands.")),
+                        say("What do you want?", c -> c.line(DEATH, her, "The stones. All six of them, on one hand. Yours.")),
+                        say("Get away from me.", c -> c.run(() -> Devotion.add(story, lead(t, player), -1)).direction("She laughs, low, and comes a step closer instead.")
+                                .line(DEATH, her, "Nobody has ever meant that. Not once, in all the time there's been.")))
                 .line(WARLOCK, w, "Ask her what for.")
-                .line(STRANGER, her, "Balance.")
-                .line(WARLOCK, w, "That isn't an answer.")
-                .line(STRANGER, her, "It's the only one there is.");
+                .run(() -> her.watch(w))
+                .line(DEATH, her, "He's sweet. He always asks the right question a moment too late.")
+                .run(() -> her.watch(lead(t, player)))
+                .line(DEATH, her, "All six, on one hand. And then...")
+                .direction("She lifts a gloved hand in front of your face, and snaps her fingers. Softly.")
+                .line(DEATH, her, "Half. Half of everything that breathes, on every world, all at once. Quietly. Like blowing out candles.")
+                .run(() -> w.direct(EntityAdamWarlock.State.STAND, land, her.getPositionEyes(1F), 0.1D))
+                .line(WARLOCK, w, "She wants you to kill half of everything that's alive.")
+                .line(DEATH, her, "I want them home. Every one of them comes to me sooner or later. I'm only asking for sooner.")
+                .line(DEATH, her, "And you'd never be afraid of anything again. Not the dark. Not the fall. Not me.");
         if (cubeKilled) {
-            t.pause(16).line(STRANGER, her, "I haven't lied to you. The cube was killing that village. You stopped it.");
+            t.line(DEATH, her, "I haven't lied to you once. The cube was killing that village; you stopped it. I don't need to lie to you. I only need you to want it.");
         } else {
-            t.pause(16).line(STRANGER, her, "I haven't lied to you.");
+            t.line(DEATH, her, "I haven't lied to you once. I don't need to. I only need you to want it.");
         }
-        t.run(() -> w.direct(EntityAdamWarlock.State.STAND, land, player.getPositionEyes(1F), 0.1D))
-                .line(WARLOCK, w, "She'll use you until there's nothing left of you, and then she'll have you anyway.")
+        t.ask(DEATH, her,
+                        say("Never.", c -> c.run(() -> Devotion.add(story, lead(t, player), -1)).direction("She smiles as if you'd said yes.")
+                                .line(DEATH, her, "Everyone says never. Then they're holding five, and the sixth is right there in front of them.")),
+                        say("What would I get?", c -> c.run(() -> story.mark(lead(t, player), "death_tempted")).run(() -> Devotion.add(story, lead(t, player), 2))
+                                .line(DEATH, her, "Me. Grateful. For ever. And a universe with room to breathe in it.")),
+                        act("(Say nothing.)", c -> c.run(() -> Devotion.add(story, lead(t, player), 1)).line(DEATH, her, "The quiet ones are my favourite.")))
+                .run(() -> w.direct(EntityAdamWarlock.State.STAND, land, lead(t, player).getPositionEyes(1F), 0.1D))
+                .line(WARLOCK, w, "Don't listen to her. She'll use you until there's nothing left of you, and then she'll have you anyway.")
                 .line(WARLOCK, w, "Give me the stones. I'll take them where she can't reach them.")
                 .ask(WARLOCK, w,
                         say("Where?", c -> c.line(WARLOCK, w, "Where I'm from. The Sovereign keep what's theirs.")),
@@ -377,28 +424,92 @@ final class VaultStory {
                 .pause(10)
                 .ask(WARLOCK, w, 20 * 10, 2,
                         say("All right.", c -> {
-                            c.run(() -> stance(player, StoryData.Stance.TRUCE, 0))
+                            c.run(() -> stance(lead(t, player), StoryData.Stance.TRUCE, 0)).run(() -> Devotion.add(story, lead(t, player), -1))
                                     .direction("He isn't sure he believes you.")
                                     .line(WARLOCK, w, "Then stop. Don't take another one. If you do, I'll know.");
                         }),
-                        say("No.", c -> c.run(() -> stance(player, StoryData.Stance.RIVAL, 1))
+                        say("No.", c -> c.run(() -> stance(lead(t, player), StoryData.Stance.RIVAL, 1)).run(() -> Devotion.add(story, lead(t, player), 1))
                                 .line(WARLOCK, w, "Then I'll take them from you. I can't kill you; she's made sure of that. But I can take them.")),
-                        act("(Say nothing.)", c -> c.run(() -> stance(player, StoryData.Stance.RIVAL, 0))
+                        act("(Say nothing.)", c -> c.run(() -> stance(lead(t, player), StoryData.Stance.RIVAL, 0))
                                 .direction("He reads it in your face.")
                                 .line(WARLOCK, w, "Then I'll take them from you. I can't kill you; she's made sure of that. But I can take them.")))
                 .run(() -> w.direct(EntityAdamWarlock.State.HOVER, steps.add(0D, 1D, 0D), steps, 0.12D))
                 .pause(70)
-                .line(STRANGER, her, "He was made to obey someone. He thinks you were too.")
+                .run(() -> her.watch(lead(t, player)))
+                .line(DEATH, her, "He was made to obey someone. He thinks you were too.")
                 .pause(20)
-                .line(STRANGER, her, "Were you?")
-                .ask(STRANGER, her, 20 * 12, 2,
-                        say("Yes.", c -> c.run(() -> story.mark(player, "were_you_yes"))),
-                        say("No.", c -> c.run(() -> story.mark(player, "were_you_no"))),
-                        act("(Say nothing.)", c -> c.run(() -> story.mark(player, "were_you_silent"))))
-                .direction("She doesn't say what she makes of it.")
-                .run(() -> end(world, player, her));
+                .line(DEATH, her, "Were you?")
+                .ask(DEATH, her, 20 * 12, 2,
+                        say("Yes.", c -> c.run(() -> story.mark(lead(t, player), "were_you_yes")).run(() -> Devotion.add(story, lead(t, player), 2))
+                                .line(DEATH, her, "Then obey me. I'm much nicer than his mother.")),
+                        say("No.", c -> c.run(() -> story.mark(lead(t, player), "were_you_no"))
+                                .line(DEATH, her, "Good. Then it's your hand, and your choice. That's what makes it so lovely.")),
+                        act("(Say nothing.)", c -> c.run(() -> story.mark(lead(t, player), "were_you_silent")).run(() -> Devotion.add(story, lead(t, player), 1))
+                                .direction("She doesn't say what she makes of it. She only smiles.")))
+                .direction("She leans in, close enough that you feel the cold come off her.")
+                .line(DEATH, her, "Go and find me the next one. I'll be watching. I'm always watching.")
+                .run(() -> end(world, lead(t, player), her));
         t.abandoned(() -> end(world, player, her));
         story.talk(player, t);
+        warlockTalk = t;
+        // Everyone in the vault is there for this, wherever in the hall they were.
+        for (EntityPlayer each : new ArrayList<>(world.playerEntities)) {
+            if (each instanceof EntityPlayerMP && each != player && !each.isSpectator()) {
+                story.draw(t, (EntityPlayerMP) each);
+            }
+        }
+    }
+
+    /**
+     * Found out, she doesn't cross the hall to answer him: if she is any distance off, she goes up in
+     * black smoke where she stands and comes out of it a few steps from them, on the vault's own floor,
+     * on the side she was on.
+     */
+    private void closeIn(WorldServer world, EntityNorse her, EntityPlayerMP player) {
+        if (her.isDead || her.world != world || player.world != world || her.getDistance(player) < 8D) {
+            return;
+        }
+        Vec3d from = new Vec3d(her.posX - player.posX, 0D, her.posZ - player.posZ).normalize();
+        double toward = Math.atan2(from.z, from.x);
+        BlockPos spot = null;
+        search:
+        for (double dist : new double[]{3D, 2.5D, 4D, 2D}) {
+            // Straight toward where she was first, then swinging further round either way.
+            for (int k = 0; k < 12; k++) {
+                double a = toward + (k % 2 == 0 ? 1 : -1) * ((k + 1) / 2) * Math.PI / 6D;
+                double x = player.posX + Math.cos(a) * dist, z = player.posZ + Math.sin(a) * dist;
+                for (int dy = 0; dy >= -1; dy--) {
+                    BlockPos p = new BlockPos(x, player.posY + dy, z);
+                    if (OdinsVault.standable(p.getX(), p.getY(), p.getZ()) && world.isAirBlock(p) && world.isAirBlock(p.up())) {
+                        spot = p;
+                        break search;
+                    }
+                }
+            }
+        }
+        if (spot == null) {
+            return;
+        }
+        smoke(world, her.posX, her.posY, her.posZ);
+        her.getNavigator().clearPath();
+        her.setPositionAndUpdate(spot.getX() + 0.5D, spot.getY(), spot.getZ() + 0.5D);
+        her.face(player.getPositionVector());
+        smoke(world, her.posX, her.posY, her.posZ);
+    }
+
+    /** A column of black smoke boiling up off the floor, and the hiss of it. */
+    private static void smoke(WorldServer world, double x, double y, double z) {
+        world.spawnParticle(EnumParticleTypes.SMOKE_LARGE, x, y + 1D, z, 70, 0.35D, 0.8D, 0.35D, 0.03D);
+        world.spawnParticle(EnumParticleTypes.SMOKE_LARGE, x, y + 0.1D, z, 30, 0.7D, 0.05D, 0.7D, 0.01D);
+        world.spawnParticle(EnumParticleTypes.SMOKE_NORMAL, x, y + 1D, z, 40, 0.3D, 0.9D, 0.3D, 0.02D);
+        world.playSound(null, x, y + 1D, z, SoundEvents.ENTITY_ENDERMEN_TELEPORT, SoundCategory.HOSTILE, 0.7F, 0.45F);
+        world.playSound(null, x, y + 1D, z, SoundEvents.BLOCK_FIRE_EXTINGUISH, SoundCategory.HOSTILE, 0.8F, 0.5F);
+    }
+
+    /** Whoever leads a conversation now, or whom it was begun with if nobody does. */
+    private static EntityPlayerMP lead(Talk t, EntityPlayerMP player) {
+        EntityPlayerMP p = t.leadNow();
+        return p != null ? p : player;
     }
 
     /** What Warlock makes of them, and of everyone who answered him with them. */
@@ -451,7 +562,8 @@ final class VaultStory {
             }
         }
         EntityAdamWarlock w = warlock;
-        if (w != null && !w.isDead && data().seen("vault_warlock") && !story.talking(firstIn(world))) {
+        // Not while he is still saying his piece to anyone, wherever they are in the hall.
+        if (w != null && !w.isDead && data().seen("vault_warlock") && (warlockTalk == null || warlockTalk.isOver())) {
             Vec3d steps = new Vec3d(OdinsVault.ARRIVE_X, OdinsVault.ARRIVE_Y + 2D, OdinsVault.ARRIVE_Z);
             if (w.getDistanceSq(steps.x, steps.y, steps.z) < 9D || !Oath.watched(world, w) && w.ticksExisted > 400) {
                 w.setDead();
@@ -461,11 +573,6 @@ final class VaultStory {
         if (world.playerEntities.isEmpty()) {
             fallen.clear();
         }
-    }
-
-    @Nullable
-    private static EntityPlayer firstIn(World world) {
-        return world.playerEntities.isEmpty() ? null : world.playerEntities.get(0);
     }
 
     // ------------------------------------------------------------------ the Aether, in someone
@@ -490,7 +597,7 @@ final class VaultStory {
 
     /** While it is in someone, the ground round their home is rewritten, a block at a time, and stays rewritten. */
     private void aether(MinecraftServer server, long now) {
-        if (now % 40 != 0 || !EternityConfig.story.aetherChangesWorld) {
+        if (now % 40 != 0 || !EternityConfig.story.aetherChangesWorld || !EternityConfig.destroyBlocks) {
             return;
         }
         StoryData d = data();
@@ -568,6 +675,11 @@ final class VaultStory {
                 continue;
             }
             int mask = InfinityStones.scan(p);
+            if (sp.truceMask == -1) {
+                // Their fellowship gave him the word while they were elsewhere: what they carry now is what they promised to stop at.
+                sp.truceMask = mask;
+                d.markDirty();
+            }
             if (sp.betrayalAt < 0 && (mask & ~sp.truceMask) != 0) {
                 sp.betrayalAt = now + 1200 + rand.nextInt(2400);
                 d.markDirty();
@@ -654,7 +766,7 @@ final class VaultStory {
                 d.beats.remove("vault_warlock");
                 d.markDirty();
                 story.sendStateToAll();
-                return "The Flame burns and the Aether is back in its column, as if nobody had come.";
+                return "The Flame burns and the Aether is back in its lantern, as if nobody had come.";
             default:
                 return null;
         }

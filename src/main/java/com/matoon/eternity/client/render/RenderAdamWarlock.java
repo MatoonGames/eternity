@@ -39,6 +39,9 @@ public class RenderAdamWarlock extends RenderLiving<EntityAdamWarlock> {
     /** How many ticks back his trail of fire reaches. */
     private static final int TRAIL_POINTS = 11;
 
+    /** The Power Stone's light, in him and round him: purple, hot at the heart. */
+    static final float[] STONE = {0.7F, 0.18F, 1F}, STONE_HOT = {0.95F, 0.55F, 1F}, STONE_DEEP = {0.42F, 0.04F, 0.8F};
+
     /** Set while he is drawn in a portrait, not the world: his trail and corona are left out. */
     public static boolean portrait;
 
@@ -95,6 +98,9 @@ public class RenderAdamWarlock extends RenderLiving<EntityAdamWarlock> {
         WarlockFx.additive();
         trail(entity, at, base, partialTicks);
         corona(entity, at, power);
+        if (entity.wearsStone()) {
+            stone(entity, at, partialTicks);
+        }
         if (entity.getState() == State.BEAM) {
             orb(entity, at, partialTicks);
         }
@@ -134,7 +140,8 @@ public class RenderAdamWarlock extends RenderLiving<EntityAdamWarlock> {
         GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240F, 240F);
         bindTexture(GLOW);
-        GlStateManager.color(1F, 1F, 1F, 0.3F + 0.7F * Math.min(1F, power));
+        boolean stone = entity.wearsStone();
+        GlStateManager.color(1F, 1F, 1F, stone ? 1F : 0.3F + 0.7F * Math.min(1F, power));
         model().renderPose(scaleFactor);
 
         // The aura: larger copies of him drawn from the inside only, so his own body hides all of
@@ -144,10 +151,12 @@ public class RenderAdamWarlock extends RenderLiving<EntityAdamWarlock> {
             bindTexture(GOLDEN);
             GlStateManager.enableCull();
             GlStateManager.cullFace(GlStateManager.CullFace.FRONT);
-            float[] alphas = {0.75F, 0.4F, 0.18F};
-            float[][] colours = {{1F, 0.92F, 0.6F}, {1F, 0.72F, 0.28F}, {1F, 0.45F, 0.1F}};
+            // With the stone in him, the outer shells burn its colour and one more stands out past them.
+            float[] alphas = stone ? new float[]{0.7F, 0.6F, 0.5F, 0.32F} : new float[]{0.75F, 0.4F, 0.18F};
+            float[][] colours = stone ? new float[][]{{1F, 0.85F, 0.6F}, {0.95F, 0.4F, 0.9F}, STONE, STONE_DEEP}
+                    : new float[][]{{1F, 0.92F, 0.6F}, {1F, 0.72F, 0.28F}, {1F, 0.45F, 0.1F}};
             for (int i = 0; i < alphas.length; i++) {
-                float s = 1.05F + i * 0.06F + 0.012F * MathHelper.sin(ageInTicks * 0.9F + i * 2.1F) * (1 + i);
+                float s = 1.05F + i * (stone ? 0.075F : 0.06F) + 0.012F * MathHelper.sin(ageInTicks * 0.9F + i * 2.1F) * (1 + i);
                 GlStateManager.pushMatrix();
                 GlStateManager.translate(0F, 1.501F - CENTRE, 0F);
                 GlStateManager.scale(s, s, s);
@@ -278,6 +287,80 @@ public class RenderAdamWarlock extends RenderLiving<EntityAdamWarlock> {
         WarlockFx.star(behind, 0.45D, 1.05D + 0.45D * strength, 18, flicker * 7919L + entity.getEntityId(), time * 0.02F,
                 WarlockFx.AMBER, 0.28F * flames);
         WarlockFx.star(behind, 0.4D, 0.85D + 0.3D * strength, 12, flicker * 104729L, -time * 0.03F, WarlockFx.GOLD, 0.22F * flames);
+    }
+
+    /**
+     * The Power Stone in his brow: a purple star burning there, never still; its light running
+     * over him in arcs that jump from his body to the air and back; and the air round him
+     * pulsing with it, slowly, like a heartbeat.
+     */
+    private void stone(EntityAdamWarlock entity, Vec3d at, float partialTicks) {
+        float time = entity.ticksExisted + partialTicks;
+        Vec3d brow = at.add(bodyPoint(entity, 1.86D, 0.3D, partialTicks));
+        float beat = 0.5F + 0.5F * MathHelper.sin(time * 0.35F);
+        float near = WarlockFx.nearFade(brow.length());
+        WarlockFx.glow(brow, 0.16D + 0.05D * beat, STONE_HOT, 0.9F * near);
+        WarlockFx.glow(brow, 0.42D + 0.14D * beat, STONE, 0.45F * near);
+        WarlockFx.star(brow, 0.03D, 0.32D + 0.18D * beat, 8, entity.ticksExisted / 2 * 31L, time * 0.05F, STONE, 0.55F * near);
+        if (entity.isStreaking()) {
+            return;
+        }
+        Vec3d c = at.add(0D, CENTRE, 0D);
+        WarlockFx.glow(c.add(c.normalize().scale(0.8D)), 2.4D + 0.8D * beat, STONE_DEEP, 0.12F + 0.06F * beat);
+        // A few arcs at a time, each held for two ticks, from somewhere on him out into the air.
+        Random rand = new Random(entity.ticksExisted / 2 * 7919L + entity.getEntityId());
+        int arcs = 2 + rand.nextInt(3);
+        for (int i = 0; i < arcs; i++) {
+            Vec3d from = at.add((rand.nextDouble() - 0.5D) * 0.6D, 0.3D + rand.nextDouble() * 1.6D, (rand.nextDouble() - 0.5D) * 0.6D);
+            Vec3d out = new Vec3d(rand.nextGaussian(), rand.nextGaussian() * 0.6D, rand.nextGaussian()).normalize().scale(0.9D + rand.nextDouble() * 1.2D);
+            spark(from, from.add(out), rand, 0.035D, 0.9F * WarlockFx.nearFade(from.length()));
+        }
+        // Now and then one goes all the way down into the ground under him.
+        if (rand.nextInt(6) == 0) {
+            Vec3d from = at.add(0D, 0.4D + rand.nextDouble(), 0D);
+            spark(from, at.add(rand.nextGaussian() * 1.5D, -1.2D - rand.nextDouble() * 2D, rand.nextGaussian() * 1.5D), rand, 0.05D, 0.8F);
+        }
+    }
+
+    /**
+     * A point on his body (height above his feet, distance in front) as it is drawn, leaning and
+     * banking about his middle as applyRotations turns him; relative to his feet.
+     */
+    private static Vec3d bodyPoint(EntityAdamWarlock entity, double up, double ahead, float partialTicks) {
+        float pitch = (float) Math.toRadians(-(entity.prevBodyPitch + (entity.bodyPitch - entity.prevBodyPitch) * partialTicks));
+        float roll = (float) Math.toRadians(entity.prevBodyRoll + (entity.bodyRoll - entity.prevBodyRoll) * partialTicks);
+        float yaw = (float) Math.toRadians(180F - (entity.prevRotationYaw + MathHelper.wrapDegrees(entity.rotationYaw - entity.prevRotationYaw) * partialTicks));
+        // The model faces -z; about its middle, the roll first, then the lean, then round to where he faces.
+        double x = 0D, y = up - CENTRE, z = -ahead;
+        double x1 = x * Math.cos(roll) - y * Math.sin(roll), y1 = x * Math.sin(roll) + y * Math.cos(roll);
+        double y2 = y1 * Math.cos(pitch) - z * Math.sin(pitch), z2 = y1 * Math.sin(pitch) + z * Math.cos(pitch);
+        y2 += CENTRE;
+        return new Vec3d(x1 * Math.cos(yaw) + z2 * Math.sin(yaw), y2, -x1 * Math.sin(yaw) + z2 * Math.cos(yaw));
+    }
+
+    /** A jagged thread of the stone's lightning between two camera-relative points: a white-hot core in a purple sheath. */
+    private static void spark(Vec3d a, Vec3d b, Random rand, double width, float alpha) {
+        if (alpha <= 0.01F) {
+            return;
+        }
+        Vec3d d = b.subtract(a);
+        double len = d.length();
+        if (len < 1.0E-3) {
+            return;
+        }
+        Vec3d[] side = WarlockFx.basis(d.scale(1D / len));
+        int steps = Math.max(3, (int) (len * 3D));
+        Vec3d last = a;
+        for (int s = 1; s <= steps; s++) {
+            double f = s / (double) steps;
+            double jag = s == steps ? 0D : Math.sin(f * Math.PI) * len * 0.16D;
+            Vec3d next = a.add(d.scale(f)).add(side[0].scale(rand.nextGaussian() * jag)).add(side[1].scale(rand.nextGaussian() * jag));
+            float fade = alpha * (float) (1D - f * 0.6D);
+            WarlockFx.strip(last, next, width * 4D, STONE_DEEP, 0.6F * fade);
+            WarlockFx.strip(last, next, width * 2D, STONE, 0.7F * fade);
+            WarlockFx.strip(last, next, width * 0.7D, STONE_HOT, fade);
+            last = next;
+        }
     }
 
     /** The sun he cups between his palms before the beam, and holds there while it pours out. */

@@ -1,0 +1,42 @@
+{
+  "variants": {
+    "kind=wall": [
+      {
+        "model": "eternity:vault_stone_wall",
+        "weight": 3
+      },
+      {
+        "model": "eternity:vault_stone_wall_b",
+        "weight": 2
+      },
+      {
+        "model": "eternity:vault_stone_wall_c",
+        "weight": 2
+      }
+    ],
+    "kind=slate": {
+      "model": "eternity:vault_stone_slate"
+    },
+    "kind=obsidian": {
+      "model": "eternity:vault_stone_obsidian"
+    },
+    "kind=floor": {
+      "model": "eternity:vault_stone_floor"
+    },
+    "kind=trim": {
+      "model": "eternity:vault_stone_trim"
+    },
+    "kind=carved": {
+      "model": "eternity:vault_stone_carved"
+    },
+    "kind=gold": {
+      "model": "eternity:vault_stone_gold"
+    },
+    "kind=pillar": {
+      "model": "eternity:vault_stone_pillar"
+    },
+    "kind=step": {
+      "model": "eternity:vault_stone_step"
+    }
+  }
+}

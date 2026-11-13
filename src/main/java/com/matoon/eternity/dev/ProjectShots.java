@@ -90,6 +90,7 @@ import java.util.Random;
  * srv call SEL METHOD [ARGS]             call a method (or read/set a field) on the server copy of an entity
  * srv static a.b.Class.FIELD.method [ARGS]  the same on a static or singleton, on the server thread;
  *                                        ARGS: numbers, true/false, enum names, 'player', #id, strings
+ * creative [INDEX]                       the creative screen, at the Eternity tab (or tab INDEX), on its page of tabs
  * quit
  * </pre>
  */
@@ -181,7 +182,7 @@ public final class ProjectShots {
             mc.displayGuiScreen(null);
         }
         if (locked && mc.world != null && mc.player != null && mc.currentScreen != null && !(mc.currentScreen instanceof GuiMainMenu)
-                && !(mc.currentScreen instanceof com.matoon.eternity.client.gui.GuiDestroyerArmor) && !(mc.currentScreen instanceof com.matoon.eternity.client.gui.GuiStoryChoice)) {
+                && !(mc.currentScreen instanceof com.matoon.eternity.client.gui.GuiDestroyerArmor) && !(mc.currentScreen instanceof com.matoon.eternity.client.gui.GuiStoryChoice) && !(mc.currentScreen instanceof com.matoon.eternity.client.gui.GuiFellowship)) {
             // Dialogue screens and the like would block the view.
             log("closed screen " + mc.currentScreen.getClass().getSimpleName());
             mc.displayGuiScreen(null);
@@ -370,6 +371,18 @@ public final class ProjectShots {
                 mc.player.rotationYaw = mc.player.rotationYawHead = Float.parseFloat(p[0]);
                 mc.player.rotationPitch = Float.parseFloat(p[1]);
                 return true;
+            case "face": {
+                // Turns the player (not the camera) to look at an entity: face SEL [height frac].
+                Entity e = select(mc, p[0]);
+                if (e != null) {
+                    double h = p.length > 1 ? Double.parseDouble(p[1]) : 0.6D;
+                    double dx = e.posX - mc.player.posX, dz = e.posZ - mc.player.posZ;
+                    double dy = e.posY + e.height * h - (mc.player.posY + mc.player.getEyeHeight());
+                    mc.player.rotationYaw = mc.player.rotationYawHead = (float) Math.toDegrees(Math.atan2(-dx, dz));
+                    mc.player.rotationPitch = (float) -Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
+                }
+                return true;
+            }
             case "ents": {
                 if (mc.world == null) {
                     return false;
@@ -451,9 +464,22 @@ public final class ProjectShots {
                     spyCam.setInvisible(true);
                 }
                 return true;
+            case "fellowship":
+                mc.displayGuiScreen(new com.matoon.eternity.client.gui.GuiFellowship());
+                return true;
             case "journal":
                 mc.displayGuiScreen(new com.matoon.eternity.client.gui.GuiStoryJournal());
                 return true;
+            case "creative": {
+                // The creative screen, open at the Eternity tab (on its page of tabs).
+                net.minecraft.creativetab.CreativeTabs tab = com.matoon.eternity.EternityTab.INSTANCE;
+                net.minecraftforge.fml.common.ObfuscationReflectionHelper.setPrivateValue(net.minecraft.client.gui.inventory.GuiContainerCreative.class, null,
+                        tab.getTabPage(), "tabPage");
+                net.minecraftforge.fml.common.ObfuscationReflectionHelper.setPrivateValue(net.minecraft.client.gui.inventory.GuiContainerCreative.class, null,
+                        p.length > 0 && !p[0].isEmpty() ? Integer.parseInt(p[0]) : tab.getIndex(), "selectedTabIndex", "field_147058_w");
+                mc.displayGuiScreen(new net.minecraft.client.gui.inventory.GuiContainerCreative(mc.player));
+                return true;
+            }
             case "respawn":
                 // Out of the death screen, the way the button would.
                 if (mc.player != null && mc.player.isDead) {
@@ -755,7 +781,7 @@ public final class ProjectShots {
     public static void gui(GuiOpenEvent event) {
         if (active() && event.getGui() != null && event.getGui().getClass().getName().startsWith("com.matoon.eternity")
                 && !(event.getGui() instanceof com.matoon.eternity.client.gui.GuiDestroyerArmor) && !(event.getGui() instanceof com.matoon.eternity.client.gui.GuiStoryChoice)
-                && !(event.getGui() instanceof com.matoon.eternity.client.gui.GuiStoryJournal)) {
+                && !(event.getGui() instanceof com.matoon.eternity.client.gui.GuiStoryJournal) && !(event.getGui() instanceof com.matoon.eternity.client.gui.GuiFellowship)) {
             log("blocked screen " + event.getGui().getClass().getSimpleName());
             event.setCanceled(true);
         }

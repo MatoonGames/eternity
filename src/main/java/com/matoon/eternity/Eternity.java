@@ -73,6 +73,7 @@ public class Eternity {
         MinecraftForge.EVENT_BUS.register(ChampionDirector.INSTANCE);
         MinecraftForge.EVENT_BUS.register(TamarataBreaker.INSTANCE);
         MinecraftForge.EVENT_BUS.register(VaultDirector.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(com.matoon.eternity.world.Fimbulwinter.INSTANCE);
         MinecraftForge.EVENT_BUS.register(Armory.INSTANCE);
         MinecraftForge.EVENT_BUS.register(GrandmasterDirector.INSTANCE);
         MinecraftForge.EVENT_BUS.register(com.matoon.eternity.story.StoryDirector.INSTANCE);
@@ -106,6 +107,7 @@ public class Eternity {
     public void serverStarting(FMLServerStartingEvent event) {
         event.registerServerCommand(new CommandEternity());
         event.registerServerCommand(new CommandTpDimension());
+        event.registerServerCommand(new com.matoon.eternity.command.CommandFellowship());
     }
 
     @Mod.EventHandler
@@ -125,6 +127,7 @@ public class Eternity {
         MastersPowers.INSTANCE.reset();
         ChampionDirector.INSTANCE.reset();
         VaultDirector.INSTANCE.reset();
+        com.matoon.eternity.world.Fimbulwinter.INSTANCE.reset();
         GrandmasterDirector.INSTANCE.reset();
         com.matoon.eternity.story.StoryDirector.INSTANCE.reset();
         com.matoon.eternity.stones.InfinityPatches.reset();

@@ -4,6 +4,7 @@ import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.client.render.FxRenderer;
 import com.matoon.eternity.client.render.GlSnapshot;
 import com.matoon.eternity.client.render.VaultFx;
+import com.matoon.eternity.client.render.VaultHall;
 import com.matoon.eternity.entity.ArmorPowers;
 import com.matoon.eternity.client.render.VaultTreasures;
 import com.matoon.eternity.entity.EntityDestroyer;
@@ -166,13 +167,8 @@ public final class VaultClient {
                 }
                 break;
             case MsgTribunalFx.CASKET_WINTER:
-                if (m.id == 0) {
-                    effects.add(new VaultFx.Gale(at, to, m.time, seed));
-                    for (int i = 0; i < 50; i++) {
-                        double s = 0.5D + rand.nextDouble() * 1.3D;
-                        mc.world.spawnParticle(EnumParticleTypes.END_ROD, at.x, at.y, at.z, to.x * s + rand.nextGaussian() * 0.2D,
-                                to.y * s + rand.nextGaussian() * 0.2D, to.z * s + rand.nextGaussian() * 0.2D);
-                    }
+                if (m.id == 2) {
+                    CasketClient.INSTANCE.unleashed(m);
                 } else {
                     effects.add(new VaultFx.Burst(at, m.a, m.time, seed));
                     for (int i = 0; i < 120; i++) {
@@ -236,9 +232,11 @@ public final class VaultClient {
         }
         if (!inVault()) {
             motes.clear();
+            VaultHall.clear();
             return;
         }
         VaultTreasures.tick(mc);
+        VaultHall.tick(mc, rand);
         drift();
         embers();
         // Somewhere in the dark, the vault settles.
@@ -272,7 +270,7 @@ public final class VaultClient {
         }
     }
 
-    /** Embers rising off the Eternal Flame; frost spilling off the Casket. */
+    /** Embers rising off the Eternal Flame, and smoke off the Crown. */
     private void embers() {
         Vec3d flame = VaultTreasures.at(OdinsVault.Relic.ETERNAL_FLAME, 34.5D);
         if (flame.squareDistanceTo(mc.player.getPositionVector()) < 48D * 48D && !StoryClient.INSTANCE.flameSpent()) {
@@ -288,11 +286,6 @@ public final class VaultClient {
         if (rand.nextInt(4) == 0 && crown.squareDistanceTo(mc.player.getPositionVector()) < 40D * 40D) {
             mc.world.spawnParticle(EnumParticleTypes.SMOKE_NORMAL, crown.x + rand.nextGaussian() * 0.2D, crown.y + 0.3D, crown.z + rand.nextGaussian() * 0.2D,
                     0D, 0.02D, 0D);
-        }
-        if (casket && rand.nextInt(3) == 0) {
-            Vec3d c = VaultTreasures.at(OdinsVault.Relic.CASKET, 30D);
-            mc.world.spawnParticle(EnumParticleTypes.END_ROD, c.x + rand.nextGaussian() * 0.25D, c.y, c.z + rand.nextGaussian() * 0.2D,
-                    0D, -0.02D, 0D);
         }
     }
 
@@ -343,6 +336,7 @@ public final class VaultClient {
         GlSnapshot before = GlSnapshot.take();
         if (vault) {
             VaultTreasures.render(mc.world, camera, pt, casket);
+            VaultHall.render(mc.world, camera, pt, tick + pt);
             OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240F, 240F);
             atmosphere(camera, pt);
         }
@@ -366,7 +360,7 @@ public final class VaultClient {
         for (int z = 32; z >= -58; z -= 6) {
             float breathe = 0.85F + 0.15F * MathHelper.sin(t * 0.013F + z * 0.4F);
             shaft(new Vec3d(0.5D, OdinsVault.STAND + 26.5D, z + 0.5D).subtract(camera), 25.5D, 2.6D, 0.6D,
-                    new float[]{0.72F, 0.8F, 0.95F}, 0.045F * breathe);
+                    new float[]{1F, 0.86F, 0.6F}, 0.04F * breathe);
         }
         // Warmer light onto each treasure from the lamp over its bay.
         for (OdinsVault.Relic relic : OdinsVault.Relic.values()) {

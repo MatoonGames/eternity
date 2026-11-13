@@ -1,6 +1,7 @@
 package com.matoon.eternity.block;
 
 import com.matoon.eternity.Eternity;
+import com.matoon.eternity.EternityTab;
 import net.minecraft.block.BlockBush;
 import net.minecraft.block.SoundType;
 import net.minecraft.block.properties.PropertyInteger;
@@ -41,7 +42,7 @@ public class BlockStrangeBloom extends BlockBush {
         setSoundType(SoundType.PLANT);
         setLightLevel(0.4F);
         setDefaultState(blockState.getBaseState().withProperty(KIND, 0));
-        setCreativeTab(CreativeTabs.DECORATIONS);
+        setCreativeTab(EternityTab.INSTANCE);
     }
 
     @Override

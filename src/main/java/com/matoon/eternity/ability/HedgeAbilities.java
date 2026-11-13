@@ -1,6 +1,7 @@
 package com.matoon.eternity.ability;
 
 import com.matoon.eternity.Eternity;
+import com.matoon.eternity.api.Force;
 import com.matoon.eternity.compat.InfinityStones;
 import com.matoon.eternity.story.StoryDirector;
 import lucraft.mods.lucraftcore.infinity.EnumInfinityStone;
@@ -66,7 +67,7 @@ public final class HedgeAbilities {
         return reality && soul ? BOTH : reality ? REALITY : soul ? SOUL : null;
     }
 
-    /** What the stones in hand lend at the hedge: one provider for each, so the bar only changes when the stones do. */
+    /** What the stones in hand lend at the hedge, framed in their stone's colour: one provider for each, so the bar only changes when the stones do. */
     private static final class Gifts implements IAbilityProvider {
         private final boolean reality, soul;
 
@@ -78,10 +79,10 @@ public final class HedgeAbilities {
         @Override
         public Ability.AbilityMap addDefaultAbilities(EntityLivingBase entity, Ability.AbilityMap map, Ability.EnumAbilityContext context) {
             if (reality) {
-                map.put("rewrite", ready(new Rewrite(entity)));
+                map.put("rewrite", Force.REALITY_STONE.tint(ready(new Rewrite(entity))));
             }
             if (soul) {
-                map.put("reap", ready(new Reap(entity)));
+                map.put("reap", Force.SOUL_STONE.tint(ready(new Reap(entity))));
             }
             return map;
         }

@@ -1,9 +1,9 @@
 package com.matoon.eternity.item;
 
 import com.matoon.eternity.Eternity;
+import com.matoon.eternity.EternityTab;
 import net.minecraft.block.BlockDispenser;
 import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
@@ -34,7 +34,7 @@ public class ItemEinherjarShield extends Item {
     public ItemEinherjarShield() {
         setRegistryName(Eternity.MODID, "einherjar_shield");
         setTranslationKey(Eternity.MODID + ".einherjar_shield");
-        setCreativeTab(CreativeTabs.COMBAT);
+        setCreativeTab(EternityTab.INSTANCE);
         setMaxStackSize(1);
         setMaxDamage(672);
         addPropertyOverride(new ResourceLocation("blocking"),

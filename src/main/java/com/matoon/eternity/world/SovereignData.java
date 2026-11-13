@@ -41,6 +41,41 @@ public class SovereignData extends WorldSavedData {
     /** Whether the Magus has it (he does not give things back). */
     public boolean magusHasPower, magusHasMind;
     public boolean motherDead;
+    /** The Magus's last fight, for the gauntlet. */
+    public enum Fight {
+        /** Not begun: he has not yet had the Mind Stone, or not yet gone. */
+        NONE,
+        /** He has gone, and waits for someone to have a gauntlet with all their stones in it. */
+        HUNTING,
+        /** Under way. */
+        FIGHTING,
+        /** He is dust. */
+        WON,
+        /** He snapped: all six are his, and he is gone with them. */
+        LOST,
+        /** Odin took it: both of them beaten, and the gauntlet gone up the Bifrost with him. */
+        TAKEN
+    }
+
+    public Fight fight = Fight.NONE;
+    /** Whose fight it is. */
+    @javax.annotation.Nullable
+    public java.util.UUID fightPlayer;
+    /** The gauntlet, while he has it (empty while they do). */
+    public ItemStack fightGauntlet = ItemStack.EMPTY;
+    /** After he snapped: their gauntlet, with their own stones, for them when they wake. */
+    public ItemStack giveBack = ItemStack.EMPTY;
+    /** Whom it is to be given back to (null: whose fight it was, as before this was kept). */
+    @javax.annotation.Nullable
+    public java.util.UUID giveBackTo;
+    /** Not before this world time will he come for them again. */
+    public long nextAmbush;
+    /** Warlock died in it, at the Magus's hands: he does not come again. */
+    public boolean warlockFell;
+    /** Odin has come down into the fight (he comes once). */
+    public boolean odinCame;
+    /** When it was won (world time), so what comes after can wait until it has been taken in. */
+    public long fightSettled;
     /** The station's doors that have been opened, by name (SovereignStation.doors). They stay open. */
     public final Set<String> opened = new HashSet<>();
 
@@ -77,6 +112,16 @@ public class SovereignData extends WorldSavedData {
         magusHasPower = nbt.getBoolean("magusHasPower");
         magusHasMind = nbt.getBoolean("magusHasMind");
         motherDead = nbt.getBoolean("motherDead");
+        int f = nbt.getInteger("fight");
+        fight = f >= 0 && f < Fight.values().length ? Fight.values()[f] : Fight.NONE;
+        fightPlayer = nbt.hasUniqueId("fightPlayer") ? nbt.getUniqueId("fightPlayer") : null;
+        fightGauntlet = nbt.hasKey("fightGauntlet") ? new ItemStack(nbt.getCompoundTag("fightGauntlet")) : ItemStack.EMPTY;
+        giveBack = nbt.hasKey("giveBack") ? new ItemStack(nbt.getCompoundTag("giveBack")) : ItemStack.EMPTY;
+        giveBackTo = nbt.hasUniqueId("giveBackTo") ? nbt.getUniqueId("giveBackTo") : null;
+        nextAmbush = nbt.getLong("nextAmbush");
+        warlockFell = nbt.getBoolean("warlockFell");
+        odinCame = nbt.getBoolean("odinCame");
+        fightSettled = nbt.getLong("fightSettled");
         opened.clear();
         NBTTagList list = nbt.getTagList("opened", Constants.NBT.TAG_STRING);
         for (int i = 0; i < list.tagCount(); i++) {
@@ -94,6 +139,23 @@ public class SovereignData extends WorldSavedData {
         nbt.setBoolean("magusHasPower", magusHasPower);
         nbt.setBoolean("magusHasMind", magusHasMind);
         nbt.setBoolean("motherDead", motherDead);
+        nbt.setInteger("fight", fight.ordinal());
+        if (fightPlayer != null) {
+            nbt.setUniqueId("fightPlayer", fightPlayer);
+        }
+        if (!fightGauntlet.isEmpty()) {
+            nbt.setTag("fightGauntlet", fightGauntlet.writeToNBT(new NBTTagCompound()));
+        }
+        if (!giveBack.isEmpty()) {
+            nbt.setTag("giveBack", giveBack.writeToNBT(new NBTTagCompound()));
+        }
+        if (giveBackTo != null) {
+            nbt.setUniqueId("giveBackTo", giveBackTo);
+        }
+        nbt.setLong("nextAmbush", nextAmbush);
+        nbt.setBoolean("warlockFell", warlockFell);
+        nbt.setBoolean("odinCame", odinCame);
+        nbt.setLong("fightSettled", fightSettled);
         NBTTagList list = new NBTTagList();
         for (String door : opened) {
             list.appendTag(new NBTTagString(door));

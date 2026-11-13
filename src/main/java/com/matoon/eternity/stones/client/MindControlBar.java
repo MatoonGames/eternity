@@ -4,6 +4,7 @@ import com.matoon.eternity.Eternity;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.stones.network.MsgMindControlAct;
 import com.matoon.eternity.stones.network.MsgMindControlEntries;
+import com.matoon.eternity.api.Force;
 import lucraft.mods.lucraftcore.util.abilitybar.EnumAbilityBarColor;
 import lucraft.mods.lucraftcore.util.abilitybar.IAbilityBarEntry;
 import lucraft.mods.lucraftcore.util.abilitybar.IAbilityBarProvider;
@@ -237,9 +238,10 @@ public class MindControlBar implements IAbilityBarProvider {
             return true;
         }
 
+        /** The Mind Stone's: it is what holds them. */
         @Override
         public EnumAbilityBarColor getColor() {
-            return EnumAbilityBarColor.ORANGE;
+            return Force.MIND_STONE.color;
         }
     }
 }

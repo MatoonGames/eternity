@@ -949,6 +949,12 @@ public final class EternityClient {
         player.rotationPitch += (pitch - player.rotationPitch) * 0.035F;
     }
 
+    /** The post shader this class has put up, if any (a vanilla name, or "eternity:..." for one of ours). */
+    @javax.annotation.Nullable
+    public String shaderName() {
+        return activeShader;
+    }
+
     private void updateShader() {
         String want = null;
         if (EternityConfig.client.distortionShaders && OpenGlHelper.shadersSupported && OpenGlHelper.isFramebufferEnabled()) {
@@ -969,6 +975,9 @@ public final class EternityClient {
             } else if (NexusClient.INSTANCE.sinking() > 0F) {
                 // Going under in the Nexus's abyss: the image splits, then the colour drains out of it.
                 want = NexusClient.INSTANCE.sinking() > 0.65F ? "desaturate" : "deconverge";
+            } else if (OdinClient.INSTANCE.wantsShader()) {
+                // Odin about: dark, hard light, the colour thinned (OdinClient eases its uniforms).
+                want = "eternity:odin";
             }
         }
         if (Objects.equals(want, activeShader)) {
@@ -978,7 +987,9 @@ public final class EternityClient {
             mc.entityRenderer.stopUseShader();
             activeShader = null;
         } else if (activeShader != null || !mc.entityRenderer.isShaderActive()) {
-            mc.entityRenderer.loadShader(new ResourceLocation("shaders/post/" + want + ".json"));
+            int colon = want.indexOf(':');
+            mc.entityRenderer.loadShader(colon < 0 ? new ResourceLocation("shaders/post/" + want + ".json")
+                    : new ResourceLocation(want.substring(0, colon), "shaders/post/" + want.substring(colon + 1) + ".json"));
             activeShader = want;
         }
     }

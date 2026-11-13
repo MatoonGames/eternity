@@ -4,6 +4,7 @@ import com.matoon.eternity.client.render.StarChamberSky;
 import net.minecraft.entity.Entity;
 import net.minecraft.init.Biomes;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.DimensionType;
 import net.minecraft.world.WorldProvider;
@@ -44,6 +45,19 @@ public class WorldProviderVault extends WorldProvider {
             float f = 1F - i / 15F;
             lightBrightnessTable[i] = (1F - f) / (f * 3F + 1F) * 0.94F + 0.06F;
         }
+    }
+
+    /**
+     * The vault's light is the colour of old gold where its lamps and braziers burn, and its
+     * shadows go the cold blue of deep stone: blocks well lit are warmed, blocks in the dark cooled.
+     */
+    @SideOnly(Side.CLIENT)
+    @Override
+    public void getLightmapColors(float partialTicks, float sunBrightness, float skyLight, float blockLight, float[] colors) {
+        float warm = MathHelper.clamp((blockLight - 0.25F) / 0.6F, 0F, 1F);
+        colors[0] = MathHelper.clamp(colors[0] * (0.8F + 0.3F * warm), 0F, 1F);
+        colors[1] = MathHelper.clamp(colors[1] * (0.9F + 0.04F * warm), 0F, 1F);
+        colors[2] = MathHelper.clamp(colors[2] * (1.18F - 0.42F * warm), 0F, 1F);
     }
 
     @Override

@@ -2,10 +2,8 @@ package com.matoon.eternity.compat;
 
 import anvil.infinity.abilities.AbilitySnap;
 import anvil.infinity.snap.SnapHelper;
+import com.matoon.eternity.api.Force;
 import com.matoon.eternity.Eternity;
-import com.matoon.eternity.ability.EternityAbilities;
-import com.matoon.eternity.ability.MastersAbilities;
-import com.matoon.eternity.ability.TribunalAbilities;
 import com.matoon.eternity.item.ItemAstralRegulator;
 import com.matoon.eternity.stones.SnapPowers;
 import com.matoon.eternity.stones.Stones;
@@ -31,7 +29,6 @@ import lucraft.mods.lucraftcore.superpowers.abilities.AbilityStrength;
 import lucraft.mods.lucraftcore.superpowers.abilities.data.AbilityData;
 import lucraft.mods.lucraftcore.superpowers.abilities.supplier.AbilityContainer;
 import lucraft.mods.lucraftcore.superpowers.abilities.supplier.IAbilityProvider;
-import lucraft.mods.lucraftcore.util.abilitybar.EnumAbilityBarColor;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -138,23 +135,9 @@ public final class StoneAbilities {
             // In a gauntlet the Space Stone opens a black hole beside the Power Stone, which it looks for in its user's
             // hands; here both are in the chest.
             if (space && power && Ability.getAbilitiesFromClass(new ArrayList<>(abilities.values()), AbilityBlackHole.class).isEmpty()) {
-                abilities.put("black_hole", new AbilityBlackHole(entity).setDataValue(Ability.BAR_COLOR, EnumAbilityBarColor.LIGHT_BLUE).setMaxCooldown(6000));
+                abilities.put("black_hole", Force.SPACE_STONE.tint(new AbilityBlackHole(entity)).setMaxCooldown(6000));
             }
-            if (held.contains(ItemAstralRegulator.ETERNITY)) {
-                EternityAbilities.grantEternity(entity, abilities);
-            }
-            if (held.contains(ItemAstralRegulator.TRIBUNAL)) {
-                TribunalAbilities.grant(entity, abilities);
-            }
-            if (held.contains(ItemAstralRegulator.ORDER)) {
-                MastersAbilities.grantOrder(entity, abilities);
-            }
-            if (held.contains(ItemAstralRegulator.CHAOS)) {
-                MastersAbilities.grantChaos(entity, abilities);
-            }
-            if (held.contains(ItemAstralRegulator.INBETWEENER)) {
-                MastersAbilities.grantInBetweener(entity, abilities);
-            }
+            ItemAstralRegulator.grant(entity, abilities, held);
             for (String key : new ArrayList<>(abilities.keySet())) {
                 Ability ability = abilities.get(key);
                 if (ability.getClass() == AbilityGrabEntity.class) {

@@ -5,6 +5,8 @@ import com.matoon.eternity.entity.EntityDraugr;
 import com.matoon.eternity.entity.EntityNorse;
 import com.matoon.eternity.entity.NorseBody;
 import com.matoon.eternity.entity.NorsePose;
+import com.matoon.eternity.entity.Morph;
+import com.matoon.eternity.entity.Rot;
 import net.minecraft.client.model.ModelBase;
 import net.minecraft.client.model.ModelRenderer;
 import net.minecraft.entity.Entity;
@@ -43,7 +45,7 @@ public class ModelNorse extends ModelBase {
             HEAD_X = 9, HEAD_Y = 10, HEAD_Z = 11, RA_X = 12, RA_Y = 13, RA_Z = 14, R_ELBOW = 15, LA_X = 16, LA_Y = 17, LA_Z = 18,
             L_ELBOW = 19, RL_X = 20, RL_Y = 21, RL_Z = 22, R_KNEE = 23, LL_X = 24, LL_Y = 25, LL_Z = 26, L_KNEE = 27, LOOK = 28,
             WALK = 29, AXE = 30, LIFT = 31, R_WRIST = 32, L_WRIST = 33, R_CURL = 34, L_CURL = 35, R_TWIST = 36, L_TWIST = 37,
-            R_FOOT = 38, L_FOOT = 39, JAW = 40, LIDS = 41, R_THUMB = 42, L_THUMB = 43, TALK = 44, N = 45;
+            R_FOOT = 38, L_FOOT = 39, JAW = 40, LIDS = 41, R_THUMB = 42, L_THUMB = 43, TALK = 44, HEAD_LIMIT = 45, N = 46;
 
     private static final float PI = (float) Math.PI;
 
@@ -55,13 +57,23 @@ public class ModelNorse extends ModelBase {
     private final boolean living, skirted;
     public final ModelRenderer root, abdomen, chest, head, rArm, rFore, rHand, lArm, lFore, lHand, rLeg, rShin, lLeg, lShin;
     private final ModelRenderer rFingers, lFingers, rThumb, lThumb, rFoot, lFoot, lid, mouth, jaw, lockR, lockL, apron, apron2,
-            sleeveR, sleeveL, axeHand, axeBelt, helm, brim, trowelHand, trowelBelt, gem, collar;
+            sleeveR, sleeveL, axeHand, axeBelt, helm, brim, trowelHand, trowelBelt, gem, collar, eye, flapR, flapL, gut;
     private final ModelRenderer[] upper = new ModelRenderer[6], lower = new ModelRenderer[6];
     private final ModelRenderer[] cloak = new ModelRenderer[NorseBoxes.CLOAK_SEGMENTS];
+    /** Her cape: a row for each length; in each, its pleats, right then left, from the middle out; and the falls of it from her wrists, right then left. */
+    private final ModelRenderer[] rows = new ModelRenderer[NorseBoxes.CAPE_SEGMENTS];
+    private final ModelRenderer[][][] pleats = new ModelRenderer[2][NorseBoxes.CAPE_PLEATS][NorseBoxes.CAPE_SEGMENTS];
+    private final ModelRenderer[][] drapes = new ModelRenderer[2][NorseBoxes.DRAPES];
     private final ModelRenderer[] braid = new ModelRenderer[NorseBoxes.BRAID];
     private final ModelRenderer[] beard = new ModelRenderer[NorseBoxes.BEARD_SEGMENTS];
     private final float[] pose = new float[N];
     private float partial;
+    /** Where the hips sit: higher on her, whose legs are longer than anyone's. */
+    private final float hips;
+    /** Every part by name, so pieces of the skin can be taken off (see {@link #peel}). */
+    private final java.util.Map<String, Peel> named = new java.util.HashMap<>();
+    /** Every part, however many share a name, so all of her can be changed at once (see {@link #each}). */
+    private final java.util.List<Peel> all = new java.util.ArrayList<>();
 
     public ModelNorse(int look) {
         this.look = look;
@@ -69,13 +81,16 @@ public class ModelNorse extends ModelBase {
         textureWidth = sheet.width;
         textureHeight = sheet.height;
         living = look == NorseBoxes.STRANGER || look == NorseBoxes.RAGNA || look == NorseBoxes.HRAFN || look == NorseBoxes.GARDENER
-                || look == NorseBoxes.AYESHA || look == NorseBoxes.MAGUS;
+                || look == NorseBoxes.AYESHA || look == NorseBoxes.MAGUS || look == NorseBoxes.TEMPTRESS || look == NorseBoxes.UNVEILED;
         skirted = !sheet.of("skirtFR2").isEmpty();
         boolean broad = look == NorseBoxes.HRAFN || look == NorseBoxes.MAGUS;
         float shoulder = broad ? 6F : 5.5F;
         float half = broad ? 2F : 1.5F;
 
-        root = part("pelvis", null, 0F, 12F, 0F);
+        // Her legs are longer than anyone's: the hips sit higher, and the renderer scales her down to match.
+        boolean leggy = look == NorseBoxes.TEMPTRESS || look == NorseBoxes.UNVEILED;
+        hips = leggy ? 10F : 12F;
+        root = part("pelvis", null, 0F, hips, 0F);
         float[][] at = {{-2.4F, 0.6F, -2.45F}, {2.4F, 0.6F, -2.45F}, {-2.4F, 0.6F, 2.45F}, {2.4F, 0.6F, 2.45F}, {-4.15F, 0.6F, 0F}, {4.15F, 0.6F, 0F}};
         for (int i = 0; i < 6; i++) {
             String name = "skirt" + NorseBoxes.PANELS[i];
@@ -141,6 +156,34 @@ public class ModelNorse extends ModelBase {
         lFingers = part("fingersL", lHand, 0F, 0.9F, -0.3F);
         lThumb = part("thumbL", lHand, -(half - 0.2F), 0.3F, -0.6F);
         sleeveL = part("sleeveL", lFore, 0F, 0.4F, 0F);
+        // Her cape: a row for each length, hanging from the end of the row above, the first from across her shoulders;
+        // in each row, the pleats hinged edge to edge out from the middle of her back, her right then her left. A fall
+        // of it from each wrist, in lengths the same way. All of it sheets, drawn from the side that faces you only.
+        // Her sash.
+        ModelRenderer row = chest;
+        for (int i = 0; i < NorseBoxes.CAPE_SEGMENTS; i++) {
+            rows[i] = row = part("caperow" + i, row, 0F, i == 0 ? -7.1F : NorseBoxes.CAPE_LENGTH - 0.25F, i == 0 ? 2.5F : 0F);
+            for (int side = 0; side < 2; side++) {
+                ModelRenderer hinge = row;
+                for (int j = 0; j < NorseBoxes.CAPE_PLEATS; j++) {
+                    float edge = j == 0 ? 0F : NorseBoxes.PLEAT_WIDTHS[j - 1] * (side == 0 ? -1F : 1F);
+                    pleats[side][j][i] = hinge = sheet(part("cape" + (side == 0 ? "R" : "L") + j + "_" + i, hinge, edge, 0F, 0F));
+                }
+            }
+        }
+        for (int side = 0; side < 2; side++) {
+            ModelRenderer link = side == 0 ? rFore : lFore;
+            for (int i = 0; i < NorseBoxes.DRAPES; i++) {
+                drapes[side][i] = link = sheet(part("drape" + i + (side == 0 ? "R" : "L"), link, 0F, i == 0 ? 3.4F : NorseBoxes.DRAPE_LENGTH, 0F));
+            }
+        }
+        part("sash", root, 0F, 0F, 0F);
+        // What comes loose on her as the pretty one rots: a flap of skin off each forearm, her left eye out of its
+        // socket on its stalk, and a loop of something out of the split in her belly. Each hangs plumb, and swings.
+        flapR = part("flapR", rFore, -1.9F, 0.6F, 0F);
+        flapL = part("flapL", lFore, 1.9F, 0.6F, 0F);
+        eye = part("eye", head, 2F, -4F, -4.2F);
+        gut = part("gut", abdomen, 0.6F, -1.2F, -2.3F);
         // The axe: gripped in his right hand once drawn, at his right hip until then.
         axeHand = part("axe", rHand, 0F, 1.1F, -0.2F);
         axeBelt = part("axe", root, -4.7F, 0.6F, 0.4F);
@@ -155,15 +198,56 @@ public class ModelNorse extends ModelBase {
         part("wingL", chest, 3.4F, -6.6F, -0.6F).rotateAngleZ = -0.12F;
 
         rLeg = part("thighR", root, -2F, 0F, 0F);
-        rShin = part("shinR", rLeg, 0F, 6F, 0F);
-        rFoot = part("footR", rShin, 0F, 5F, 0F);
+        rShin = part("shinR", rLeg, 0F, leggy ? 7F : 6F, 0F);
+        rFoot = part("footR", rShin, 0F, leggy ? 6F : 5F, 0F);
         lLeg = part("thighL", root, 2F, 0F, 0F);
-        lShin = part("shinL", lLeg, 0F, 6F, 0F);
-        lFoot = part("footL", lShin, 0F, 5F, 0F);
+        lShin = part("shinL", lLeg, 0F, leggy ? 7F : 6F, 0F);
+        lFoot = part("footL", lShin, 0F, leggy ? 6F : 5F, 0F);
     }
 
     private ModelRenderer part(String name, ModelRenderer parent, float x, float y, float z) {
-        return VaultParts.part(this, sheet, name, parent, x, y, z);
+        ModelRenderer part = VaultParts.part(this, sheet, name, parent, x, y, z);
+        if (part instanceof Peel) {
+            all.add((Peel) part);
+            named.putIfAbsent(name, (Peel) part);
+        }
+        return part;
+    }
+
+    /** A part that is a sheet of cloth: drawn only from whichever side faces you, so its two faces never fight. */
+    private static ModelRenderer sheet(ModelRenderer part) {
+        if (part instanceof Peel) {
+            ((Peel) part).sheet = true;
+        }
+        return part;
+    }
+
+    /** Takes away the boxes of every part that passes, leaving what hangs from them; until {@link #unpeel}. */
+    void peel(java.util.function.Predicate<String> gone) {
+        for (java.util.Map.Entry<String, Peel> e : named.entrySet()) {
+            e.getValue().peeled = gone.test(e.getKey());
+        }
+    }
+
+    void unpeel() {
+        for (Peel p : named.values()) {
+            p.peeled = false;
+        }
+    }
+
+    /** Does something to every part; each knows its name by its boxName. */
+    void each(java.util.function.Consumer<Peel> f) {
+        all.forEach(f);
+    }
+
+    /** Every part back to as it was made. */
+    void plain() {
+        all.forEach(Peel::plain);
+    }
+
+    /** One part by name, to draw on its own as a piece torn off; null if there is none. */
+    Peel named(String name) {
+        return named.get(name);
     }
 
     @Override
@@ -219,6 +303,43 @@ public class ModelNorse extends ModelBase {
         if (talk > 0F) {
             talking(p, age, talk, look, state);
         }
+        int rot = look == NorseBoxes.TEMPTRESS && entity instanceof EntityNorse ? ((EntityNorse) entity).rot() : 0;
+        float twitch = 0F;
+        int joint = 0;
+        if (rot >= Rot.TWITCHES && state != NorsePose.TEAR && !portraitPose) {
+            twitch = Rot.twitch(age, seed, rot);
+            joint = Rot.which(age, seed, rot);
+            if (joint == 0) {
+                p[HEAD_Z] += 1.05F * twitch * (seed % 2 == 0 ? 1F : -1F);
+                p[HEAD_X] += 0.2F * twitch;
+            } else if (joint == 2) {
+                p[HEAD_Y] += 1.6F * twitch;
+                p[HEAD_LIMIT] = 1F;
+            }
+        }
+        if (entity instanceof EntityNorse && !portraitPose) {
+            float shudder = (((EntityNorse) entity).thrilledAt - body.ticksExisted) + 34F - partial;
+            if (shudder > 0F) {
+                // Something died for her: it goes through her all the way down, the eyes roll shut, the head goes back.
+                float k = shudder / 34F;
+                float bump = (float) Math.sin(Math.min(1F, (1F - k) * 3F) * Math.PI / 2F) * k;
+                p[CHEST_X] += MathHelper.sin(age * 3.1F) * 0.06F * k - 0.12F * bump;
+                p[HEAD_X] -= 0.4F * bump;
+                p[HEAD_Z] += MathHelper.sin(age * 2.3F) * 0.05F * k;
+                p[RA_Z] += 0.1F * bump;
+                p[LA_Z] -= 0.1F * bump;
+                p[R_CURL] = Math.max(p[R_CURL], 0.8F * bump);
+                p[L_CURL] = Math.max(p[L_CURL], 0.8F * bump);
+                p[JAW] = Math.max(p[JAW], 0.35F * bump);
+                if (bump > 0.3F) {
+                    p[LIDS] = 1F;
+                }
+            }
+        }
+        float morph = entity instanceof EntityNorse && !portraitPose ? ((EntityNorse) entity).morphTicks(partial) : -1F;
+        if (morph >= 0F) {
+            morph(p, morph, age, seed);
+        }
         float hurt = body.hurtTime > 0 ? (body.hurtTime - partial) / 10F : 0F;
         if (hurt > 0F && !state.lying()) {
             hurt *= hurt;
@@ -239,10 +360,48 @@ public class ModelNorse extends ModelBase {
             }
         }
         apply(p, b, entity, age, talk);
+        if (twitch > 0F && joint == 1) {
+            // The elbow, backwards.
+            rFore.rotateAngleX = 1.1F * twitch;
+        }
+        if (morph >= 0F) {
+            // As each piece of her goes, its joint goes the wrong way: the elbows back, the knees forward.
+            rFore.rotateAngleX += 1.5F * Morph.snap(Morph.ARM_R, morph);
+            lFore.rotateAngleX += 1.5F * Morph.snap(Morph.ARM_L, morph);
+            float knees = Morph.snap(Morph.LEGS, morph);
+            rShin.rotateAngleX -= 1.1F * knees;
+            lShin.rotateAngleX -= 0.8F * knees;
+        }
+        hanging(rot, age);
+    }
+
+    /** What has come loose on her, shown once it has, hanging plumb from wherever it hangs, swinging a little. */
+    private void hanging(int rot, float age) {
+        boolean her = look == NorseBoxes.TEMPTRESS;
+        flapR.showModel = flapL.showModel = her && rot >= 5;
+        eye.showModel = her && rot >= 6;
+        gut.showModel = her && rot >= 7;
+        if (her) {
+            jaw.showModel = rot >= 7;
+            if (rot >= 7) {
+                // Her jaw has come away at one hinge: it hangs, open, crooked, and swings.
+                jaw.rotateAngleX = Math.max(jaw.rotateAngleX, 0.7F + MathHelper.sin(age * 0.09F) * 0.08F);
+                jaw.rotateAngleZ = 0.28F;
+            }
+        }
+        float body = root.rotateAngleX + abdomen.rotateAngleX;
+        eye.rotateAngleX = -(body + chest.rotateAngleX + head.rotateAngleX) + MathHelper.sin(age * 0.15F) * 0.25F;
+        eye.rotateAngleZ = -(root.rotateAngleZ + chest.rotateAngleZ + head.rotateAngleZ) + MathHelper.sin(age * 0.11F + 1F) * 0.2F;
+        gut.rotateAngleX = -body + MathHelper.sin(age * 0.07F) * 0.12F;
+        gut.rotateAngleZ = -root.rotateAngleZ + MathHelper.sin(age * 0.05F + 2F) * 0.1F;
+        flapR.rotateAngleX = -(body + chest.rotateAngleX + rArm.rotateAngleX + rFore.rotateAngleX) + MathHelper.sin(age * 0.13F) * 0.15F;
+        flapR.rotateAngleZ = -rArm.rotateAngleZ;
+        flapL.rotateAngleX = -(body + chest.rotateAngleX + lArm.rotateAngleX + lFore.rotateAngleX) + MathHelper.sin(age * 0.13F + 2F) * 0.15F;
+        flapL.rotateAngleZ = -lArm.rotateAngleZ;
     }
 
     private void apply(float[] p, NorseBody b, Entity entity, float age, float talk) {
-        root.rotationPointY = 12F + p[DROP];
+        root.rotationPointY = hips + p[DROP];
         root.rotationPointZ = p[LIFT];
         root.rotateAngleX = p[LEAN];
         root.rotateAngleY = p[TWIST];
@@ -253,7 +412,8 @@ public class ModelNorse extends ModelBase {
         chest.rotateAngleY = p[CHEST_Y];
         chest.rotateAngleZ = p[CHEST_Z];
         head.rotateAngleX = MathHelper.clamp(p[HEAD_X], -1.4F, 1F);
-        head.rotateAngleY = MathHelper.clamp(p[HEAD_Y], -1.25F, 1.25F);
+        // Her neck, mid-twitch, goes further round than any neck should.
+        head.rotateAngleY = p[HEAD_LIMIT] > 0.5F ? p[HEAD_Y] : MathHelper.clamp(p[HEAD_Y], -1.25F, 1.25F);
         head.rotateAngleZ = p[HEAD_Z];
         rArm.rotateAngleX = p[RA_X];
         rArm.rotateAngleY = p[RA_Y];
@@ -389,6 +549,80 @@ public class ModelNorse extends ModelBase {
         sleeveR.rotateAngleZ = -p[RA_Z] * 0.8F + 0.05F;
         sleeveL.rotateAngleX = -(up + p[LA_X] + Math.min(0F, p[L_ELBOW])) * 0.85F + sleeve;
         sleeveL.rotateAngleZ = -p[LA_Z] * 0.8F - 0.05F;
+        cloth(p, b, age, lying, up, sleeve, sway);
+    }
+
+    /**
+     * Her cape. Its rows hang from her shoulders and from each other, and swing as any cloak does,
+     * held off her back so they fall clear of her, a slow ripple running down them so the cloth never
+     * quite stops moving; the pleats in every row are turned the same, so they run unbroken from
+     * the shoulders to the hem, back and forward, the outermost wrapped round her sides. The falls
+     * from her wrists hang plumb, stretched to reach the ground from however high her wrists are,
+     * each length below the first billowing a little on its own. Each row hangs from wherever the one
+     * above it has unrolled to, so cloth still coming out of the dark onto her (see {@link Peel#grow})
+     * unrolls from the top.
+     */
+    private void cloth(float[] p, NorseBody b, float age, boolean lying, float up, float swing, float sway) {
+        float push = Math.max(0F, Math.max(p[RL_X], p[LL_X])) * 0.3F;
+        float previous = 0F;
+        for (int i = 0; i < NorseBoxes.CAPE_SEGMENTS; i++) {
+            ModelRenderer r = rows[i];
+            if (i > 0) {
+                r.rotationPointY = (NorseBoxes.CAPE_LENGTH - 0.25F) * grow(pleats[0][0][i - 1]);
+            }
+            for (int side = 0; side < 2; side++) {
+                float turned = 0F;
+                for (int j = 0; j < NorseBoxes.CAPE_PLEATS; j++) {
+                    float turn = lying ? 0F : NorseBoxes.PLEAT_TURNS[j] * (side == 0 ? 1F : -1F);
+                    pleats[side][j][i].rotateAngleY = turn - turned;
+                    turned = turn;
+                }
+            }
+            if (lying) {
+                r.rotateAngleX = r.rotateAngleZ = 0F;
+                continue;
+            }
+            int j = Math.min(i, NorseBoxes.CLOAK_SEGMENTS - 1);
+            float angle = b.prevCloak[j] + (b.cloak[j] - b.prevCloak[j]) * partial;
+            float ripple = MathHelper.sin(age * 0.085F + i * 1.15F) * 0.015F * i + MathHelper.sin(age * 0.047F) * 0.02F;
+            // Off her back at the shoulders, and on down at the same angle: the less each row bends from the one
+            // above, the closer its pleats meet the ones above them.
+            float a = angle + ripple + 0.17F;
+            r.rotateAngleX = a - previous - (i == 0 ? up - push : 0F);
+            previous = a;
+            r.rotateAngleZ = i == 0 ? sway * 0.4F : 0F;
+        }
+        float shoulder = root.rotationPointY - 13F, roll = p[TILT] + p[CHEST_Z];
+        for (int side = 0; side < 2; side++) {
+            boolean right = side == 0;
+            float x = right ? p[RA_X] : p[LA_X], z = right ? p[RA_Z] : p[LA_Z];
+            float elbow = (right ? rFore : lFore).rotateAngleX;
+            // Turned in toward her back, so that from in front it opens out like a wing rather than hanging edge-on.
+            ModelRenderer top = drapes[side][0];
+            top.rotateAngleX = -(up + x + elbow) + swing * 0.6F;
+            top.rotateAngleY = -(right ? p[RA_Y] - 0.75F : p[LA_Y] + 0.75F);
+            top.rotateAngleZ = -(z + roll);
+            float c = MathHelper.cos(z + roll);
+            float wrist = shoulder + 4.5F * MathHelper.cos(x + up) * c + 3.4F * MathHelper.cos(x + up + elbow) * c;
+            float stretch = Math.max(0.12F, (23.4F - wrist) / (NorseBoxes.DRAPE_LENGTH * NorseBoxes.DRAPES));
+            for (int i = 0; i < NorseBoxes.DRAPES; i++) {
+                ModelRenderer d = drapes[side][i];
+                if (d instanceof Peel) {
+                    ((Peel) d).sy = stretch;
+                }
+                if (i > 0) {
+                    float t = age * 0.075F + i * 1.3F + side * 2.4F;
+                    d.rotationPointY = NorseBoxes.DRAPE_LENGTH * stretch * grow(drapes[side][i - 1]);
+                    // Billowing out from her and back, a little more each length down; never swung across its own plane.
+                    d.rotateAngleX = 0F;
+                    d.rotateAngleZ = (MathHelper.sin(t * 0.8F + 1F) * 0.04F + 0.03F) * (right ? 1F : -1F);
+                }
+            }
+        }
+    }
+
+    private static float grow(ModelRenderer part) {
+        return part instanceof Peel ? ((Peel) part).grow : 1F;
     }
 
     private static float blendTicks(NorsePose to, NorsePose from) {
@@ -545,6 +779,12 @@ public class ModelNorse extends ModelBase {
             case SEIZED:
                 seized(p, t, age);
                 break;
+            case TEAR:
+                tear(p, t, age);
+                break;
+            case FURY:
+                fury(p, t, age, seed);
+                break;
         }
     }
 
@@ -577,6 +817,279 @@ public class ModelNorse extends ModelBase {
         p[JAW] = 0.25F + 0.45F * jolt;
         p[LIDS] = 0F;
         p[LOOK] = 0F;
+    }
+
+    /**
+     * Her lid flipped: she drops into a crouch with her claws out and her jaw open wider than it
+     * goes, and her head jerks to a new angle every couple of ticks, too fast to follow, as if
+     * something inside it were trying to get out.
+     */
+    private static void fury(float[] p, float t, float age, int seed) {
+        float in = ModelAdamWarlock.outBack(clamp(t / 4F));
+        float step = (float) Math.floor(age / 2F);
+        float j1 = jerk(step, seed), j2 = jerk(step + 17F, seed), j3 = jerk(step + 41F, seed);
+        p[LEAN] = 0.12F * in;
+        p[CHEST_X] = 0.25F * in + j1 * 0.05F;
+        p[HEAD_X] = -0.45F * in + j1 * 0.25F;
+        p[HEAD_Z] = j2 * 0.65F;
+        p[HEAD_Y] = j3 * 0.5F;
+        p[RA_X] = -1.35F * in;
+        p[RA_Z] = 0.65F * in;
+        p[R_ELBOW] = -0.45F;
+        p[LA_X] = -1.35F * in;
+        p[LA_Z] = -0.65F * in;
+        p[L_ELBOW] = -0.45F;
+        p[R_CURL] = p[L_CURL] = 0.55F;
+        p[R_WRIST] = p[L_WRIST] = -0.5F;
+        p[R_KNEE] = p[L_KNEE] = 0.4F * in;
+        p[RL_Z] = 0.15F * in;
+        p[LL_Z] = -0.15F * in;
+        p[DROP] = 1F * in;
+        p[JAW] = 1F;
+        p[LIDS] = 0F;
+        p[LOOK] = 0F;
+    }
+
+    /**
+     * Changing shape (see {@link Morph}): doubled up and sinking at the knees, writhing, and
+     * jerking from one angle to the next, a few ticks at each, like something being pushed
+     * about from the inside. When her trunk goes, her back arches over until her head hangs
+     * behind her; when her head goes, it wrenches all the way round, and back.
+     */
+    private static void morph(float[] p, float t, float age, int seed) {
+        float w = Morph.writhe(t);
+        float step = (float) Math.floor(age / 3F);
+        float j1 = jerk(step, seed), j2 = jerk(step + 23F, seed), j3 = jerk(step + 57F, seed);
+        float s = MathHelper.sin(age * 0.55F);
+        p[DROP] += 2.2F * w;
+        p[R_KNEE] += 0.6F * w;
+        p[L_KNEE] += 0.6F * w;
+        p[LEAN] += 0.12F * w;
+        p[CHEST_X] += (0.45F + 0.12F * s + 0.15F * j1) * w;
+        p[HEAD_X] += 0.35F * j1 * w;
+        p[HEAD_Z] += 0.7F * j2 * w;
+        p[HEAD_Y] += 0.6F * j3 * w;
+        p[RA_X] += (-0.7F + 0.6F * j2) * w;
+        p[RA_Z] += (0.35F + 0.35F * j3) * w;
+        p[LA_X] += (-0.7F + 0.6F * j3) * w;
+        p[LA_Z] -= (0.35F + 0.35F * j1) * w;
+        p[R_WRIST] += 0.7F * j1 * w;
+        p[L_WRIST] += 0.7F * j2 * w;
+        p[R_CURL] = Math.max(p[R_CURL], (0.5F + 0.5F * j3) * w);
+        p[L_CURL] = Math.max(p[L_CURL], (0.5F - 0.5F * j3) * w);
+        p[JAW] = Math.max(p[JAW], (0.55F + 0.45F * j2) * w);
+        p[LIDS] = 0F;
+        p[LOOK] = 0F;
+        float arch = Morph.snap(Morph.TRUNK, t);
+        p[CHEST_X] -= 1.4F * arch;
+        p[HEAD_X] -= 0.8F * arch;
+        p[RA_Z] += 0.8F * arch;
+        p[LA_Z] -= 0.8F * arch;
+        float round = Morph.snap(Morph.HEAD, t);
+        if (round > 0F) {
+            p[HEAD_Y] += (float) Math.PI * round * (seed % 2 == 0 ? 1F : -1F);
+            p[HEAD_LIMIT] = 1F;
+        }
+    }
+
+    /** A new random angle, -1 to 1, held for one step. */
+    private static float jerk(float step, int seed) {
+        float s = MathHelper.sin(step * 12.9898F + seed * 78.233F) * 43758.547F;
+        return (s - (float) Math.floor(s)) * 2F - 1F;
+    }
+
+    /** Where each stage of taking off the skin begins (see {@link com.matoon.eternity.entity.SkinTear}); the last runs to the end. */
+    private static final float[] TEAR_AT = {0F, 24F, 52F, 63F, 76F, 98F, 118F, 134F, 146F};
+
+    /**
+     * Death tearing off the pretty one. Doubled over and shaking as it splits on her; clawing at
+     * her own face, the head thrown about; the left hand held out and the skin dragged off it like
+     * a glove; then the right; both hands in at the hairline, bowed into it, and the face dragged
+     * forward off her skull; arms crossed to the collarbones and the body torn open, thrown off
+     * wide; bent double to push the rest down off her hips, and a step out of it with each foot.
+     * Then she straightens, the head back and the eyes shut, and breathes out, slow, as if she had
+     * been holding that breath the whole time she wore it.
+     */
+    private static void tear(float[] p, float t, float age) {
+        int stage = 0;
+        while (stage + 1 < TEAR_AT.length && t >= TEAR_AT[stage + 1]) {
+            stage++;
+        }
+        tearStage(stage, p, t - TEAR_AT[stage], age);
+        float blend = smooth((t - TEAR_AT[stage]) / 5F);
+        if (stage > 0 && blend < 1F) {
+            float[] was = new float[N];
+            tearStage(stage - 1, was, t - TEAR_AT[stage - 1], age);
+            for (int i = 0; i < N; i++) {
+                p[i] = was[i] + (p[i] - was[i]) * blend;
+            }
+        }
+        p[LOOK] = 0F;
+    }
+
+    private static void tearStage(int stage, float[] p, float s, float age) {
+        // Frantic all the way through, until she is out: a shake through the whole body that never settles.
+        float shake = stage < 8 ? MathHelper.sin(age * 2.7F) * MathHelper.sin(age * 1.31F + 1F) : 0F;
+        switch (stage) {
+            case 0: {
+                // It starts to split: doubled over, the arms wrapped round herself, shaking.
+                float in = smooth(s / 10F);
+                p[WAIST_X] = 0.3F * in;
+                p[CHEST_X] = 0.35F * in + shake * 0.06F;
+                p[CHEST_Z] = shake * 0.08F;
+                p[HEAD_X] = 0.35F * in;
+                p[HEAD_Z] = shake * 0.12F;
+                p[RA_X] = -0.9F;
+                p[RA_Y] = 0.5F;
+                p[R_ELBOW] = -1.5F;
+                p[LA_X] = -0.9F;
+                p[LA_Y] = -0.5F;
+                p[L_ELBOW] = -1.5F;
+                p[R_CURL] = p[L_CURL] = 0.9F;
+                p[R_KNEE] = p[L_KNEE] = 0.25F * in;
+                p[DROP] = 0.6F * in;
+                p[JAW] = 0.3F;
+                break;
+            }
+            case 1: {
+                // Clawing at her face: both hands at it, each dragging down in turn, the head thrown back and side to side.
+                float r = MathHelper.sin(age * 1.6F), l = MathHelper.sin(age * 1.6F + 3.1F);
+                p[CHEST_X] = -0.15F + shake * 0.05F;
+                p[HEAD_X] = -0.3F + MathHelper.sin(age * 0.9F) * 0.15F;
+                p[HEAD_Y] = MathHelper.sin(age * 0.53F) * 0.4F;
+                p[HEAD_Z] = shake * 0.15F;
+                p[RA_X] = -2.35F + r * 0.35F;
+                p[RA_Y] = -0.45F;
+                p[R_ELBOW] = -1.75F + Math.max(0F, r) * 0.4F;
+                p[LA_X] = -2.35F + l * 0.35F;
+                p[LA_Y] = 0.45F;
+                p[L_ELBOW] = -1.75F + Math.max(0F, l) * 0.4F;
+                p[R_CURL] = 0.6F + 0.4F * Math.max(0F, r);
+                p[L_CURL] = 0.6F + 0.4F * Math.max(0F, l);
+                p[R_KNEE] = 0.2F + shake * 0.08F;
+                p[L_KNEE] = 0.3F - shake * 0.08F;
+                p[DROP] = 0.4F;
+                p[JAW] = 0.8F;
+                break;
+            }
+            case 2:
+            case 3: {
+                // A hand held out, and the other dragging the skin off it like a glove: the left, then the right.
+                boolean left = stage == 2;
+                float pull = s < 4F ? 0F : ModelAdamWarlock.outBack(clamp((s - 4F) / 5F));
+                int held = left ? LA_X : RA_X, puller = left ? RA_X : LA_X;
+                p[CHEST_X] = 0.12F + shake * 0.04F;
+                p[CHEST_Y] = (left ? 0.25F : -0.25F) * (1F - pull);
+                p[HEAD_X] = 0.3F;
+                p[HEAD_Y] = left ? 0.3F : -0.3F;
+                p[held] = -1.35F + shake * 0.05F;
+                p[left ? L_ELBOW : R_ELBOW] = -0.1F;
+                p[left ? LA_Y : RA_Y] = left ? -0.25F : 0.25F;
+                p[left ? L_CURL : R_CURL] = 0.1F;
+                // Across the body to the wrist, and then the yank, out to the side, the skin in the fist.
+                p[puller] = -1.25F + pull * 0.75F;
+                p[left ? RA_Y : LA_Y] = (left ? 0.75F : -0.75F) * (1F - pull);
+                p[left ? RA_Z : LA_Z] = (left ? 1.0F : -1.0F) * pull;
+                p[left ? R_ELBOW : L_ELBOW] = -0.7F + pull * 0.5F;
+                p[left ? R_CURL : L_CURL] = 1F;
+                p[R_KNEE] = p[L_KNEE] = 0.15F;
+                p[DROP] = 0.3F;
+                p[JAW] = 0.5F + pull * 0.4F;
+                break;
+            }
+            case 4: {
+                // Fingers in at the hairline, bowed into it, working it loose; then dragging the whole face forward and off.
+                float drag = smooth((s - 12F) / 9F);
+                float dig = MathHelper.sin(age * 2.2F) * 0.12F * (1F - drag);
+                p[CHEST_X] = 0.25F - drag * 0.35F + shake * 0.05F;
+                p[HEAD_X] = 0.5F - drag * 0.9F;
+                p[HEAD_Z] = shake * 0.1F * (1F - drag);
+                p[RA_X] = -2.75F + dig + drag * 1.6F;
+                p[RA_Y] = -0.6F + drag * 0.4F;
+                p[R_ELBOW] = -2.0F + drag * 1.2F;
+                p[LA_X] = -2.75F - dig + drag * 1.6F;
+                p[LA_Y] = 0.6F - drag * 0.4F;
+                p[L_ELBOW] = -2.0F + drag * 1.2F;
+                p[R_CURL] = p[L_CURL] = 1F;
+                p[R_KNEE] = p[L_KNEE] = 0.2F;
+                p[DROP] = 0.4F;
+                p[JAW] = 0.2F + drag * 0.8F;
+                break;
+            }
+            case 5: {
+                // Arms crossed, a hand at each collarbone, hunched; then the body torn open down the front and thrown off wide.
+                float rip = s < 12F ? 0F : ModelAdamWarlock.outBack(clamp((s - 12F) / 6F));
+                p[CHEST_X] = 0.3F - rip * 0.6F + shake * 0.05F * (1F - rip);
+                p[HEAD_X] = 0.25F - rip * 0.65F;
+                p[RA_X] = -1.1F + rip * 0.8F;
+                p[RA_Y] = 0.95F * (1F - rip);
+                p[RA_Z] = rip * 1.35F;
+                p[R_ELBOW] = -1.9F + rip * 1.6F;
+                p[LA_X] = -1.1F + rip * 0.8F;
+                p[LA_Y] = -0.95F * (1F - rip);
+                p[LA_Z] = -rip * 1.35F;
+                p[L_ELBOW] = -1.9F + rip * 1.6F;
+                p[R_CURL] = p[L_CURL] = 1F - rip * 0.5F;
+                p[R_KNEE] = p[L_KNEE] = 0.15F;
+                p[DROP] = 0.3F;
+                p[JAW] = 0.3F + rip * 0.6F;
+                break;
+            }
+            case 6: {
+                // Bent double, pushing the rest down off her hips with both hands.
+                float push = smooth(s / 16F);
+                p[WAIST_X] = 0.55F;
+                p[CHEST_X] = 0.45F + shake * 0.04F;
+                p[HEAD_X] = 0.2F;
+                p[RA_X] = -0.55F + push * 0.3F;
+                p[RA_Z] = 0.3F;
+                p[R_ELBOW] = -0.3F;
+                p[LA_X] = -0.55F + push * 0.3F;
+                p[LA_Z] = -0.3F;
+                p[L_ELBOW] = -0.3F;
+                p[R_CURL] = p[L_CURL] = 0.8F;
+                p[R_KNEE] = p[L_KNEE] = 0.35F + push * 0.45F;
+                p[RL_X] = p[LL_X] = -0.25F - push * 0.25F;
+                p[DROP] = 1F + push * 1.2F;
+                p[JAW] = 0.4F;
+                break;
+            }
+            case 7: {
+                // A step out of it with each foot, rising as she goes.
+                float up = smooth(s / 12F);
+                float r = (float) Math.sin(clamp(s / 6F) * Math.PI), l = (float) Math.sin(clamp((s - 6F) / 6F) * Math.PI);
+                p[WAIST_X] = 0.55F * (1F - up);
+                p[CHEST_X] = 0.3F * (1F - up);
+                p[HEAD_X] = 0.2F * (1F - up);
+                p[RA_Z] = 0.3F;
+                p[LA_Z] = -0.3F;
+                p[R_ELBOW] = p[L_ELBOW] = -0.3F;
+                p[RL_X] = -0.7F * r;
+                p[R_KNEE] = 0.9F * r;
+                p[LL_X] = -0.7F * l;
+                p[L_KNEE] = 0.9F * l;
+                p[DROP] = 1.2F * (1F - up);
+                break;
+            }
+            default: {
+                // Out. She straightens, taller than it was; the head goes back, the eyes shut, the arms open a little,
+                // palms out; and she breathes out, long and slow. Then she looks at you again.
+                float sigh = (float) Math.sin(clamp((s - 2F) / 16F) * Math.PI);
+                float back = 1F - smooth((s - 14F) / 10F);
+                p[CHEST_X] = -0.18F * sigh;
+                p[HEAD_X] = -0.45F * back;
+                p[HEAD_Z] = 0.1F * back;
+                p[RA_Z] = 0.25F + 0.15F * sigh;
+                p[LA_Z] = -0.25F - 0.15F * sigh;
+                p[R_ELBOW] = p[L_ELBOW] = -0.2F;
+                p[R_TWIST] = -0.9F * back;
+                p[L_TWIST] = 0.9F * back;
+                p[R_CURL] = p[L_CURL] = 0.15F;
+                p[JAW] = 0.35F * sigh;
+                p[LIDS] = back > 0.3F ? 1F : 0F;
+                break;
+            }
+        }
     }
 
     // ------------------------------------------------------------------ the Sovereign: her, him, and what he is
@@ -899,6 +1412,64 @@ public class ModelNorse extends ModelBase {
                 p[L_KNEE] = 0.06F;
                 folded(p, 0.3F);
                 p[R_CURL] = p[L_CURL] = 0.3F;
+                break;
+            }
+            case NorseBoxes.TEMPTRESS: {
+                // All her weight on one leg, the hip thrown out over it, one gloved hand resting
+                // there and the other loose at her side; her head tilted, her chin down a little,
+                // so she looks up at you through her lashes. She sways, slowly, as if to music
+                // nobody else can hear.
+                float br = breath(age, 0.04F);
+                float sway = MathHelper.sin(age * 0.035F + seed);
+                p[CHEST_X] = -0.05F + br * 0.012F;
+                p[WAIST_Y] = 0.12F + sway * 0.04F;
+                p[TILT] = -0.09F + sway * 0.03F;
+                p[HEAD_Z] = 0.16F + sway * 0.03F;
+                p[HEAD_X] = 0.07F;
+                p[RL_Z] = 0.08F;
+                p[LL_Z] = -0.02F;
+                p[L_KNEE] = 0.32F;
+                p[LL_X] = -0.12F;
+                // The right hand on her hip.
+                p[RA_X] = -0.05F;
+                p[RA_Z] = 0.42F;
+                p[R_ELBOW] = -1.05F;
+                p[RA_Y] = -0.75F;
+                p[R_WRIST] = 0.4F;
+                p[R_CURL] = 0.2F;
+                // The left loose, the fingers a little open.
+                p[LA_Z] = -0.26F + sway * 0.02F;
+                p[L_ELBOW] = -0.18F;
+                p[L_CURL] = 0.2F;
+                break;
+            }
+            case NorseBoxes.UNVEILED: {
+                // She doesn't stand; she hangs in the air a hand's breadth off the ground, rising and
+                // settling as if on a slow tide. Her arms held out and down, so the cape between her
+                // wrists and the ground opens like wings; one knee drawn up, both feet pointed; the
+                // skull tilted a little, considering you. Nothing breathes.
+                float tide = MathHelper.sin(age * 0.045F + seed);
+                p[DROP] = -2.2F + tide * 0.6F;
+                p[WALK] = 0.15F;
+                p[CHEST_X] = -0.06F;
+                p[HEAD_Z] = 0.14F + MathHelper.sin(age * 0.02F + seed) * 0.05F;
+                p[HEAD_X] = 0.08F;
+                p[RA_Z] = 0.72F + tide * 0.05F;
+                p[LA_Z] = -0.72F - tide * 0.05F;
+                p[RA_X] = p[LA_X] = -0.15F;
+                p[R_ELBOW] = p[L_ELBOW] = -0.2F;
+                p[R_WRIST] = p[L_WRIST] = -0.35F;
+                p[R_TWIST] = 0.9F;
+                p[L_TWIST] = -0.9F;
+                p[R_CURL] = p[L_CURL] = 0.12F;
+                p[RL_X] = -0.75F;
+                p[R_KNEE] = 1.25F;
+                p[RL_Z] = 0.06F;
+                p[LL_X] = 0.08F;
+                p[LL_Z] = -0.03F;
+                p[L_KNEE] = 0.1F;
+                p[R_FOOT] = 1.0F;
+                p[L_FOOT] = 0.85F;
                 break;
             }
             case NorseBoxes.MAGUS: {
@@ -1521,7 +2092,7 @@ public class ModelNorse extends ModelBase {
      */
     private static void walk(float[] p, float swing, float gait, int look) {
         boolean dead = look == NorseBoxes.DRAUGR;
-        boolean woman = look == NorseBoxes.STRANGER || look == NorseBoxes.RAGNA || look == NorseBoxes.DEATH;
+        boolean woman = look == NorseBoxes.STRANGER || look == NorseBoxes.RAGNA || look == NorseBoxes.DEATH || look == NorseBoxes.TEMPTRESS || look == NorseBoxes.UNVEILED;
         float phase = swing * 0.6662F;
         float s = MathHelper.cos(phase);
         float c = MathHelper.sin(phase);
@@ -1534,6 +2105,11 @@ public class ModelNorse extends ModelBase {
         p[L_FOOT] += Math.max(0F, -s) * -0.25F * gait + Math.max(0F, s) * 0.3F * gait;
         p[DROP] += (1F - Math.abs(c)) * -0.35F * gait + 0.2F * gait;
         p[TWIST] += s * (woman ? 0.06F : 0.04F) * gait;
+        if (look == NorseBoxes.TEMPTRESS || look == NorseBoxes.UNVEILED) {
+            // One foot set before the other, and the hips rolling with every step.
+            p[WAIST_Y] += s * 0.14F * gait;
+            p[TILT] += c * 0.05F * gait;
+        }
         p[CHEST_Y] -= s * 0.09F * gait;
         p[TILT] += c * (woman ? 0.04F : 0.02F) * gait;
         p[HEAD_Y] += s * 0.04F * gait;
@@ -1562,6 +2138,15 @@ public class ModelNorse extends ModelBase {
         p[HEAD_X] += (beat * 0.04F + stress * 0.06F) * k * scale;
         p[HEAD_Z] += MathHelper.sin(age * 0.09F) * 0.03F * k * scale;
         p[CHEST_X] += stress * 0.02F * k * scale;
+        if ((look == NorseBoxes.TEMPTRESS || look == NorseBoxes.UNVEILED) && state == NorsePose.STAND) {
+            // The loose hand lifts as she speaks, palm up, the fingers curling toward her: come closer.
+            float hand = Math.max(0F, MathHelper.sin(age * 0.045F)) * k;
+            set(p, LA_X, -0.85F, hand);
+            set(p, LA_Z, 0.05F, hand);
+            set(p, L_ELBOW, -0.75F, hand);
+            set(p, L_CURL, 0.15F + 0.5F * Math.max(0F, MathHelper.sin(age * 0.3F)), hand);
+            p[HEAD_Z] += MathHelper.sin(age * 0.06F) * 0.04F * k;
+        }
         if ((look == NorseBoxes.HRAFN || look == NorseBoxes.GARDENER) && (state == NorsePose.STAND || state == NorsePose.MOURN)) {
             // A hand comes up and opens, palm up, as if offering the point.
             float hand = Math.max(0F, MathHelper.sin(age * (look == NorseBoxes.GARDENER ? 0.05F : 0.07F))) * k;
@@ -1573,6 +2158,9 @@ public class ModelNorse extends ModelBase {
             set(p, L_WRIST, -0.2F, hand);
         } else if (look == NorseBoxes.RAGNA) {
             p[JAW] += 0.15F * k;
+        } else if (look == NorseBoxes.UNVEILED) {
+            // A skull speaking: the whole jaw drops and snaps up again with the words.
+            p[JAW] += k * (0.2F + 0.55F * Math.max(0F, MathHelper.sin(age * 1.7F + MathHelper.sin(age * 0.6F) * 1.5F)));
         }
     }
 }

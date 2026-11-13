@@ -1030,6 +1030,10 @@ that runs on FE charged. It gives 10k FE/t empty, 1M FE/t more for Eternity, 100
 the Living Tribunal, 250M each for Master Order and Lord Chaos and 500M for the
 In-Betweener (Java's integers stop it at a little over 2.1B FE/t).
 
+On the ability bar each power is framed in the colour of the being it comes from: Eternity's magenta, the Living
+Tribunal's brown, Master Order's white, Lord Chaos's cyan, the In-Betweener's gray. The stones' powers keep
+InfinityCraft's colours, Eternity's additions to them included.
+
 What it holds shows. With Eternity inside, its heart is a universe of violet stars; once
 it has absorbed the Living Tribunal it evolves: the crystal warms to gold, a golden sun
 burns at its heart, and his power circles it in three turning rings of gold, rays of light
@@ -1053,6 +1057,7 @@ one another, and past two their powers run on into a second column.
 | `/eternity slay` | Starts the finale immediately |
 | `/eternity doom [0-1]` | Skips straight into the end of the world, at the given progress |
 | `/eternity restore` | Heals reality from the unmaking or the void, and gives players their game mode back |
+| `/eternity recover` | The same, and then puts back every block the end of the world turned or tore away (wherever nobody has built over it since), clears the sky, and lifts anyone left standing inside the ground back onto it |
 | `/eternity reset` | Brings him back and forgets every player's stones |
 | `/eternity comet [status]` | Where the comet is, its integrity, and how long it has been out of sight |
 | `/eternity comet summon` | Brings it into your sky (full size if you are in space) |
@@ -1099,6 +1104,13 @@ one another, and past two their powers run on into a second column.
 | `/eternity vault armor [broken\|full\|forged]` | An empty Destroyer Armor stands in front of you, anywhere: as claimed from the vault, fit to run (the default), or with every upgrade forged (the Dynamo too, so it runs on Forge Energy) |
 | `/tpdimension <player> <dim> [x y z]` | Sends a player to another dimension: to its spawn on safe ground, or to exact coordinates (`~` is relative to the player) |
 
+## Addons
+
+Eternity has an API for addons (`com.matoon.eternity.api`): new beings for the Astral Regulator with their own powers,
+bar colours and tooltip entries, a base for cosmic abilities, events for absorbing, snapping and the story moving on,
+and one entry point to the stones, the story, the dimensions, the no-grief switch and the Destroyer Armor's rules. See
+[docs/API.md](docs/API.md); `./gradlew build` also makes the `-dev` and `-api` jars to build against.
+
 ## Configuration
 
 `config/eternity.cfg` covers rift timing, encounter delays, rebirth after death,
@@ -1111,7 +1123,7 @@ Stone, Tamarata's dimension id and rocket tier, his health, damage and how much 
 how fast his rage builds and cools, how far Planet Breaker reaches and how fast it erases), Odin's Vault (its
 dimension id, how soon the Destroyer wakes, its health and armour, how hard it hits, how long it takes to mend, the
 Einherjar's health and spears and how often they leave their arms behind, whether the Casket changes the world, and the
-Destroyer Armor's integrity, how hard it hits, how hungry it is for lava and whether it changes the world), and client options: presence strength, screen
+Destroyer Armor's integrity, how hard it hits, how hungry it is for lava and whether it changes the world), a master switch (`destroyBlocks`) that stops anything of the mod's from breaking or rewriting blocks (Eternity's attacks and black holes, the end of the world, the Destroyer Armor, the Casket, the Aether and the leaks; the story's set pieces, like the Champion breaking his world or a doorway opening, still happen), and client options: presence strength, screen
 shake, reduced flashing, forced gaze and distortion shaders.
 
 ## Building

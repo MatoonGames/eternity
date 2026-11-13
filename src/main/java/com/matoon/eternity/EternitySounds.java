@@ -75,6 +75,12 @@ public final class EternitySounds {
     public static final SoundEvent MUSIC_SOVEREIGN = create("music.sovereign");
     /** Under Warlock's going, and the title after it. */
     public static final SoundEvent MUSIC_UPRISING = create("music.uprising");
+    /** Odin's: the three-way fight he makes of the Magus's last one. */
+    public static final SoundEvent MUSIC_ODIN = create("music.odin");
+    /** Before the Bifrost comes down, and after it has taken him away. */
+    public static final SoundEvent MUSIC_PRISMS = create("music.prisms");
+    /** The Bifrost coming down (stereo: heard everywhere at once, not from a place). */
+    public static final SoundEvent ODIN_BIFROST = create("entity.odin.bifrost");
     public static final SoundEvent GRANDMASTER_FRUSTRATED = create("entity.grandmaster.frustrated");
 
     // The stones' own powers (see com.matoon.eternity.stones): the Time Stone at work, the full gauntlet waking, the snap.

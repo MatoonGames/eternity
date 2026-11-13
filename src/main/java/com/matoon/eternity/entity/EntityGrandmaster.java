@@ -95,6 +95,8 @@ public class EntityGrandmaster extends EntityLiving {
     private int showIndex;
     private int lastSpoke = -1000;
     private int lastStruck = -1000;
+    /** Held up by someone who puts him where he is every tick: he does nothing about where he is himself. */
+    private boolean carried;
 
     // ------------------------------------------------------------------ client state
     public int clientStateTicks;
@@ -226,6 +228,17 @@ public class EntityGrandmaster extends EntityLiving {
         lookAt = at;
     }
 
+    /** In someone's hand, or out of it. Let go, he falls to whatever is under him. */
+    public void carry(boolean on) {
+        carried = on;
+    }
+
+    /** Exactly here this tick, turned this way, by whoever is holding him. */
+    public void place(Vec3d at, float yaw) {
+        setPosition(at.x, at.y, at.z);
+        rotationYaw = renderYawOffset = yaw;
+    }
+
     private static int natural(State state) {
         switch (state) {
             case ARRIVE:
@@ -326,7 +339,9 @@ public class EntityGrandmaster extends EntityLiving {
             rotationYawHead = rotationYaw;
         }
         // Feet on whatever is under him: the board, or the ground once it is gone; or, held up, a long way off it.
-        if (held) {
+        if (carried) {
+            // Where his hand puts him.
+        } else if (held) {
             double floor = floor(posX, posY + 0.3D, posZ);
             setPosition(posX, posY + (floor + LIFT - posY) * 0.15D, posZ);
         } else if (!down || state == State.FALL) {

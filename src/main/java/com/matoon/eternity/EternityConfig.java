@@ -9,6 +9,13 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 @Config(modid = Eternity.MODID, name = Eternity.MODID)
 public class EternityConfig {
 
+    @Config.Comment({"Whether anything of this mod's may break or rewrite the world's blocks: Eternity's black holes, lances and",
+            "impacts, the end of the world eating the land round you, the Destroyer Armor's fists and ray, the Casket's",
+            "winter, the Aether rewriting the ground round your home, and the north taking from it. When false none of it",
+            "touches a block, whatever each one's own setting says. The story's set pieces still happen: the Champion",
+            "breaking his world, a doorway opening, the board, the barrow and the garden built and taken down."})
+    public static boolean destroyBlocks = true;
+
     @Config.Comment("How Eternity moves through the worlds.")
     public static Roaming roaming = new Roaming();
 
@@ -32,6 +39,13 @@ public class EternityConfig {
 
     @Config.Comment("Adam Warlock, who wants the stones for himself.")
     public static Warlock warlock = new Warlock();
+
+    @Config.Comment("The Magus, in his last fight: the struggle for the gauntlet.")
+    public static Magus magus = new Magus();
+
+    @Config.Comment({"Odin, woken from the Odinsleep: he comes down the Bifrost into the Magus's last fight, the second time the",
+            "Magus's health runs out, and makes it three ways."})
+    public static Odin odin = new Odin();
 
     @Config.Comment("The Champion of the Universe, and Tamarata, the war-ruined planet he lives on.")
     public static Champion champion = new Champion();
@@ -135,8 +149,17 @@ public class EternityConfig {
         public double einherjarDamage = 8.0;
 
         @Config.Comment({"Whether the Casket of Ancient Winters changes the world it is opened on: water freezing, snow on",
-                "the ground, ice erupting from it. Never inside the vault itself."})
+                "the ground, ice erupting from it, glaciers where the Fimbulwinter passes. Never inside the vault itself."})
         public boolean casketChangesTerrain = true;
+
+        @Config.Comment({"How far the Fimbulwinter reaches, in blocks: the winter let out all at once when the Casket is held open",
+                "until it is full and then released. Everything in it freezes, and the land is buried in snow and ice."})
+        @Config.RangeInt(min = 16, max = 256)
+        public int casketWinterRadius = 96;
+
+        @Config.Comment({"Whether the land the Fimbulwinter covers stays in an ice age: its biomes turned to their frozen kin,",
+                "so snow falls there from then on. Only where the Casket changes terrain at all, and only on surface worlds."})
+        public boolean casketIceAge = true;
 
         @Config.Comment("Chance that a fallen Einherjar leaves each piece of his armour behind (helm, cuirass, greaves, boots).")
         @Config.RangeDouble(min = 0, max = 1)
@@ -272,6 +295,11 @@ public class EternityConfig {
 
         @Config.Comment("While the Aether is in someone, the world round their home is rewritten a block at a time, for good.")
         public boolean aetherChangesWorld = true;
+
+        @Config.Comment({"Players who answer the story's people together, or see a conversation through together, become a",
+                "fellowship: they share one story from then on, journal and all. When false, fellowships only form by",
+                "invitation (/fellowship invite <player>)."})
+        public boolean fellowships = true;
     }
 
     public static class GrandmasterSettings {
@@ -295,6 +323,56 @@ public class EternityConfig {
         @Config.Comment("Moves the Grandmaster looks ahead when he plays the raiders himself.")
         @Config.RangeInt(min = 1, max = 5)
         public int grandmasterDepth = 4;
+
+        @Config.Comment({"On the Magus's road: cheats made over the board, his and the Grandmaster's together, before the Magus says what",
+                "they are and takes the board. He cheats every other move of his from his third, and the house answers each."})
+        @Config.RangeInt(min = 1, max = 40)
+        public int magusRivalry = 8;
+    }
+
+    public static class Magus {
+        @Config.Comment({"His health in the fight for the gauntlet. Emptying it does not beat him (only the snap does that):",
+                "he reels, drops the gauntlet if he has it, and comes back to half, angrier."})
+        @Config.RangeDouble(min = 1, max = 1024)
+        public double health = 1000.0;
+
+        @Config.Comment("Most of his health any single blow can take.")
+        @Config.RangeDouble(min = 0.001, max = 1)
+        public double maxHitFraction = 0.03;
+
+        @Config.Comment("How much Adam Warlock's blows count against him, against a player's.")
+        @Config.RangeDouble(min = 0, max = 4)
+        public double warlockShare = 0.5;
+
+        @Config.Comment({"Whether Adam Warlock can die in the fight, beaten by the Magus, rather than being driven off.",
+                "If he does, he is gone for good."})
+        public boolean warlockCanDie = true;
+    }
+
+    public static class Odin {
+        @Config.Comment("Whether he comes into the Magus's last fight at all.")
+        public boolean enabled = true;
+
+        @Config.Comment({"His health. Emptying it does not kill him: he is driven back, Sleipnir rearing, and comes again at half.",
+                "Nobody in this fight can kill the Allfather."})
+        @Config.RangeDouble(min = 1, max = 1024)
+        public double health = 1000.0;
+
+        @Config.Comment("Most of his health any single blow can take.")
+        @Config.RangeDouble(min = 0.001, max = 1)
+        public double maxHitFraction = 0.025;
+
+        @Config.Comment("How much the Magus's and Adam Warlock's blows count against him, against a player's.")
+        @Config.RangeDouble(min = 0, max = 4)
+        public double otherShare = 0.5;
+
+        @Config.Comment("How hard his blows land on players, as a multiple of the usual.")
+        @Config.RangeDouble(min = 0, max = 4)
+        public double damage = 1.0;
+
+        @Config.Comment({"Whether a player falling while he is in the fight is the end of it: he takes the gauntlet and goes.",
+                "Off, they die as they would without him, and the fight starts over when they are ready."})
+        public boolean canWin = true;
     }
 
     public static class Warlock {
@@ -319,6 +397,15 @@ public class EternityConfig {
         @Config.Comment("Share of his maximum health he comes out of an unbroken cocoon with.")
         @Config.RangeDouble(min = 0.01, max = 1)
         public double evolvedHealth = 0.65;
+
+        @Config.Comment({"With the Power Stone in his brow (when he tears it out of the Champion after Planet Breaker), every blow",
+                "to him counts for this many times less, and the most any one can take is halved."})
+        @Config.RangeDouble(min = 1, max = 100)
+        public double stoneToughness = 3.0;
+
+        @Config.Comment("With the Power Stone in his brow, his blows to you are this many times heavier.")
+        @Config.RangeDouble(min = 0, max = 10)
+        public double stoneDamage = 1.6;
     }
 
     public static class InBetweenerSettings {

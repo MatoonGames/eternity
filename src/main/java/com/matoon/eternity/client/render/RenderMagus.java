@@ -59,6 +59,7 @@ public class RenderMagus extends RenderLiving<EntityMagus> {
     public RenderMagus(RenderManager manager) {
         super(manager, new ModelMagus(), 0.45F);
         addLayer(new Hands());
+        addLayer(new Held());
     }
 
     @Override
@@ -155,6 +156,9 @@ public class RenderMagus extends RenderLiving<EntityMagus> {
         WarlockFx.additive();
         if (!away) {
             corona(entity, at);
+            if (entity.pose() == Pose.POWER || entity.pose() == Pose.SNAP) {
+                gauntletFx(entity, at, partialTicks);
+            }
         }
         folding(entity, at, partialTicks);
         GlStateManager.popMatrix();
@@ -192,6 +196,9 @@ public class RenderMagus extends RenderLiving<EntityMagus> {
         GlSnapshot before = GlSnapshot.take();
         GlStateManager.enableBlend();
         GlStateManager.depthFunc(GL11.GL_LEQUAL);
+        if (entity.burn() > 0F) {
+            burn(entity, ageInTicks, scaleFactor);
+        }
         if (white > 0.01F) {
             bindTexture(POWER);
             GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
@@ -227,6 +234,39 @@ public class RenderMagus extends RenderLiving<EntityMagus> {
             }
         }
         before.restore();
+    }
+
+    /**
+     * His own snap's burn on his right arm (see MagusBurn): the char, lit like the rest of him; then its cracks,
+     * glowing and slowly throbbing, and the white heat of it fresh, cooling over a few seconds, in their own light.
+     */
+    private void burn(EntityMagus entity, float ageInTicks, float scaleFactor) {
+        ResourceLocation[] layers = MagusBurn.layers();
+        float since = entity.ticksExisted - entity.burntAt + partial;
+        float flare = Math.max(0F, 1F - since / 60F);
+        float glow = MathHelper.clamp((0.55F + 0.45F * (float) Math.exp(-since / 280F))
+                * (0.82F + 0.18F * MathHelper.sin(ageInTicks * 0.11F)), 0F, 1F) * entity.burn();
+        bindTexture(layers[0]);
+        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+        GlStateManager.color(1F, 1F, 1F, entity.burn());
+        model().renderPose(scaleFactor);
+        GlStateManager.disableLighting();
+        GlStateManager.depthMask(false);
+        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240F, 240F);
+        bindTexture(layers[1]);
+        GlStateManager.color(1F, 1F, 1F, glow);
+        model().renderPose(scaleFactor);
+        if (flare > 0.01F) {
+            bindTexture(layers[2]);
+            GlStateManager.color(1F, 1F, 1F, flare * flare);
+            model().renderPose(scaleFactor);
+        }
+        GlStateManager.depthMask(true);
+        GlStateManager.enableLighting();
+        int light = entity.getBrightnessForRender();
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light % 65536, light / 65536);
+        GlStateManager.color(1F, 1F, 1F, 1F);
     }
 
     /** Violet echoes of him where he was a moment ago, when he is really moving. */
@@ -359,6 +399,173 @@ public class RenderMagus extends RenderLiving<EntityMagus> {
                 float alpha = (1F - Math.abs(travel - 0.5F) * 1.6F) * 0.8F;
                 WarlockFx.strip(s0, s1, 0.05D, 0.03D, VIOLET, WHITE, 0F, alpha);
             }
+        }
+    }
+
+    /** The stones' own colours, by EnumInfinityStone ordinal: space, soul, reality, time, power, mind. */
+    static final float[][] STONE_COLOURS = {{0.3F, 0.55F, 1F}, {1F, 0.55F, 0.1F}, {1F, 0.15F, 0.15F}, {0.2F, 1F, 0.35F},
+            {0.75F, 0.25F, 1F}, {1F, 0.85F, 0.2F}};
+
+    /** Where his gauntleted fist is drawn, near enough, relative to where he is drawn. */
+    private static Vec3d fist(EntityMagus entity, Vec3d at, float partialTicks) {
+        float yaw = (float) Math.toRadians(entity.prevRotationYaw + MathHelper.wrapDegrees(entity.rotationYaw - entity.prevRotationYaw) * partialTicks);
+        Vec3d forward = new Vec3d(-MathHelper.sin(yaw), 0D, MathHelper.cos(yaw));
+        Vec3d right = new Vec3d(-forward.z, 0D, forward.x);
+        if (entity.pose() == Pose.SNAP) {
+            float up = Math.min(1F, (entity.clientPoseTicks + partialTicks) / 14F);
+            return at.add(0D, (1.5D + 1.25D * up) * SCALE, 0D).add(forward.scale(0.55D * (1D - up) + 0.12D)).add(right.scale(0.36D));
+        }
+        return at.add(0D, 1.48D * SCALE, 0D).add(forward.scale(0.62D * SCALE)).add(right.scale(0.04D));
+    }
+
+    /**
+     * The gauntlet coming alive on his fist: light pouring out of it, the stones' colours
+     * thrown off it in rays, lightning running from it up his arm and out into the air, all of
+     * it building for twenty seconds; and at the snap, everything at once.
+     */
+    private void gauntletFx(EntityMagus entity, Vec3d at, float partialTicks) {
+        float t = entity.clientPoseTicks + partialTicks;
+        boolean snap = entity.pose() == Pose.SNAP;
+        float k = snap ? 1F : MathHelper.clamp(t / EntityMagus.POWER_TICKS, 0F, 1F);
+        Vec3d f = fist(entity, at, partialTicks);
+        float time = entity.ticksExisted + partialTicks;
+        float beat = 0.5F + 0.5F * MathHelper.sin(time * (0.3F + 0.5F * k));
+        float near = (float) MathHelper.clamp((f.length() - 0.8D) / 2D, 0D, 1D);
+        // The glow of it, gold, getting brighter and bigger.
+        WarlockFx.glow(f, 0.2D + 0.2D * k + 0.08D * beat, WarlockFx.WHITE, (0.55F + 0.35F * k) * near);
+        WarlockFx.glow(f, 0.5D + 0.8D * k, WarlockFx.GOLD, (0.2F + 0.25F * k) * near);
+        // Each stone's own colour, in rays turning round the fist.
+        for (int i = 0; i < STONE_COLOURS.length; i++) {
+            float[] c = STONE_COLOURS[i];
+            WarlockFx.star(f, 0.05D, 0.4D + 1.4D * k * (0.7D + 0.3D * MathHelper.sin(time * 0.2F + i)), 5,
+                    (entity.ticksExisted / 3) * 977L + i * 31L, time * 0.02F * (i % 2 == 0 ? 1 : -1) + i, c, (0.12F + 0.3F * k) * near);
+        }
+        // What it is doing to him: lightning crawling out of the fist, up the forearm, the arm, the shoulder and the
+        // neck, like something in the veins; and once it is in his head, breaking out of all of him into the air.
+        float yaw = (float) Math.toRadians(entity.rotationYaw);
+        Vec3d forward = new Vec3d(-MathHelper.sin(yaw), 0D, MathHelper.cos(yaw));
+        Vec3d right = new Vec3d(-forward.z, 0D, forward.x);
+        float surge = snap ? 0F : smooth((t - 105F) / 22F) * (1F - smooth((t - 330F) / 36F));
+        Vec3d shoulder = at.add(0D, 1.72D * SCALE, 0D).add(right.scale(0.4D * SCALE));
+        Vec3d elbow = f.add(shoulder).scale(0.5D).add(right.scale(0.18D)).add(0D, -0.22D, 0D);
+        Vec3d neck = at.add(0D, 1.9D * SCALE, 0D).add(forward.scale(-0.05D - 0.12D * surge));
+        Vec3d head = at.add(0D, 2.18D * SCALE, 0D).add(forward.scale(0.05D - 0.3D * surge));
+        Vec3d[] path = snap ? new Vec3d[]{f, elbow, shoulder} : new Vec3d[]{f, elbow, shoulder, neck, head};
+        float crawl = snap ? 1F : MathHelper.clamp((t - 18F) / 92F, 0F, 1F) * (path.length - 1);
+        Random rand = new Random(entity.ticksExisted / 2 * 7919L + entity.getEntityId());
+        for (int i = 0; i < path.length - 1 && i < crawl; i++) {
+            float part = Math.min(1F, crawl - i);
+            Vec3d from = path[i], to = from.add(path[i + 1].subtract(from).scale(part));
+            float[] c = STONE_COLOURS[(i + entity.ticksExisted / 4) % STONE_COLOURS.length];
+            float a2 = (0.55F + 0.45F * beat) * near;
+            WarlockFx.strip(from, to, 0.16D, c, 0.35F * a2);
+            WarlockFx.strip(from, to, 0.05D, WarlockFx.WHITE, 0.8F * a2);
+            MagusFx.arc(from, to, rand, 0.035D, 0.9F * near);
+            MagusFx.arc(from, to, rand, 0.02D, 0.6F * near);
+            if (part < 1F) {
+                // The front of it, burning its way up him.
+                WarlockFx.glow(to, 0.35D + 0.1D * beat, WarlockFx.WHITE, 0.9F * near);
+                WarlockFx.glow(to, 0.8D, c, 0.4F * near);
+            }
+        }
+        // Thrown off the fist into the air all along; out of all of him once it has filled him.
+        int arcs = 1 + (int) (k * 3F) + (int) (surge * 6F);
+        Vec3d[] from = {f, shoulder, neck, head, at.add(0D, 1.2D * SCALE, 0D)};
+        for (int i = 0; i < arcs; i++) {
+            Vec3d o = surge > 0.2F ? from[rand.nextInt(from.length)] : f;
+            Vec3d to = o.add(new Vec3d(rand.nextGaussian(), rand.nextGaussian() * 0.7D + (surge > 0.2F ? 0.4D : 0D), rand.nextGaussian())
+                    .normalize().scale(0.6D + rand.nextDouble() * (0.8D + 1.8D * k + 1.5D * surge)));
+            float[] c = STONE_COLOURS[rand.nextInt(STONE_COLOURS.length)];
+            MagusFx.arc(o, to, rand, 0.03D + 0.03D * k, (0.5F + 0.5F * k) * near);
+            WarlockFx.glow(to, 0.15D, c, 0.4F * near);
+        }
+        if (surge > 0.05F) {
+            // Out of his mouth and eyes, up, at the sky.
+            WarlockFx.glow(head, 0.5D + 0.4D * beat, WarlockFx.WHITE, 0.7F * surge * near);
+            WarlockFx.strip(head, head.add(forward.scale(-0.6D)).add(0D, 6D * surge, 0D), 0.25D, WarlockFx.GOLD, 0.35F * surge * near);
+            WarlockFx.strip(head, head.add(forward.scale(-0.6D)).add(0D, 6D * surge, 0D), 0.08D, WarlockFx.WHITE, 0.7F * surge * near);
+        }
+        if (snap) {
+            float since = t - EntityMagus.SNAP_AT;
+            if (since > -1F && since < 20F) {
+                float flash = since < 0F ? 0F : (float) Math.exp(-since * 0.25F);
+                WarlockFx.glow(f, 1D + 8D * flash, WarlockFx.WHITE, 0.95F * flash);
+                WarlockFx.ring(f, new Vec3d(0D, 1D, 0D), 1D + since * 1.5D, 0.6D, WarlockFx.GOLD, 0.7F * flash);
+            }
+        }
+    }
+
+    /**
+     * The gauntlet, when he has it: held to his chest in both arms as he flies; on his open
+     * right palm while he sets the stones in it, with the stone in his left hand until it goes;
+     * and, once he has put it on, on his right hand.
+     */
+    /** How far down the forearm from the elbow the gauntlet sits worn, in model pixels; how much bigger it is than a player's; and how far past the fist it is held by its cuff. */
+    static float WORN_ALONG = 7F, WORN_SIZE = 1.3F, HELD_PAST = 5F, WORN_X = 1F, WORN_Y = 2F, WORN_ROT = -90F, WORN_YAW = 180F, WORN_ROLL = 0F;
+
+    private class Held implements LayerRenderer<EntityMagus> {
+        @Override
+        public void doRenderLayer(EntityMagus entity, float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks,
+                                  float netHeadYaw, float headPitch, float scale) {
+            net.minecraft.item.ItemStack gauntlet = entity.gauntlet();
+            if (gauntlet.isEmpty() || entity.isAway()) {
+                return;
+            }
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getMinecraft();
+            int how = entity.hold();
+            if (entity.pose() == Pose.STRUGGLE) {
+                // In the struggle it is drawn between the two of them, in the view of whoever is struggling.
+                return;
+            }
+            boolean worn = how == EntityMagus.HOLD_WORN || entity.pose() == Pose.DON && entity.clientPoseTicks >= EntityMagus.DON_IN;
+            GlStateManager.pushMatrix();
+            GlStateManager.enableRescaleNormal();
+            if (worn) {
+                // On his fist: from the palm, turned so the fingers go on along the forearm and the cuff round the wrist.
+                // As a player's held item is put in the hand (LayerHeldItem), from the elbow down the forearm.
+                model().toElbow(true, scale);
+                GlStateManager.rotate(WORN_ROT, 1F, 0F, 0F);
+                GlStateManager.rotate(WORN_YAW, 0F, 1F, 0F);
+                GlStateManager.translate(WORN_X / 16F, WORN_Y / 16F, -WORN_ALONG / 16F);
+                GlStateManager.rotate(WORN_ROLL, 0F, 0F, 1F);
+                GlStateManager.scale(WORN_SIZE, WORN_SIZE, WORN_SIZE);
+                mc.getRenderItem().renderItem(gauntlet, net.minecraft.client.renderer.block.model.ItemCameraTransforms.TransformType.THIRD_PERSON_RIGHT_HAND);
+            } else if (how == EntityMagus.HOLD_CRADLE) {
+                model().toChest(scale);
+                GlStateManager.translate(0F, -3.6F * scale, -6.4F * scale);
+                GlStateManager.rotate(180F, 0F, 0F, 1F);
+                GlStateManager.rotate(-90F, 0F, 1F, 0F);
+                GlStateManager.scale(0.8F, 0.8F, 0.8F);
+                mc.getRenderItem().renderItem(gauntlet, net.minecraft.client.renderer.block.model.ItemCameraTransforms.TransformType.THIRD_PERSON_RIGHT_HAND);
+            } else {
+                // Held up in his right hand by the cuff, the fingers on up past his fist, open to take the stones.
+                model().toElbow(true, scale);
+                GlStateManager.rotate(WORN_ROT, 1F, 0F, 0F);
+                GlStateManager.rotate(WORN_YAW, 0F, 1F, 0F);
+                GlStateManager.translate(WORN_X / 16F, WORN_Y / 16F, -(WORN_ALONG + HELD_PAST) / 16F);
+                GlStateManager.rotate(WORN_ROLL, 0F, 0F, 1F);
+                GlStateManager.scale(WORN_SIZE, WORN_SIZE, WORN_SIZE);
+                mc.getRenderItem().renderItem(gauntlet, net.minecraft.client.renderer.block.model.ItemCameraTransforms.TransformType.THIRD_PERSON_RIGHT_HAND);
+            }
+            GlStateManager.popMatrix();
+            int stone = entity.slotting();
+            if (stone >= 0 && entity.pose() == Pose.SLOT && entity.clientPoseTicks < EntityMagus.SLOT_GO) {
+                net.minecraft.item.ItemStack held = com.matoon.eternity.compat.InfinityStones.stack(stone);
+                if (!held.isEmpty()) {
+                    GlStateManager.pushMatrix();
+                    model().toHand(false, scale);
+                    GlStateManager.translate(0F, 0.6F * scale, -0.4F * scale);
+                    GlStateManager.scale(0.4F, 0.4F, 0.4F);
+                    mc.getRenderItem().renderItem(held, net.minecraft.client.renderer.block.model.ItemCameraTransforms.TransformType.FIXED);
+                    GlStateManager.popMatrix();
+                }
+            }
+            GlStateManager.disableRescaleNormal();
+        }
+
+        @Override
+        public boolean shouldCombineTextures() {
+            return false;
         }
     }
 

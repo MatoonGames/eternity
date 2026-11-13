@@ -4,7 +4,6 @@ import com.matoon.eternity.Eternity;
 import com.matoon.eternity.world.OdinsVault;
 import com.matoon.eternity.world.OdinsVault.Relic;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.model.ModelRenderer;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
@@ -94,6 +93,17 @@ public final class VaultTreasures {
             draw(relic, camera, casket);
         }
         RenderHelper.disableStandardItemLighting();
+        if (casket && near(Relic.CASKET, camera)) {
+            // The Casket on its pedestal, built and lit as it is everywhere else.
+            int light = world.getCombinedLight(new BlockPos(Relic.CASKET.base()).up(Relic.CASKET.height + 1), 0);
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light % 65536, light / 65536);
+            Vec3d foot = at(Relic.CASKET, 17D).subtract(camera);
+            GlStateManager.pushMatrix();
+            GlStateManager.translate(foot.x, foot.y, foot.z);
+            GlStateManager.rotate(Relic.CASKET.yaw(), 0F, 1F, 0F);
+            CasketRenderer.INSTANCE.draw(age, 0F);
+            GlStateManager.popMatrix();
+        }
 
         // What burns and shines in them, at full brightness.
         GlStateManager.disableLighting();
@@ -130,12 +140,6 @@ public final class VaultTreasures {
         WarlockFx.glow(at(Relic.WARLOCKS_EYE, 12.5D).subtract(camera), 0.32D, new float[]{1F, 0.95F, 0.85F}, 0.45F);
         Vec3d gauntlet = at(Relic.GAUNTLET, 19D).subtract(camera);
         WarlockFx.glow(gauntlet, 0.9D, new float[]{1F, 0.85F, 0.55F}, 0.08F);
-        if (casket) {
-            Vec3d heart = at(Relic.CASKET, 23.5D).subtract(camera);
-            WarlockFx.glow(heart, 0.8D, VaultFx.ICE, 0.1F + 0.04F * MathHelper.sin(age * 0.09F));
-            WarlockFx.glow(heart, 0.4D, VaultFx.FROST, 0.15F);
-            mist(heart, age);
-        }
 
         GlStateManager.shadeModel(GL11.GL_FLAT);
         GlStateManager.depthMask(true);
@@ -207,38 +211,9 @@ public final class VaultTreasures {
                 break;
             case CASKET:
                 MODEL.pedestal.render(PX);
-                if (casket) {
-                    GlStateManager.translate(0F, -17F * PX, 0F);
-                    MODEL.casket.render(PX);
-                }
                 break;
         }
         GlStateManager.popMatrix();
-    }
-
-    /** The casket on its own, for drawing it as an item. Its glow is drawn over it, at full brightness. */
-    public static void casket(float time) {
-        Minecraft mc = Minecraft.getMinecraft();
-        mc.getTextureManager().bindTexture(TEXTURE);
-        MODEL.casket.render(PX);
-        GlSnapshot before = GlSnapshot.take();
-        GlStateManager.disableLighting();
-        GlStateManager.enableBlend();
-        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
-        GlStateManager.depthFunc(GL11.GL_LEQUAL);
-        float lastX = OpenGlHelper.lastBrightnessX, lastY = OpenGlHelper.lastBrightnessY;
-        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240F, 240F);
-        mc.getTextureManager().bindTexture(GLOW);
-        GlStateManager.color(1F, 1F, 1F, 0.8F + 0.2F * MathHelper.sin(time * 0.09F));
-        MODEL.casket.render(PX);
-        GlStateManager.color(1F, 1F, 1F, 1F);
-        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, lastX, lastY);
-        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-        before.restore();
-    }
-
-    public static ModelRenderer casketModel() {
-        return MODEL.casket;
     }
 
     // ------------------------------------------------------------------ what they give off
@@ -274,15 +249,5 @@ public final class VaultTreasures {
         }
         WarlockFx.glow(c.add(0D, 0.3D, 0D), 0.9D, VaultFx.ORANGE, 0.14F + 0.04F * MathHelper.sin(age * 0.6F));
         WarlockFx.glow(c.add(0D, 0.15D, 0D), 0.45D, VaultFx.YELLOW, 0.25F);
-    }
-
-    /** Cold mist spilling over the Casket's sides and down the pedestal. */
-    private static void mist(Vec3d c, float age) {
-        for (int i = 0; i < 6; i++) {
-            float local = (age * 0.012F + i / 6F) % 1F;
-            double a = i * 1.9D + age * 0.01D;
-            Vec3d p = c.add(Math.cos(a) * (0.3D + local * 0.5D), -local * 1.1D, Math.sin(a) * (0.3D + local * 0.5D));
-            WarlockFx.glow(p, 0.35D + local * 0.5D, VaultFx.FROST, 0.1F * (1F - local) * Math.min(1F, local * 5F));
-        }
     }
 }

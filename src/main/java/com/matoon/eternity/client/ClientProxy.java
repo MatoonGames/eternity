@@ -3,7 +3,7 @@ package com.matoon.eternity.client;
 import com.matoon.eternity.CommonProxy;
 import com.matoon.eternity.Eternity;
 import com.matoon.eternity.client.gui.GuiDestroyerArmor;
-import com.matoon.eternity.client.render.CasketItemRenderer;
+import com.matoon.eternity.client.render.CasketRenderer;
 import com.matoon.eternity.client.render.EinherjarItemRenderer;
 import com.matoon.eternity.client.render.RegulatorItemRenderer;
 import com.matoon.eternity.client.render.RenderDestroyer;
@@ -79,8 +79,9 @@ public class ClientProxy extends CommonProxy {
         RenderingRegistry.registerEntityRenderingHandler(EntityNorse.class, RenderNorse::new);
         RenderingRegistry.registerEntityRenderingHandler(EntityDraugr.class, RenderNorse::new);
         RenderingRegistry.registerEntityRenderingHandler(com.matoon.eternity.entity.EntityMagus.class, com.matoon.eternity.client.render.RenderMagus::new);
+        RenderingRegistry.registerEntityRenderingHandler(com.matoon.eternity.entity.EntityOdin.class, com.matoon.eternity.client.render.RenderOdin::new);
         EternityItems.ASTRAL_REGULATOR.setTileEntityItemStackRenderer(new RegulatorItemRenderer());
-        EternityItems.CASKET.setTileEntityItemStackRenderer(new CasketItemRenderer());
+        EternityItems.CASKET.setTileEntityItemStackRenderer(CasketRenderer.INSTANCE);
         EinherjarItemRenderer gear = new EinherjarItemRenderer();
         for (Item item : EternityItems.EINHERJAR_GEAR) {
             item.setTileEntityItemStackRenderer(gear);
@@ -95,8 +96,11 @@ public class ClientProxy extends CommonProxy {
         MinecraftForge.EVENT_BUS.register(FightMusic.INSTANCE);
         MinecraftForge.EVENT_BUS.register(TesseractClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(WarlockClient.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(OdinClient.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(GauntletFightClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(ChampionClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(VaultClient.INSTANCE);
+        MinecraftForge.EVENT_BUS.register(CasketClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(ArmorClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(GrandmasterClient.INSTANCE);
         MinecraftForge.EVENT_BUS.register(Cutscene.INSTANCE);
@@ -154,6 +158,14 @@ public class ClientProxy extends CommonProxy {
             Minecraft.getMinecraft().addScheduledTask(() -> StonesClient.INSTANCE.handle((StoneMessage) message));
             return;
         }
+        if (message instanceof com.matoon.eternity.network.MsgGauntletFight) {
+            Minecraft.getMinecraft().addScheduledTask(() -> GauntletFightClient.INSTANCE.receive((com.matoon.eternity.network.MsgGauntletFight) message));
+            return;
+        }
+        if (message instanceof com.matoon.eternity.network.MsgFellowship) {
+            Minecraft.getMinecraft().addScheduledTask(() -> com.matoon.eternity.client.gui.GuiFellowship.receive((com.matoon.eternity.network.MsgFellowship) message));
+            return;
+        }
         if (message instanceof MsgStory) {
             Minecraft.getMinecraft().addScheduledTask(() -> StoryClient.INSTANCE.handle((MsgStory) message));
             return;
@@ -164,6 +176,8 @@ public class ClientProxy extends CommonProxy {
         }
         if (message instanceof MsgTribunal) {
             Minecraft.getMinecraft().addScheduledTask(() -> TribunalClient.INSTANCE.handle((MsgTribunal) message));
+        } else if (message instanceof MsgTribunalFx && ((MsgTribunalFx) message).type >= MsgTribunalFx.ODIN_BIFROST) {
+            Minecraft.getMinecraft().addScheduledTask(() -> OdinClient.INSTANCE.effect((MsgTribunalFx) message));
         } else if (message instanceof MsgTribunalFx && ((MsgTribunalFx) message).type >= MsgTribunalFx.MAGUS_IMPACT) {
             Minecraft.getMinecraft().addScheduledTask(() -> WarlockClient.INSTANCE.magus((MsgTribunalFx) message));
         } else if (message instanceof MsgTribunalFx && ((MsgTribunalFx) message).type >= MsgTribunalFx.VAULT_STATE) {

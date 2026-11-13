@@ -50,6 +50,7 @@ import java.util.Random;
 import java.util.UUID;
 
 import static com.matoon.eternity.story.Speakers.CHAMPION;
+import static com.matoon.eternity.story.Speakers.DEATH;
 import static com.matoon.eternity.story.Speakers.DIRECTION;
 import static com.matoon.eternity.story.Speakers.GARDENER;
 import static com.matoon.eternity.story.Speakers.WARLOCK;
@@ -90,6 +91,11 @@ final class Garden {
     /** Whom his roots have hold of, and where they are holding them. */
     private final Map<UUID, Vec3d> held = new HashMap<>();
     private final Map<UUID, Long> nextBloom = new HashMap<>(), lastThrown = new HashMap<>();
+    /** Whom his roots had when they left the world, and where: they come up out of it when they're back. */
+    private final Map<UUID, Vec3d> gone = new HashMap<>();
+    /** What he is in the middle of saying to someone; whoever else comes is drawn into it, not into another. */
+    @Nullable
+    private Talk scene;
     /** How much more of the garden is still to die, once the stone is out of him. */
     private int ruinLeft;
     private boolean brokeThrough;
@@ -112,6 +118,8 @@ final class Garden {
         warlock = null;
         warlockGoesAt = -1;
         held.clear();
+        gone.clear();
+        scene = null;
         nextBloom.clear();
         lastThrown.clear();
         ruinLeft = 0;
@@ -259,6 +267,10 @@ final class Garden {
             }
             d.markDirty();
         }
+        if (story.talking(player)) {
+            // In the middle of something with someone already: the green on the horizon will keep.
+            return;
+        }
         if (d.gardenDim != player.dimension || !p.beats.add("garden_told")) {
             return;
         }
@@ -322,11 +334,14 @@ final class Garden {
             switch (d.garden) {
                 case GROWING:
                     if (dist < 12D && !p.seen("gardener_met") && drawn(p)) {
-                        talk(player, g, plot);
+                        if (!busy(player)) {
+                            talk(player, g, plot);
+                        }
                         return;
                     }
-                    if (p.seen("gardener_met") && held.isEmpty()) {
+                    if (p.seen("gardener_met") && held.isEmpty() && !busy()) {
                         // He tried and they're out of his roots (got clear, or left the world while held): he knows.
+                        // Not while he is still talking to someone: met, to a friend far off, isn't tried yet.
                         hedge(world, plot);
                         return;
                     }
@@ -346,7 +361,9 @@ final class Garden {
                         if (!d.gardenBreach.isEmpty() && !InfinityStones.wieldsPower(player)) {
                             // His hedge is open: his roots have nothing left to throw anyone out with.
                             if (dist < 9D) {
-                                bound(player, g, plot);
+                                if (!busy(player)) {
+                                    bound(player, g, plot);
+                                }
                                 return;
                             }
                         } else if (InfinityStones.wieldsPower(player)) {
@@ -356,7 +373,9 @@ final class Garden {
                                         "Roots come up through the soil at you. The stone in your fist breaks them before they close."), player);
                             }
                             if (dist < 9D) {
-                                bound(player, g, plot);
+                                if (!busy(player)) {
+                                    bound(player, g, plot);
+                                }
                                 return;
                             }
                         } else {
@@ -365,9 +384,12 @@ final class Garden {
                     }
                     break;
                 case SPARED:
-                    if (dist < 5D && p.beats.add("came_back")) {
-                        d.markDirty();
-                        cameBack(player, g, plot);
+                    if (dist < 5D && !p.seen("came_back")) {
+                        if (!busy(player)) {
+                            p.beats.add("came_back");
+                            d.markDirty();
+                            cameBack(player, g, plot);
+                        }
                         return;
                     }
                     break;
@@ -405,6 +427,21 @@ final class Garden {
         }
     }
 
+    /** Whether he is in the middle of saying something to someone. */
+    private boolean busy() {
+        Talk t = scene;
+        return t != null && !t.isOver();
+    }
+
+    /** As {@link #busy()}; and if he is, whoever has come up is drawn into it, rather than into a second of their own. */
+    private boolean busy(EntityPlayerMP player) {
+        if (!busy()) {
+            return false;
+        }
+        story.draw(scene, player);
+        return true;
+    }
+
     @Nullable
     private EntityAdamWarlock warlockBeside(EntityPlayerMP player, EntityNorse g, GardenPlot plot) {
         StoryData.Player p = data().player(player.getUniqueID());
@@ -436,7 +473,11 @@ final class Garden {
         story.mark(player, "gardener_met");
         EntityAdamWarlock w = warlockBeside(player, g, plot);
         Talk t = new Talk(player).at(g, 40D);
-        t.run(() -> g.watch(null))
+        scene = t;
+        t.run(() -> {
+            markAll(t, "gardener_met");
+            g.watch(null);
+        })
                 .line(GARDENER, g, "You came a long way. Sit, if you like.")
                 .direction("He goes on working.")
                 .pause(30)
@@ -462,6 +503,7 @@ final class Garden {
         if (w != null) {
             t.run(() -> w.direct(EntityAdamWarlock.State.STAND, w.getPositionVector(), g.getPositionEyes(1F), 0.05D))
                     .line(WARLOCK, w, "They won't.");
+            Judgement.judged(t, w, Judgement.GARDEN);
         }
         t.pause(20)
                 .line(GARDENER, g, "No.")
@@ -470,15 +512,17 @@ final class Garden {
                 .run(() -> g.act(NorsePose.RAISE))
                 .pause(56)
                 .run(() -> {
-                    for (EntityPlayerMP each : story.party(player)) {
+                    // Whoever is with him now, not whoever began it: the one who walked up may have gone.
+                    // As far as anyone may stand and still be in it: nobody left loose inside when the hedge comes up.
+                    for (EntityPlayerMP each : t.present()) {
                         if (each.isEntityAlive() && each.dimension == g.dimension
-                                && (plot.inside(each.posX, each.posZ) || each.getDistance(g) < 28D)) {
+                                && (plot.inside(each.posX, each.posZ) || each.getDistance(g) < 40D)) {
                             strangle(each);
                         }
                     }
                     if (held.isEmpty() && g.world instanceof WorldServer) {
                         // Everyone got clear before it closed: he has shown his hand all the same.
-                        for (EntityPlayerMP each : story.party(player)) {
+                        for (EntityPlayerMP each : t.present()) {
                             EternityNetwork.send(MsgStory.line(DIRECTION, -1, "Roots come up where you were standing, and close on nothing."), each);
                         }
                         hedge((WorldServer) g.world, plot);
@@ -487,7 +531,12 @@ final class Garden {
                 .direction("The ground opens under your feet.");
         t.abandoned(() -> {
             if (data().garden == StoryData.Garden.GROWING && held.isEmpty()) {
-                for (EntityPlayerMP each : story.party(player)) {
+                // Met is shared among friends: taken back from one, it is taken back from all of them.
+                List<EntityPlayerMP> them = t.present();
+                if (!them.contains(player)) {
+                    them.add(player);
+                }
+                for (EntityPlayerMP each : them) {
                     data().player(each.getUniqueID()).beats.remove("gardener_met");
                 }
                 data().markDirty();
@@ -507,6 +556,20 @@ final class Garden {
         BlockPos feet = new BlockPos(player.posX, player.posY + 0.2D, player.posZ);
         for (int i = 0; i < 8 && world.isAirBlock(feet.down()); i++) {
             feet = feet.down();
+        }
+        for (Map.Entry<UUID, Vec3d> e : held.entrySet()) {
+            Vec3d other = e.getValue();
+            if (e.getKey().equals(player.getUniqueID())) {
+                continue;
+            }
+            BlockPos at = new BlockPos(other.x, other.y + 4D, other.z);
+            if (Math.abs(at.getX() - feet.getX()) <= 4 && Math.abs(at.getZ() - feet.getZ()) <= 4 && Math.abs(at.getY() - feet.getY()) < 6) {
+                // Standing too close to someone already taken: the same roots take them both, down the same pit.
+                player.motionX = player.motionZ = 0D;
+                player.setPositionAndUpdate(other.x, other.y + 4D, other.z);
+                held.put(player.getUniqueID(), other);
+                return;
+            }
         }
         for (int y = 1; y <= 4; y++) {
             for (int x = -1; x <= 1; x++) {
@@ -534,6 +597,7 @@ final class Garden {
 
     /** His roots, holding whoever they have, and tightening. */
     private void hold(WorldServer world, GardenPlot plot) {
+        comeUp(world);
         if (held.isEmpty()) {
             return;
         }
@@ -543,8 +607,15 @@ final class Garden {
             Vec3d at = e.getValue();
             if (p == null || p.dimension != world.provider.getDimension() || p.getDistanceSq(at.x, at.y, at.z) > 40D * 40D) {
                 held.remove(e.getKey());
-                closePit(world, at);
-                hedge(world, plot);
+                if (p == null) {
+                    // Gone out of the world while held: still lying in the pit. It stays open until they're back.
+                    gone.put(e.getKey(), at);
+                } else {
+                    closePit(world, at);
+                }
+                if (held.isEmpty()) {
+                    hedge(world, plot);
+                }
                 continue;
             }
             if (!p.isEntityAlive()) {
@@ -571,13 +642,40 @@ final class Garden {
         }
     }
 
-    /** Once the roots let go, the ground closes over where they were: earth, and grass on it. */
-    private static void closePit(World world, Vec3d at) {
+    /** Whoever left the world in his roots, back in it: they come up out of the pit, and it closes under them. */
+    private void comeUp(WorldServer world) {
+        if (gone.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<UUID, Vec3d> e : new HashMap<>(gone).entrySet()) {
+            EntityPlayerMP p = StoryDirector.player(e.getKey());
+            if (p == null) {
+                continue;
+            }
+            gone.remove(e.getKey());
+            Vec3d at = e.getValue();
+            closePit(world, at);
+            if (p.dimension == world.provider.getDimension() && p.isEntityAlive()) {
+                p.motionX = p.motionY = p.motionZ = 0D;
+                p.setPositionAndUpdate(at.x, at.y + 4D, at.z);
+            }
+        }
+    }
+
+    /** Once the roots let go, the ground closes over where they were: earth, and grass on it. Not over anyone else's pit. */
+    private void closePit(World world, Vec3d at) {
         BlockPos feet = new BlockPos(at.x, at.y + 4D, at.z);
+        List<BlockPos> others = new ArrayList<>();
+        for (Vec3d other : held.values()) {
+            others.add(new BlockPos(other.x, other.y + 4D, other.z));
+        }
         for (int y = 1; y <= 5; y++) {
             for (int x = -2; x <= 2; x++) {
                 for (int z = -2; z <= 2; z++) {
                     BlockPos p = feet.add(x, -y, z);
+                    if (nearPit(p, others)) {
+                        continue;
+                    }
                     boolean dug = Math.abs(x) <= 1 && Math.abs(z) <= 1 && y <= 4;
                     if (dug ? world.isAirBlock(p) : world.getBlockState(p).getBlock() == Blocks.LEAVES) {
                         world.setBlockState(p, y == 1 ? Blocks.GRASS.getDefaultState() : Blocks.DIRT.getDefaultState(), 3);
@@ -585,6 +683,17 @@ final class Garden {
                 }
             }
         }
+    }
+
+    /** Whether a block is part of a pit someone is still held in. */
+    private static boolean nearPit(BlockPos p, List<BlockPos> pits) {
+        for (BlockPos feet : pits) {
+            if (Math.abs(p.getX() - feet.getX()) <= 2 && Math.abs(p.getZ() - feet.getZ()) <= 2
+                    && p.getY() >= feet.getY() - 6 && p.getY() <= feet.getY() + 1) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Someone his roots had has died. */
@@ -628,6 +737,20 @@ final class Garden {
         }
         d.garden = StoryData.Garden.HEDGED;
         d.markDirty();
+        // Anyone inside it and loose, or standing where it comes up, finds themselves outside it: it doesn't close round friends.
+        double edge = GardenPlot.HEDGE + 2D;
+        for (EntityPlayer e : world.playerEntities) {
+            if (!(e instanceof EntityPlayerMP) || e.isSpectator() || e.isCreative() || !e.isEntityAlive() || held.containsKey(e.getUniqueID())
+                    || plot.distance(e.posX, e.posZ) >= edge || Math.abs(e.posY - plot.middle.getY()) > 24D) {
+                continue;
+            }
+            double a = Math.atan2(e.posZ - plot.middle.getZ() - 0.5D, e.posX - plot.middle.getX() - 0.5D);
+            int x = MathHelper.floor(plot.middle.getX() + 0.5D + Math.cos(a) * (GardenPlot.HEDGE + 4D));
+            int z = MathHelper.floor(plot.middle.getZ() + 0.5D + Math.sin(a) * (GardenPlot.HEDGE + 4D));
+            BlockPos top = Barrow.surface(world, x, z);
+            e.motionX = e.motionY = e.motionZ = 0D;
+            ((EntityPlayerMP) e).setPositionAndUpdate(x + 0.5D, top.getY(), z + 0.5D);
+        }
         plot.raiseHedge(world);
         story.sendStateToAll();
         world.playSound(null, plot.middle, SoundEvents.BLOCK_CHORUS_FLOWER_GROW, SoundCategory.BLOCKS, 4F, 0.5F);
@@ -645,7 +768,9 @@ final class Garden {
             return;
         }
         data().markDirty();
-        Talk t = new Talk(player);
+        // Theirs alone: whoever is standing by where they wake wasn't dead.
+        Talk t = new Talk(player).at(player, 1000D);
+        t.reach = 0D;
         t.pause(40)
                 .direction("There was nothing. For a long time, nothing at all.")
                 .pause(20)
@@ -702,7 +827,7 @@ final class Garden {
         }
         if (broken > 0 && !brokeThrough) {
             brokeThrough = true;
-            EternityNetwork.send(MsgStory.line(DIRECTION, -1, "The stone in your fist flares, and the hedge comes apart round it like wet paper."), player);
+            StoryDirector.line(player, player, DIRECTION, -1, "The stone in your fist flares, and the hedge comes apart round it like wet paper.");
         }
         return true;
     }
@@ -854,8 +979,7 @@ final class Garden {
             return;
         }
         breach("casket");
-        EternityNetwork.send(MsgStory.line(DIRECTION, -1, "The frozen stems break like glass. Where they stood there's a gap, and nothing grows into it."),
-                player);
+        StoryDirector.line(player, player, DIRECTION, -1, "The frozen stems break like glass. Where they stood there's a gap, and nothing grows into it.");
     }
 
     /** The Reality Stone, held up at his hedge: from where they stand, round both ways, it was never there. */
@@ -871,8 +995,7 @@ final class Garden {
         WorldServer world = player.getServerWorld();
         world.playSound(null, player.posX, player.posY, player.posZ, SoundEvents.ENTITY_ILLAGER_MIRROR_MOVE, SoundCategory.PLAYERS, 2F, 0.5F);
         world.playSound(null, player.posX, player.posY, player.posZ, SoundEvents.BLOCK_PORTAL_TRIGGER, SoundCategory.PLAYERS, 0.6F, 1.6F);
-        EternityNetwork.send(MsgStory.line(DIRECTION, -1, "You close your hand on the stone and want the hedge gone. Not broken. Gone; never there at all."),
-                player);
+        StoryDirector.line(player, player, DIRECTION, -1, "You close your hand on the stone and want the hedge gone. Not broken. Gone; never there at all.");
         return true;
     }
 
@@ -940,7 +1063,7 @@ final class Garden {
         reaper = player.getUniqueID();
         WorldServer world = player.getServerWorld();
         world.playSound(null, player.posX, player.posY, player.posZ, SoundEvents.ENTITY_WITHER_AMBIENT, SoundCategory.PLAYERS, 1.2F, 0.5F);
-        EternityNetwork.send(MsgStory.line(DIRECTION, -1, "You close your hand on the stone, and it opens, and it's hungry."), player);
+        StoryDirector.line(player, player, DIRECTION, -1, "You close your hand on the stone, and it opens, and it's hungry.");
         return true;
     }
 
@@ -971,8 +1094,8 @@ final class Garden {
                 world.spawnParticle(EnumParticleTypes.FLAME, from.x, from.y, from.z, 0, to.x, to.y, to.z, Math.min(1.2D, len / 16D));
             }
             if (reaping == 50) {
-                EternityNetwork.send(MsgStory.line(DIRECTION, -1, "Everything in the garden gives up its life to it: leaves, stems, grass, the hedge. "
-                        + "It all comes to the stone, and through it, into you."), holder);
+                StoryDirector.line(holder, holder, DIRECTION, -1, "Everything in the garden gives up its life to it: leaves, stems, grass, the hedge. "
+                        + "It all comes to the stone, and through it, into you.");
             }
         }
         if (reaping % 10 == 0) {
@@ -998,8 +1121,7 @@ final class Garden {
         if (holder != null) {
             holder.addPotionEffect(new PotionEffect(MobEffects.ABSORPTION, 20 * 120, 3, true, false));
             holder.addPotionEffect(new PotionEffect(MobEffects.REGENERATION, 20 * 20, 1, true, false));
-            EternityNetwork.send(MsgStory.line(DIRECTION, -1, "It's done. There's nothing green left anywhere in the garden but him, and not much of that."),
-                    holder);
+            StoryDirector.line(holder, holder, DIRECTION, -1, "It's done. There's nothing green left anywhere in the garden but him, and not much of that.");
         }
         reaping = -1;
         reaper = null;
@@ -1038,7 +1160,9 @@ final class Garden {
         String how = d.gardenBreach;
         EntityChampion champion = story.companion.of(player);
         Talk t = new Talk(player).at(g, 40D);
+        scene = t;
         t.run(() -> {
+            markAll(t, "gardener_bound");
             g.setArmed(false);
             g.rest(NorsePose.KNEEL).act(NorsePose.KNEEL);
             g.watch(null).look(g.getPositionVector().add(g.getLookVec().scale(2D)));
@@ -1119,28 +1243,46 @@ final class Garden {
     private void take(Talk t, EntityPlayerMP player, EntityNorse g, @Nullable EntityAdamWarlock w) {
         StoryData d = data();
         WorldServer world = player.getServerWorld();
+        // She comes as she was last seen (in mourning, as she came for Ragna, to anyone who hasn't seen her change); made now, so that what she says can be hers.
+        EntityNorse mourner = EntityNorse.of(world, NorseBoxes.STRANGER, "garden");
+        Devotion.dress(story, mourner, player);
         t.run(() -> {
             g.setArmed(false);
             g.rest(NorsePose.KNEEL).act(NorsePose.KNEEL);
-            g.watch(player);
+            EntityPlayerMP hands = taker(t);
+            g.watch(hands != null ? hands : player);
         })
                 .direction("You kneel in front of him. He takes your wrist, and puts your hand where the stone is.")
                 .pause(40)
                 .direction("It comes out of him the way a root comes out of the ground.")
                 .run(() -> {
-                    giveStone(player);
+                    // There is only one, and only once; and it goes into a living hand that is here.
+                    EntityPlayerMP hands = taker(t);
+                    if (d.garden == StoryData.Garden.TAKEN || hands == null) {
+                        return;
+                    }
+                    giveStone(hands);
                     g.setShining(false);
                     g.watch(null).look(null);
                     g.rest(NorsePose.DEAD).act(NorsePose.DEAD);
                     d.garden = StoryData.Garden.TAKEN;
                     d.markDirty();
-                    story.mark(player, "took_time");
+                    markAll(t, "took_time");
                     world.playSound(null, g.posX, g.posY, g.posZ, SoundEvents.BLOCK_GRASS_BREAK, SoundCategory.NEUTRAL, 1.5F, 0.4F);
-                    deathKneels(world, g, player);
+                    deathKneels(world, g, mourner);
                 })
                 .pause(30)
                 .direction("She is kneeling beside him before he has finished falling. She touches his face. Gently.")
-                .pause(70);
+                .pause(70)
+                .run(() -> mourner.rest(NorsePose.STAND).act(NorsePose.STAND));
+        Presence.beguile(t.pause(20), mourner)
+                .line(DEATH, mourner, "He hid from me for such a long time. Ten thousand years of weeding.")
+                .run(() -> {
+                    EntityPlayerMP hands = taker(t);
+                    mourner.watch(hands != null ? hands : player);
+                })
+                .line(DEATH, mourner, "And you just reached in and took it. You have no idea how lovely you looked, doing that.");
+        Devotion.after(story, t, mourner, player);
         if (w != null) {
             t.direction("Warlock says nothing at all. He goes.")
                     .run(() -> warlockLeaves(w));
@@ -1155,15 +1297,19 @@ final class Garden {
         t.direction("He looks at you for a long time.")
                 .pause(30)
                 .run(() -> {
+                    if (d.garden != StoryData.Garden.BOUND && d.garden != StoryData.Garden.SPARED) {
+                        // Someone else's hands have already been there: there's nothing left to spare.
+                        return;
+                    }
                     d.garden = StoryData.Garden.SPARED;
                     d.markDirty();
-                    story.mark(player, "left_gardener");
-                    for (EntityPlayerMP each : story.party(player)) {
+                    markAll(t, "left_gardener");
+                    for (EntityPlayerMP each : t.present()) {
                         story.data().player(each.getUniqueID()).beats.remove("came_back");
                     }
                     GardenPlot plot = plot();
                     if (plot != null) {
-                        plot.lowerHedge(player.world);
+                        plot.lowerHedge(g.world);
                     }
                     g.setArmed(true);
                     g.rest(NorsePose.STAND).act(NorsePose.STAND);
@@ -1171,8 +1317,10 @@ final class Garden {
                 .line(GARDENER, g, "Then go home.")
                 .direction("He picks up his trowel, and goes back to his garden.")
                 .run(() -> {
-                    g.watch(null);
-                    g.rest(NorsePose.TEND).act(NorsePose.TEND);
+                    if (d.garden == StoryData.Garden.SPARED) {
+                        g.watch(null);
+                        g.rest(NorsePose.TEND).act(NorsePose.TEND);
+                    }
                 });
         if (w != null) {
             t.run(() -> warlockLeaves(w));
@@ -1183,12 +1331,38 @@ final class Garden {
     private void cameBack(EntityPlayerMP player, EntityNorse g, GardenPlot plot) {
         EntityAdamWarlock w = warlockBeside(player, g, plot);
         Talk t = new Talk(player).at(g, 40D);
+        scene = t;
         t.line(GARDENER, g, "You came back.")
                 .direction("He doesn't stop working.")
                 .pause(20)
                 .line(GARDENER, g, "It's still here.");
         choose(t, player, g, w);
         story.talk(player, t);
+    }
+
+    /** Whose hand it goes into: whoever leads it now, if they're alive and here; or else anyone in it who is. */
+    @Nullable
+    private static EntityPlayerMP taker(Talk t) {
+        List<EntityPlayerMP> present = t.present();
+        EntityPlayerMP lead = t.leadNow();
+        if (lead != null && lead.isEntityAlive() && present.contains(lead)) {
+            return lead;
+        }
+        for (EntityPlayerMP each : present) {
+            if (each.isEntityAlive()) {
+                return each;
+            }
+        }
+        return null;
+    }
+
+    /** A beat seen by everyone in a conversation now, whoever began it. */
+    private void markAll(Talk t, String beat) {
+        StoryData d = data();
+        for (EntityPlayerMP each : t.present()) {
+            d.player(each.getUniqueID()).beats.add(beat);
+        }
+        d.markDirty();
     }
 
     private void giveStone(EntityPlayerMP player) {
@@ -1200,14 +1374,14 @@ final class Garden {
     }
 
     /** Death, gentle, for the first and only time while they watch: an Elder who opposed her all his life, hers now. */
-    private void deathKneels(WorldServer world, EntityNorse g, EntityPlayerMP player) {
+    private void deathKneels(WorldServer world, EntityNorse g, EntityNorse mourner) {
         EntityNorse d = Oath.alive(death);
-        if (d != null) {
+        if (d != null && d != mourner) {
             d.setDead();
         }
         Vec3d side = new Vec3d(-g.getLookVec().z, 0D, g.getLookVec().x).normalize();
         Vec3d at = g.getPositionVector().add(side.scale(1.1D));
-        d = death = EntityNorse.of(world, NorseBoxes.DEATH, "garden");
+        d = death = mourner;
         d.setLocationAndAngles(at.x, at.y, at.z, 0F, 0F);
         d.face(g.getPositionVector());
         world.spawnEntity(d);
@@ -1222,6 +1396,10 @@ final class Garden {
         }
         if (npc != gardener) {
             return false;
+        }
+        if (busy(player)) {
+            // He's in the middle of something with someone: they're drawn into that.
+            return true;
         }
         GardenPlot plot = plot();
         StoryData d = data();
@@ -1251,6 +1429,7 @@ final class Garden {
 
     private void aside(EntityPlayerMP player, EntityNorse npc, String text) {
         Talk t = new Talk(player).at(npc, 16D);
+        scene = t;
         t.line(GARDENER, npc, text);
         story.talk(player, t);
     }
@@ -1332,6 +1511,7 @@ final class Garden {
                     d.gardenBuilt = false;
                     d.garden = StoryData.Garden.GROWING;
                     held.clear();
+                    gone.clear();
                     for (String b : new String[]{"gardener_met", "gardener_killed", "sent_back", "gardener_bound", "left_gardener", "came_back",
                             "roots_broken"}) {
                         p.beats.remove(b);

@@ -1,6 +1,7 @@
 package com.matoon.eternity.block;
 
 import com.matoon.eternity.Eternity;
+import com.matoon.eternity.EternityTab;
 import com.matoon.eternity.story.Stones;
 import com.matoon.eternity.story.StoryDirector;
 import net.minecraft.block.Block;
@@ -52,6 +53,7 @@ public class BlockRuneStone extends Block implements ITileEntityProvider {
         setHardness(3F);
         setResistance(20F);
         setSoundType(SoundType.STONE);
+        setCreativeTab(EternityTab.INSTANCE);
         setDefaultState(blockState.getBaseState().withProperty(BlockHorizontal.FACING, EnumFacing.NORTH).withProperty(FRESH, false));
     }
 

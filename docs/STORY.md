@@ -27,9 +27,14 @@ Use these to check every scene, line and quest step, including new material.
 
 ### What Death wants
 
-The living have come to outnumber the dead, and Death wants the balance put back. The only way
-to do that at the scale she needs is a full set of stones, closed in one hand: half of all life,
-gone at once. She doesn't think of it as cruelty. She thinks of it as a correction, overdue.
+Death wants the snap. All six stones, closed in one living hand, and half of all life gone at
+once: every one of them hers, sooner rather than later. She doesn't dress it up as balance or
+justice, and she never lies about it; she says it plainly, and makes it sound like the loveliest
+thing anyone could do. She is the devil at the player's shoulder, sly and seductive: she flatters,
+she promises (never to be afraid again, her gratitude for ever, a universe with room in it), and
+she wears whatever shape they would find hardest to refuse. To everyone else she is a woman in
+mourning; to the ones she wants something from, she changes in front of them into something they
+can't look away from.
 
 | Question | Answer | Why it holds |
 | --- | --- | --- |
@@ -40,7 +45,7 @@ gone at once. She doesn't think of it as cruelty. She thinks of it as a correcti
 | Why can't the player die? | She won't let them in. Every respawn is her turning them away | It protects her investment, and builds a dependence she can lean on |
 | What does refusing them cost her? | **Every respawn is a death that doesn't happen.** Each time she sends the player back, she makes the imbalance she wants fixed a little worse | She's paying for her agent with the thing she wants most. It's why she's impatient, and why she can't afford a refusal at the end |
 | Why seduce them? | Anyone holding all six stones stands above every abstract, her included. At the end she won't be able to command the player, only ask. So from the first meeting she builds the one thing that might still work then: they have to *want* to do it for her | The seduction is planning for the moment she loses power over them |
-| Why disguise herself? | Mortals flinch from her real face. The human face lets her be listened to | It's a tool, so she drops it as soon as it stops working (Ch.2) |
+| Why disguise herself? | Mortals flinch from her real face. The mourning woman lets her be near them; the beguiling shape lets her be *wanted* | Both are tools. She drops the mourning as soon as she starts asking (Ch.2), and only the Champion, who has seen more than most, ever sees the skull |
 | Does she want Eternity dead? | **No.** Eternity is all of existence. If he dies, the universe unmakes itself; life ends and there's nothing left to balance. Death is the end of life, and with no life she has nothing to be | So she eventually sends the player to the Regulator. She needs Eternity out of the way, not dead (Ch.4) |
 
 ### What everyone else wants
@@ -702,8 +707,8 @@ Try it with `/eternity story vault`, then `aether`, `warlock` and `flame`.*
 - **Warlock**, sent for the same stone in the same window.
 - **Odin's defences** (the Einherjar, the Destroyer), which want everything to stay where it is.
 
-**Code change.** The vault's Tesseract stand becomes the **Aether**: a sealed column of dark glass
-with a slow red fluid inside, bound in iron (`world/VaultDirector.java`'s TESSERACT stand,
+**Code change.** The vault's Tesseract stand becomes the **Aether**: sealed in a lantern-shaped reliquary of
+bronze and black stone, the red fluid showing through a slit round its middle (`world/VaultDirector.java`'s TESSERACT stand,
 `world/OdinsVault.java`). The vault Tesseract is removed; the village is the only Space Stone.
 
 #### Stakes
@@ -720,7 +725,7 @@ with a slow red fluid inside, bound in iron (`world/VaultDirector.java`'s TESSER
    clothes, kneeling by each one in turn. The player has now seen her at Ragna's death, Hrafn's
    death and these. That's enough to make them uneasy.
 2. **The vault.** The existing treasures, the Casket and the Destroyer.
-3. **The Aether.** Touching the column shatters it. The Aether doesn't go into the inventory: it
+3. **The Aether.** Touching the lantern shatters it. The Aether doesn't go into the inventory: it
    *seeks a host*, as in the MCU, and goes into the player. This is a status effect, not a
    cutscene.
    - The edges of the screen vein red.
@@ -762,33 +767,66 @@ player with the Aether in them.*
 >
 > *(The camera holds on the player for a long beat.)*
 >
-> **STRANGER** *(to the player, not to him)***:** You've died, since you came into this world.
-> A fall. Something in the dark. Each time you came back. You never asked why.
+> **STRANGER:** But you'd rather not look at a woman in mourning. Nobody ever does.
 >
-> **STRANGER:** I sent you back.
+> *(She changes in front of them from the inside out, a piece at a time: her right arm swells
+> inside its sleeve and bruises and bursts, and what comes out is raw and too small and grows; then
+> the left; her back bends over the wrong way and her knees go forward; her head turns all the way
+> round and comes back with a different face. The old skin drops round her feet in wet heaps.
+> What stands there is the shape she wears for anyone she wants something from, the pretty one.
+> `EntityNorse.shapeshift`, timeline `entity/Morph`, look `TEMPTRESS`; from here on she speaks as **DEATH**.)*
+>
+> **DEATH:** There. Isn't this better? You've died, since you came into this world. A fall.
+> Something in the dark. And every time, you woke up. You never once asked why.
+>
+> **DEATH:** I sent you back, sweetheart. Every single time.
 >
 > *Player:* `Why?` / `What do you want?` / `Get away from me.`
 >
-> **STRANGER** *(Why)***:** Because I need something done that I'm not allowed to do.
+> **DEATH** *(Why)***:** Because I want something only living hands can do. And yours are such good hands.
 >
-> **STRANGER** *(What do you want)***:** The stones. All of them, in one hand.
+> **DEATH** *(What do you want)***:** The stones. All six of them, on one hand. Yours.
 >
 > **WARLOCK:** Ask her what for.
 >
-> **STRANGER:** Balance.
+> **DEATH** *(to him)***:** He's sweet. He always asks the right question a moment too late.
 >
-> **WARLOCK:** That isn't an answer.
+> **DEATH** *(she snaps her fingers, softly, in front of the player's face)***:** Half. Half of
+> everything that breathes, on every world, all at once. Quietly. Like blowing out candles.
 >
-> **STRANGER:** It's the only one there is.
+> **WARLOCK:** She wants you to kill half of everything that's alive.
 >
-> *(She doesn't look at him once. Everything she says, she says to the player.)*
+> **DEATH:** I want them home. Every one of them comes to me sooner or later. I'm only asking for
+> sooner. And you'd never be afraid of anything again. Not the dark. Not the fall. Not me.
 >
-> **STRANGER:** I haven't lied to you. The cube was killing that village. You stopped it.
+> **DEATH:** I haven't lied to you once. The cube was killing that village; you stopped it. I
+> don't need to lie to you. I only need you to want it.
+>
+> *Player:* `Never.` / `What would I get?` / *(Say nothing.)*
 
 **Why she tells the truth here:** with Warlock standing there, a denial would be caught on the
-spot and would ruin her credibility with the player for good. The truth, told calmly, makes her
-the one person in the room who has never lied to them. It costs her nothing yet, because she
-hasn't said what "balance" means.
+spot and would ruin her credibility with the player for good. So she doesn't hide it: she says it
+plainly, and makes it sound like a gift. She is a devil, not a liar. Everything she says is true;
+what she does is make the player want it. From here on she meets them as the beguiling shape,
+arriving first as the woman in mourning only until they have seen her change. After that she comes
+as she was when they last saw her (`StoryData.Player.deathLook`), rotted further by however far they
+have fallen since: it happens off-screen, never in front of them (`Devotion.dress`). Warlock notices
+as they fall: at devotion 5 he remarks on it, at 15 he calls them out to their face, and once she has
+torn off the pretty one and they stayed he writes them off (`story/Judgement`, in the Arena, the glass
+and the Garden).
+
+She only cares for the living: a kill of something undead gives her nothing (she says so, now and
+then), and she doesn't come to stand over it. Past devotion 15 the dead know whose someone is and
+leave them alone (`Obsession.spares`). If the Champion never tells them about the glass (he left
+in someone else's ship, or the Power Stone came to them without the rocket trade), she tells them
+herself at the next kill (`Presence.glass`).
+
+**Betrayal.** Once she is out of her skin, someone holding the Astral Regulator can right-click
+her and draw her into it (`story/Betrayal`). She does not go quietly: she screams at them for
+it while she is dragged in. Let go of the Regulator, or walk off, before she is all the way in, and
+she escapes, and comes back furious. Once she is in (`death_contained`, a world beat) she is gone:
+no visits, no whispers, and nobody to show the way to the next stone. *(Open: what guides them
+after that.)*
 
 #### Scene 2B: The offer
 
@@ -846,8 +884,10 @@ His fights from then on start one evolution higher (the existing cocoon mechanic
 #### As built
 
 - **The Aether** replaces the vault's Tesseract while the story runs (`story.enabled`). It is drawn
-  on the Tesseract's old cradle: a column of dark glass, bound in iron at the foot, the waist and
-  the crown, with slow bands of red folding inside it. Using it breaks it. The Aether pours into
+  on the Tesseract's old cradle, as in the films: a lantern of old bronze on a stepped, riveted
+  plinth, engraved pillars at its corners, panels of faceted black stone, a square handle over its
+  cap, and through a slit round its middle the red, folding slowly, bleeding light over the stone
+  and loosing wisps into the dark (`client/render/AetherRenderer.java`). Using it breaks it. The Aether pours into
   whoever used it, and the Destroyer wakes.
 - **With it in them:** red veins grow in from the edges of the screen to a slow heartbeat. In the
   vault, the veins on the side facing the Eternal Flame grow longer and brighter: that's the
@@ -908,8 +948,29 @@ As built, the fight runs like this:
   the shouts never talk over a conversation that's already playing.
 - **Planet Breaker stops everything again.** "Under your feet, Tamarata comes apart", then the
   Champion's two lines, in the panel, not in chat. If Warlock is still there, he hangs over the
-  wreck and reacts ("You broke it. Your own world. Over one fight."), then turns to the player:
-  "No more referee. Just you and me." The fight in the wreck is his and theirs alone.
+  wreck and reacts ("You broke it. Your own world. Over one fight."). Then he takes the stone (next item).
+- **Warlock takes the Power Stone (2026-11-09).** If he is still in the fight when the world breaks (not beaten, not
+  gone), he swoops down onto the drifting Champion: "Not if I come home with that." The stone flies out of the old man's
+  brow into his hand ("No. No! That's mine. I bled for that!" / "You broke a world to keep it, old man. You don't get to
+  keep it."), and he sets it in his own brow: he coils (`State.FLARE`) and bursts, and everyone near is thrown back.
+  "So this is what he felt. Every fight, for a billion years." / "No wonder he never lost." / "No more referee. Just you
+  and me." The fight in the wreck is his and theirs alone, and he is very hard to beat (`Arena.take/flare/arm`,
+  `EntityAdamWarlock.empower`):
+  - **What it does to him:** whole again and evolved; your blows count a third (`warlock.stoneToughness`) and the most
+    any one can take is halved; his blows are 1.6x heavier (`warlock.stoneDamage`); he picks his next move twice as
+    fast, circles faster, does four fly-by passes, nine-bolt volleys and the beam far more often; no cocoon.
+  - **What you see:** the stone burning purple in the gem on his brow, its lightning jumping off him and down into the
+    ground, purple in the outer shells of his aura (and one more shell than he has ever had), the gold never going down
+    (`RenderAdamWarlock.stone`). Boss bar "Adam Warlock (Power Stone)", in purple.
+  - **Losing to him** (anyone falls, or nobody is left to fight him): he goes home with it ("Mother will have something to
+    show for me after all."). Station ABANDONED, beat `warlock_took`, Death points home for whoever wakes or is still
+    standing (`Arena.fled`). That is the Sovereign branch below: Warlock becomes your ally, and the Magus the villain.
+  - **Beating him:** the stone tears out of his brow and flies to whoever is nearest, theirs and claimed
+    (`Arena.disarmed/handOver`): "No. No, that's mine, I took it, it's..." / "Ask her what balance means." World beat
+    `warlock_disarmed`. The Champion is still robbed and still wants his rocket; his debt line becomes "And you took it
+    off him, with it burning in him. Hah. I'd have paid to see that from the stands."
+  - World beat `warlock_empowered` while the fight lasts; after a reload he comes back with it in him. The Champion's
+    first-loss scene waits until the fight is over. The station can't be reached while he is still out there with it.
   - Only players elsewhere get the "Far away, a planet called Tamarata breaks apart" chat line.
 
 **Local four-corner.**
@@ -1024,7 +1085,8 @@ ABANDONED), that is undone too: Sovereign back to UNSEEN, stone and claim releas
 confronted is left alone. `death_revealed` and `dir_champion` stay, so the journal points you at Tamarata again.
 Your Warlock stance is kept; set it with `/eternity story stance <rival|betrayed|...>`.
 
-**Dying in the wreck (after Planet Breaker).** Warlock takes the Power Stone and flees home (`Arena.fell`):
+**Dying in the wreck (after Planet Breaker).** Warlock already has the stone (above), and goes home with it when you fall.
+The older path below (`Arena.fell`) is only a fallback now, for a Warlock who arrived in the wreck after it broke:
 - If you were carrying it, he takes it off your body (`InfinityStones.take`, before drops).
 - Otherwise he flies to the drifting Champion and tears it out of his brow. The stone flies from brow to hand: "No. No!
   That's mine. I bled for that!" / "You broke a world to keep it, old man. You don't get to keep it." / "Come back here!"
@@ -1713,27 +1775,213 @@ For a player with `magus_risen` (Warlock their ally, the Magus holding the Power
   one road; otherwise the engine's choice, explained (nearer the edge, more room to run, a guard beside the king, a
   corner kept open, a raider set up to be taken). His first tip also says how the game is won.
   `/eternity grandmaster move hint` plays his last suggestion, for testing.
-- **The turn.** At the first cheat the Magus names it: "He moved his own board." / "Then the rules were never the game.
-  Only the hand that enforces them." / "I am no longer bound by them." The stage becomes SEIZED:
-  - The Grandmaster's cheats stop working.
+- **Both of them cheat, all game (2026-11-09).** From his third move, every other move of his, the Magus cheats as well
+  as moving (`magusCheats`), pointing from the air with a thread of violet; the square it lands on goes white for
+  good, so the white spreads over the board as the game goes on:
+  - **through:** a raider slides through whatever stands in its line (always his first);
+  - **twice:** a second raider moves;
+  - **risen:** a taken raider is back, two squares from the king;
+  - **turned:** a guard at the king's side becomes a raider.
+  In the same breath the house answers with a cheat of its own (`houseAnswer`), both pieces in the air at once
+  (`anim2` on the board): the king stepped out of reach, a raider by the king turned back into a guard, or a guard
+  from nothing at the king's side. "I saw that." / "Ohh, we're doing this, are we." / "My board. My rules. MINE." ...
+  Warlock: "That's not a legal move." / "He's cheating. So is the house." / "They're both doing it now. Keep your eyes
+  on the king." The house's usual cheats (deny, save, ...) go on too. Every cheat in front of him counts toward
+  `GrandmasterData.rivalry`.
+- **The turn.** At `grandmaster.magusRivalry` (8) the Magus says what it is: "You moved your own board." / "And YOU
+  moved it first!" / "Yes." / "Then the rules were never the game. Only the hand that enforces them." / "I am no longer
+  bound by them." The stage becomes SEIZED:
+  - Nobody's cheats work any more.
   - The Magus moves raiders whenever he likes; every square he touches turns white and violet (`BlockBoard.Face.WHITE`).
   - The Grandmaster backs away in fright (EntityGrandmaster AFRAID).
-- **The Grandmaster switches sides.** "Fine. FINE. You. With me." He throws everything he has at the Magus (`gmTurns`):
-  1. the board stood up as walls round him, which the Magus blasts apart;
+- **He goes for the Grandmaster, not you** (`gmTurns`). "Fine. FINE. You want my board? Come and TAKE it." The
+  Grandmaster backs onto his throne and throws everything he has between them:
+  1. the board stood up as walls round himself, which the Magus blasts apart;
   2. every card he has;
   3. the whole table, thrown square by square.
-  The player and Warlock can fight the Magus meanwhile. None of it touches him.
-- **The end** (`magusEnding`). The Magus lifts the Grandmaster by the throat (LIFTED) and takes the Mind Stone, claimed
-  under `Sovereign.MAGUS_ID` (`SovereignData.magusHasMind`). Then he leaves. The Grandmaster lives: "He didn't even
-  want to play." The pot goes back to the player.
+  The Magus hunts him through it (`EntityMagus.hunt`): every attack is at the Grandmaster, who cowers from
+  each, and none of it touches a player. Warlock: "He's not after us. He's after the old man." (He may go at the
+  Magus meanwhile. None of it touches him.)
+- **The end** (`magusEnding`). The Magus comes down in front of him and lifts him by the throat, one-handed, exactly
+  as he lifted Warlock in the Sanctum: GRIP, rising, lightning in him (`MAGUS_GRASP`), and the Grandmaster really in
+  his hand, put there every tick (`holdTick`, `EntityGrandmaster.carry/place`), clawing at it (LIFTED). He takes
+  the Mind Stone without letting go, claimed under `Sovereign.MAGUS_ID` (`SovereignData.magusHasMind`), then opens
+  his hand: the Grandmaster drops, alive. He leaves. "He didn't even want to PLAY." The pot goes back to the player.
 - **Elsewhere in Chapter 6.** When Warlock walks out in the usual game, StoryData now records REFUSED.
-- Operator: `/eternity grandmaster magus`.
+- Operator: `/eternity grandmaster magus`; `/eternity grandmaster seize` jumps to the turn, `seize lift` to the end.
+
+### The Magus's last fight: the struggle for the gauntlet (built 2026-11-09)
+
+On the Magus's road the player can hold four stones (Space, Reality, Soul, Time); he holds Power and Mind. The Finale
+can't come until all six are in one hand, so this fight is how the road gets there. It is modelled on Endgame's
+"struggle for the gauntlet" (`story/MagusFight`, state in `SovereignData.fight`).
+
+**How it begins.** "Ready" means a gauntlet on them with every stone they hold set in it.
+- **Ready at the end of the Grandmaster's game:** he doesn't leave. "You brought it with you. Good." The fight starts on
+  the broken board (`GrandmasterDirector` hands over the Magus and Warlock at tick 440 of `magusEnding`).
+- **Not ready:** he leaves, and the fight waits (HUNTING). The moment they are ready, in the Overworld, he unfolds
+  behind them ("You put it together for me. Thank you."). Warlock is about 15 seconds behind ("Sorry. I'm here. Keep
+  it away from him.").
+- **The gauntlet held in hand during the game:** he comes down and takes it out of their hand ("Thank you."), and the
+  Mind Stone off the board on his way. The game is nothing any more ("...My GAME."), and the fight starts with him
+  holding it.
+
+**When they have it** (HUNT), he fights them from the air with what he holds. These are `EntityMagus` attacks, never
+the same one twice running; the effects are in `client/render/MagusFx`.
+- **Combo:** he blinks in front of them, then a palm, a backhand, and a knee that throws them.
+- **Shards:** five or more crystal shards of thought hang in a fan round his shoulders, each with a thread of light
+  along its aim. They are loosed one after another (left, right, left) and each can be dodged.
+- **Orb:** the Power Stone's light gathers between his hands and is thrown as a slow, crackling sphere. It bursts into
+  a dome 5 blocks across.
+- **Meteor:** he folds away. A violet ring marks the ground under them, and a white ring closes on its centre in time
+  with the blow. He appears above it, fists up, and comes down; the ground breaks in rings and spears of light.
+- **Grasp:** he raises his open hand at them (if they are out of his sight, it closes on nothing). Arcs of violet
+  lightning lift them off their feet, then his fist closes and they are thrown down. He can't do it again for 18
+  seconds.
+
+**Who he goes at.** Whoever holds the gauntlet is the fight's player (`fightPlayer`): if someone else picks it up, it
+becomes their fight. Each attack picks a target. The holder carries the most weight (8). Every other player within 40
+blocks counts 1 plus their threat, and Warlock counts 1.5 plus his (capped at 5). Threat is how much each has been
+hitting him lately; it decays over several seconds. Anyone who keeps at him draws him off, so it isn't all on the
+holder. If the gauntlet is on the ground, he drops everything and goes for it.
+
+**His boss bar** (purple, darkens the sky) sits above Warlock's: whenever his goes up, Warlock's is put up again under
+it. He has real health in this fight (`magus.health`, 1000), and no blow takes more than `magus.maxHitFraction` (3%)
+of it; Warlock's blows count for half. Running it out never kills him (only the snap does). He **reels** instead: he
+is thrown back, staggers for about four seconds while it fills back to 55%, and comes back worse (each break raises
+his attack tempo). If he was holding the gauntlet it goes out of his hands onto the ground, his slotted stones and
+all, so a player who grabs it in time may hold all six. Nothing touches him during a struggle, a clash, or Warlock's
+death.
+
+He only goes for the gauntlet now and then: after two to four attacks, or as soon as a heavy blow (the knee, the
+centre of the meteor, the grasp) lands. He appears in front of them with his hand out, and a beat later the struggle
+starts. If they get clear of him within a second and a half, he goes back to hurting them first.
+
+**When he has it** (`MagusFight.Act`):
+- **FLEE:** he flies off with it held to his chest in both arms (Pose CRADLE) to somewhere 30 to 50 blocks away from
+  them. Whoever chases him meets volleys of three shards left hanging behind him.
+- **LAND**, then **SLOT:** each of his stones in turn sits in his left hand and is drawn into its socket like iron to
+  a magnet. They become real, stamped stacks, still claimed by him.
+- **DON:** he puts it on (Pose DON). **POWER:** the Thanos shot. His fist is held before his chest with the other hand
+  on the wrist, light pours out of it with each stone's colour in rays, and lightning runs up his arm. It lasts twenty
+  seconds with the gauntlet's own power-up sound ("Watch.").
+- **SNAP:** his hand goes up and he snaps, and he has won. See "If he snaps" below.
+
+**The struggle.** Anyone within 3.2 blocks of him while he has it, or him coming in for it while they have it: neither
+can move, their view locks onto the gauntlet between their hand and his lavender one, and they pull by jumping, again
+and again, against a bar he drags his way (harder the longer it goes, about 4.5 seconds at most).
+- **Win:** the gauntlet is theirs and he is thrown 20 blocks.
+- **Lose:** they are thrown, and he has it and flies off again.
+
+**Warlock** goes at him whenever he can, and every time he reaches him (within 7 blocks) a few seconds of it are
+staged:
+- the fist caught and a palm through his chest ("No.");
+- a grab for the gauntlet, the Magus gone and then behind him with a backhand ("Where-");
+- his beam held off with one palm and pushed back down its own length, then a knee.
+
+Warlock is thrown off each time, and never gets it. Each clash costs the Magus his landing: he has to fly off again.
+Each one costs Warlock a tenth of his health too.
+
+**Warlock can die here** (`magus.warlockCanDie`). In this fight their blows don't touch him, the Magus's do, and he
+has no cocoon. If the Magus beats him he isn't driven off: the fight stops for a Talk scene (`MagusFight.elegy`,
+about 38 seconds, with its own camera, `StoryClient.ELEGY`).
+
+The continuity it rests on: the Magus is what Warlock would have become, so everything Warlock has done, the Magus
+remembers doing ("I remember this. I threw this punch, a long time ago", in the Sanctum). But in his past Warlock
+always got up. This is new to him, and killing Warlock ends the road that made him. He kills him anyway: he came
+through Chaos's window from a possibility, and he is already here.
+- Warlock falls out of the sky and doesn't get up. The Magus stands over him: "I don't remember this."
+  Warlock: "Then kill me. And you never happen." The Magus: "I already happened."
+- The Magus lifts him by the throat and takes the gold out of him, then lets him fall.
+- Warlock turns his head to them: "Don't let him close his hand."
+- A gold soul rises out of him, light goes up through him, and he is gone.
+- The Magus flickers in place, once (a blink with no distance in it): "The light of him stutters, once. Then it
+  holds." Then the fight resumes, without a word.
+
+`SovereignData.warlockFell` is set, and he never arrives again, not even in a rematch.
+
+**If he snaps** (`MagusFight.snapped`, Act AFTERMATH), it is Infinity War's "What did you do?" and he has won.
+Nobody is struck down.
+- Everything goes white and comes back over about five seconds, with a ringing (`MsgGauntletFight.WHITE`).
+- The snap burns his right arm the way it burns a player's: char from the gauntlet to past the elbow, glowing cracks,
+  a white-hot flare that cools, and smoke and sparks (`EntityMagus.burn`, painted by `client/render/MagusBurn`).
+  The gauntlet is cracked (`GauntletWear` stage 3).
+- He stands bent over the arm, breathing hard (Pose SPENT). Under the white, Warlock (if he lives) is put on the
+  ground in front of him. Warlock: "What did you do?" ... "What did you DO?" If Warlock is dead, the player asks
+  instead (speaker PARTY). The Magus says nothing; he lifts his head, looks at them, then at the sky.
+- He goes straight up off ground that breaks under him, seventy blocks in about a second, and folds away up there
+  with the gauntlet on his hand (`goes`). The camera (`StoryClient.SNAPPED`) follows him up.
+- Then half of everything living within 48 blocks goes to dust, one after another, for a while (`afterHim`). Pets,
+  named creatures and the mod's own characters are spared. Warlock watches the sky, then goes up after him.
+
+All six stones are claimed for the Magus (`claimHis`), and `SovereignData.fight` is LOST. There is no rematch, and
+**Eternity never comes** (`eternityWaits` holds for good). The journal says so.
+
+Dying in the fight is still not this. The gauntlet is given back when they respawn, and he comes again once they
+are ready (`MagusFight.died`).
+
+**The win.** He has to have set his two stones before it can be won. With all six on their hand, their snap is for
+him alone (`SnapPowers.snap` → `MagusFight.snap`). He comes apart into dust: "I... was the hand. I was always
+the...". His two stones are claimed for them. Warlock: "He's gone. All of him." / "Six, on one hand. Be careful
+what you close it on." (Only if Warlock is still alive.) Eternity keeps away entirely while the fight is on and for a
+minute after it is won (`StoryDirector.eternityWaits`, checked at the top of `Director.tickAlive`). That means no
+omens, no rifts and no encounters, and if Eternity is already about, it vanishes. After that the six bring the
+Finale. Snaps go back to normal.
+
+Operator: `/eternity story magusfight <status|give|start|ambush|grab|land|power|reach|snap|stop>`. `stop` also undoes a
+lost fight: the stones go back to you and Eternity can come again.
 
 ### The Finale
 
 The existing systems play out, with new scenes, a new sacrifice and one new decision.
 
+#### The reckoning (built: `story/Reckoning`; replaces F1 below)
+
+When someone holds all six, the Magus's fight is won (and a minute gone) or never began, and Eternity has
+not come yet, it is put to them. Eternity holds off until it has been, while it is, and for 90 seconds after.
+- Warlock (if alive: not `warlockFell`, not `warlock_gone`) streaks down and tells them to break the stones.
+  Death (unless `Betrayal.absent()`) is already standing behind them. They argue at length over the player's head.
+  She wants half of everything alive. Her ask: `(Listen.)` calms her; each of four questions sets her off
+  (crazy-girlfriend whiplash), and she takes three at most. Either of them can be missing; the other carries it.
+- **Destroy the Stones, in time** (`stones_broken`): she breaks down in the dust of them. Eternity is called
+  25 s after. When he comes she says "Good fucking luck." and is gone for good (`death_gone`). Warlock stands
+  with them (`EntityAdamWarlock.ally` + `mortalTo(EntityEternity)`); Eternity turns on him every third 10 s
+  (`EntityEternity.rival`). If he falls he is dead for good. With the stones broken, Eternity takes 0.3 of
+  anyone's blows, never regenerates, treats everyone as worthy, never ends a hunt, and comes back every 30 min.
+- **Kill half, in time** (`the_cull`): the dust passes over both of them. She is not grateful: she is impatient,
+  takes the credit, puts the guilt on their hand ("I never touched a thing"), and is gone for good.
+  Warlock, furious, fights them to the death (`toTheDeath`): beaten, he is dead for good. Eternity comes 4
+  minutes after the snap; if Warlock is still fighting, he says he told them so and leaves for good.
+- **Hesitating**: every 10 s while the clock runs, she gets less patient ("Are you HESITATING?") and Warlock asks
+  what there is to think about. At 90 s Eternity is called (25 s out), and they make a last try; a snap still counts until
+  he is here. If he gets here first, she leaves (gone for good) and so does Warlock ("You're on your own"; `warlock_gone`).
+- Warlock dead for good leaves his body where he fell (`EntityAdamWarlock.lieDead`, saved with the world).
+- Broken, her breakdown drops the act: none of the love was real; they were a hand with six stones on it.
+- With Eternity caged, Warlock (if at their side) thanks them and blasts off, never seen again. Not caged,
+  he is simply gone. Either way, `warlock_gone`.
+- `/eternity story reckoning` puts it to you now, six stones or not.
+
+#### After the cull (built: `story/Aftermath`)
+
+Once per world (`death_after`), when someone comes home from the Tribunal after `the_cull` (and she isn't in a Regulator):
+- **Stripped** (sentenced or beaten): they can curse her name, or say nothing. Cursed, she comes, fresh and
+  rested, and treats them like a weird obsessive ex. She's seeing Thanos, and lists what he has that they don't.
+  Two call-outs or questions at most; everything they say makes it weirder for her, and she leaves ("...so weird.").
+  Said nothing: 90 s later she comes anyway, ego bruised ("I was passing"), calls the silence stalkery, and the
+  same Thanos list and call-out chain follow.
+- **Absorbed the Tribunal, or acquitted**: she comes on her own and stands off for 75 s. Right-click with the Regulator in
+  hand and she is drawn in
+  (`Betrayal`, pissy lines: "a matching set", "I'm not talking to you"). Talk to her instead: they gave her the ick,
+  being bigger than her now when she likes being in charge. Trying to win her back is hopeless and she admits Thanos;
+  lashing out makes them the stalker ex in her story. Walking within 4 blocks of her (or right-clicking her without the
+  Regulator) starts the talk; the arrival narration says so. Walking off, or not talking, and she goes. Acquitted plays
+  the same chain with the "Tribunal in a jar" lines swapped for "he let you go".
+- `/eternity story aftermath [powerful|acquitted|ignored]` plays it now (`ignored` = stripped, said nothing).
+
 #### The hunt (existing)
+
+The journal turns to the Finale ("Six stones. Eternity is coming for you.") without a word: no toast, no sound. It
+is there when they open it (`Journal` `quiet`).
 
 Eternity comes. If Warlock is still a **RIVAL** or **BETRAYED** (he never walked off the board,
 because the player broke it before he did), he makes one last attempt to take stones before
@@ -2297,6 +2545,37 @@ Use these when writing or reviewing any line.
 - Make answers differ in *intent*, not tone. Never nice / neutral / rude.
 
 ---
+
+## 10. Playing together
+
+The story is written to one player and works for a party. Players who quest together are a
+**fellowship** (`StoryData`, `story/Fellowship`):
+
+- **One story between them.** Fellows share one record of what they have seen (`StoryData.Beats`),
+  so a scene that happens to one of them has happened to them all: the journal moves on for every
+  one of them, wherever they were. A few beats stay each player's own: what happened to their own
+  body (`gardener_killed`, `sent_back`), their own first sight of a place (`garden_told`,
+  `sov_arrived`), the Champion at their own side (`champion_called`).
+- **Warlock takes them as one.** Whatever he comes to make of one fellow (truce, rival, betrayed,
+  ally), he makes of them all (`StoryData.settleStances`).
+- **How it forms.** Players who answer a question together, or see a conversation through
+  together, become fellows (`StoryDirector.together`; config `story.fellowships`). Once the story
+  has found someone and others are in the world, they are asked once, in chat, whether they'd
+  quest together, with a button that opens the **Fellowship menu** (key `K`, or `/fellowship`):
+  who you quest with and how far each of them is, who has asked you along, and everyone else in
+  the world, each with *Ask along*. Leaving keeps everything you have seen.
+- **Scenes are everyone's.** The story's turns draw in everyone near enough (`Talk.reach`), and
+  everyone in the vault when Warlock comes up the steps; lines reach every member however far, a
+  cutscene already playing is shown to whoever joins late, and whoever dies or leaves drops out
+  while the rest carry on. Someone who missed a turn entirely is caught up when they come back
+  (`VaultStory.caughtUp`).
+- **Deaths.** One fellow falling is not the party losing: Warlock's theft in the wreck, the
+  Magus's fight and Odin's win only happen once nobody is left standing.
+- **The Grandmaster's board.** With more than one of a fellowship at the board, any of them can
+  stake (each stake goes back to whoever laid it down), and the moves are voted: each lays a hand
+  on a piece and a square, every choice is drawn on the board in its chooser's colour with their
+  name over it, and the move most of them chose is made (a tie goes to whoever he is playing; the
+  rest have thirty seconds after the first choice).
 
 ## Sources
 

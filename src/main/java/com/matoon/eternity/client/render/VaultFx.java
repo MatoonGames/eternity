@@ -28,7 +28,7 @@ import static com.matoon.eternity.client.render.WarlockFx.star;
 import static com.matoon.eternity.client.render.WarlockFx.strip;
 
 /**
- * Odin's Vault's effects: the Destroyer's fire, and the Casket's winter. Drawn additively, like
+ * Odin's Vault's effects: the Destroyer's fire, and the Casket's burst of winter (its torrent and the Fimbulwinter are {@link WinterFx}'s). Drawn additively, like
  * everything else, except the ice that closes over whatever the Casket freezes.
  * Positions are world coordinates; geometry is drawn relative to the camera.
  */
@@ -292,54 +292,6 @@ public final class VaultFx {
     }
 
     // ------------------------------------------------------------------ the Casket of Ancient Winters
-
-    /** The winter pouring out of the Casket in a gale: streaks of frost racing out in a widening cone, a cold mist behind them. */
-    public static class Gale extends FxRenderer.Fx {
-        final Vec3d from, dir;
-        final double[][] streaks;
-
-        public Gale(Vec3d from, Vec3d dir, int ticks, long seed) {
-            super(ticks);
-            this.from = from;
-            this.dir = dir.normalize();
-            Random rand = new Random(seed);
-            Vec3d[] b = basis(this.dir);
-            streaks = new double[70][5];
-            for (double[] s : streaks) {
-                double a = rand.nextDouble() * Math.PI * 2D, r = rand.nextDouble() * 0.42D;
-                Vec3d d = this.dir.add(b[0].scale(Math.cos(a) * r)).add(b[1].scale(Math.sin(a) * r)).normalize();
-                s[0] = d.x;
-                s[1] = d.y;
-                s[2] = d.z;
-                s[3] = 0.9D + rand.nextDouble() * 0.7D;
-                s[4] = rand.nextDouble() * 0.35D;
-            }
-        }
-
-        @Override
-        void render(Vec3d camera, float partialTicks) {
-            float p = progress(partialTicks);
-            Vec3d c = from.subtract(camera);
-            float time = age + partialTicks;
-            for (double[] s : streaks) {
-                double t = time - s[4] * lifetime;
-                if (t <= 0D) {
-                    continue;
-                }
-                Vec3d d = new Vec3d(s[0], s[1], s[2]);
-                double head = Math.min(19D, t * s[3]);
-                double tail = Math.max(0D, head - 2.5D);
-                float fade = (float) (1D - head / 19D) * (1F - p);
-                strip(c.add(d.scale(tail)), c.add(d.scale(head)), 0.05D, 0.12D + head * 0.02D, ICE, FROST, 0F, 0.7F * fade);
-            }
-            float mist = (1F - p) * (1F - p);
-            for (int k = 1; k <= 5; k++) {
-                double along = k * 3D * Math.min(1D, time / 6D);
-                glow(c.add(dir.scale(along)), 0.5D + along * 0.28D, ICE, 0.07F * mist);
-            }
-            glow(c, 1.2D, FROST, 0.5F * mist);
-        }
-    }
 
     /** Winter bursting out all round: a ring of frost racing out over the ground, shards of ice flung up in it. */
     public static class Burst extends FxRenderer.Fx {

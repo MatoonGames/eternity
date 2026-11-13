@@ -35,6 +35,8 @@ public final class StoryJournal {
     public static final KeyBinding OPEN = new KeyBinding("key.eternity.journal", Keyboard.KEY_J, "key.categories.eternity");
     /** Done reading: finish the line typing out, or move on to the next. */
     public static final KeyBinding SKIP = new KeyBinding("key.eternity.skip_line", Keyboard.KEY_RETURN, "key.categories.eternity");
+    /** Who you quest with: the fellowship menu. */
+    public static final KeyBinding FELLOWSHIP = new KeyBinding("key.eternity.fellowship", Keyboard.KEY_K, "key.categories.eternity");
 
     /** The journal's colour: old gold, the colour of the stones' runes. */
     static final int ACCENT = 0xD8B86A;
@@ -52,6 +54,7 @@ public final class StoryJournal {
     public void register() {
         ClientRegistry.registerKeyBinding(OPEN);
         ClientRegistry.registerKeyBinding(SKIP);
+        ClientRegistry.registerKeyBinding(FELLOWSHIP);
     }
 
     public boolean hasAnything() {
@@ -68,7 +71,7 @@ public final class StoryJournal {
         for (int i = 0; i < list.tagCount(); i++) {
             notes.add(list.getStringTagAt(i));
         }
-        if (!goal.isEmpty() && !goal.equals(was)) {
+        if (!goal.isEmpty() && !goal.equals(was) && !tag.getBoolean("quiet")) {
             toastChapter = chapter;
             toastGoal = goal;
             toastAt = tick;
@@ -88,6 +91,9 @@ public final class StoryJournal {
             if (mc.currentScreen == null && mc.player != null) {
                 mc.displayGuiScreen(new GuiStoryJournal());
             }
+        }
+        while (FELLOWSHIP.isPressed()) {
+            GuiFellowship.open();
         }
         while (SKIP.isPressed()) {
             if (mc.currentScreen == null && mc.player != null && SpeakerPanel.INSTANCE.skip()) {

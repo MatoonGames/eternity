@@ -3,8 +3,6 @@ package com.matoon.eternity.story;
 import com.matoon.eternity.compat.InfinityStones;
 import com.matoon.eternity.entity.EntityAdamWarlock;
 import com.matoon.eternity.entity.EntityInBetweener;
-import com.matoon.eternity.network.EternityNetwork;
-import com.matoon.eternity.network.MsgStory;
 import com.matoon.eternity.world.Director;
 import com.matoon.eternity.world.Nexus;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -104,8 +102,19 @@ final class Glass {
     /** Now and then, once they carry enough, the world gives way in front of them onto the Nexus. */
     private void pull(EntityPlayerMP player, StoryData.Player p, long now) {
         if (!StoryDirector.enabled() || !drawn(p) || player.dimension != 0 || player.isSpectator() || !player.onGround
-                || story.talking(player) || InfinityStones.countHeld(player) < STONES_FOR_RIFTS
-                || (InfinityStones.scan(player) & InfinityStones.bit(lucraft.mods.lucraftcore.infinity.EnumInfinityStone.SOUL)) != 0) {
+                || story.talking(player)) {
+            nextRift.remove(player.getUniqueID());
+            return;
+        }
+        // What they carry between them, they and the friends with them: the world gives way round the lot.
+        int carried = 0;
+        for (EntityPlayerMP each : story.fellowship(player)) {
+            if (each == player || each.dimension == player.dimension && each.getDistance(player) < 32D) {
+                carried |= InfinityStones.scan(each);
+            }
+        }
+        if (InfinityStones.count(carried) < STONES_FOR_RIFTS
+                || (carried & InfinityStones.bit(lucraft.mods.lucraftcore.infinity.EnumInfinityStone.SOUL)) != 0) {
             nextRift.remove(player.getUniqueID());
             return;
         }
@@ -127,9 +136,9 @@ final class Glass {
     void rift(EntityPlayerMP player, boolean first) {
         Director.INSTANCE.openGate(player, new Director.Destination(Nexus.dimension(), ARRIVE_X, Nexus.JUNCTION_Y, ARRIVE_Z));
         player.world.playSound(null, player.posX, player.posY, player.posZ, SoundEvents.BLOCK_PORTAL_TRIGGER, SoundCategory.AMBIENT, 0.8F, 0.5F);
-        EternityNetwork.send(MsgStory.line(DIRECTION, -1, first
+        StoryDirector.line(player, player, DIRECTION, -1, first
                 ? "The air in front of you splits. Through it: a grey floor, and every sky there is, all at once."
-                : "It's opened again. The grey floor, and every sky."), player);
+                : "It's opened again. The grey floor, and every sky.");
         if (first) {
             Talk t = new Talk(player);
             t.pause(80).direction("Where all the worlds touch. It won't stay open long.");
@@ -195,7 +204,14 @@ final class Glass {
         warlockGoesAt = -1;
 
         Talk t = new Talk(player).at(him, 48D);
-        t.direction("Someone is already at the glass, both fists against it. Gold skin. A red cape.")
+        t.run(() -> {
+            // Everyone drawn into it has seen him there, not only whoever walked up first.
+            for (EntityPlayerMP each : t.present()) {
+                story.data().player(each.getUniqueID()).beats.add("glass_warlock");
+            }
+            story.data().markDirty();
+        })
+                .direction("Someone is already at the glass, both fists against it. Gold skin. A red cape.")
                 .pause(30)
                 .run(() -> w.direct(EntityAdamWarlock.State.HOVER, post, player.getPositionEyes(1F), 0.1D))
                 .line(IN_BETWEENER, him, "Another one.")
@@ -217,6 +233,7 @@ final class Glass {
                                 .line(WARLOCK, w, "You'd know.")
                                 .run(() -> trust(player, -1))),
                         act("(Say nothing.)", c -> c.pause(20)));
+        Judgement.judged(t, w, Judgement.GLASS);
         boolean ally = story.data().player(player.getUniqueID()).warlock == StoryData.Stance.ALLY;
         if (ally) {
             t.line(WARLOCK, w, "He has one of the stones on his head. The Magus will come for it, if we leave it there.")

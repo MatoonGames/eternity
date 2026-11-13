@@ -2,10 +2,10 @@ package com.matoon.eternity.item;
 
 import com.google.common.collect.Multimap;
 import com.matoon.eternity.Eternity;
+import com.matoon.eternity.EternityTab;
 import com.matoon.eternity.client.render.ModelEinherjarArmor;
 import net.minecraft.client.model.ModelBiped;
 import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
@@ -50,7 +50,7 @@ public class ItemEinherjarArmor extends ItemArmor {
         super(MATERIAL, 0, slot);
         setRegistryName(Eternity.MODID, name);
         setTranslationKey(Eternity.MODID + "." + name);
-        setCreativeTab(CreativeTabs.COMBAT);
+        setCreativeTab(EternityTab.INSTANCE);
     }
 
     @Override

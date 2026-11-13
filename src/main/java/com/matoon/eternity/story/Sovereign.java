@@ -33,9 +33,12 @@ import net.minecraftforge.common.DimensionManager;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 
 import static com.matoon.eternity.story.Speakers.CHAOS;
 import static com.matoon.eternity.story.Speakers.MAGUS;
@@ -206,6 +209,8 @@ final class Sovereign {
         spawn.removeIf(e -> e.isDead || e.getHealth() <= 0F);
         if (spawnWoken && spawn.isEmpty()) {
             spawnWoken = false;
+            // Down for good: they do not get up again for whoever comes after.
+            story.data().see("sov_spawn_cleared");
             for (EntityPlayer p : world.playerEntities) {
                 if (p instanceof EntityPlayerMP && SovereignStation.hallAt(p.posX, p.posY, p.posZ) >= 3) {
                     story.mark((EntityPlayerMP) p, "sov_spawn_cleared");
@@ -228,6 +233,11 @@ final class Sovereign {
             StoryData.Player sp = story.data().player(p.getUniqueID());
             if (!(p instanceof EntityPlayerMP) || !p.isEntityAlive() || sp.seen("sov_spawn_cleared") || !sp.seen("sov_his_cocoon")
                     || SovereignStation.hallAt(p.posX, p.posY, p.posZ) != 3 || p.posX < 95) {
+                continue;
+            }
+            if (story.data().seen("sov_spawn_cleared")) {
+                // Someone put them down already: whoever comes after walks through what is left.
+                story.mark((EntityPlayerMP) p, "sov_spawn_cleared");
                 continue;
             }
             spawnWoken = true;
@@ -308,6 +318,8 @@ final class Sovereign {
     private void confront(EntityPlayerMP player, WorldServer world) {
         SovereignData s = SovereignData.get();
         s.station = SovereignData.Station.CONFRONTED;
+        // (Played from the start again after a cut-off: she is alive in it until she is not.)
+        s.motherDead = false;
         s.markDirty();
         BlockPos dais = SovereignStation.DAIS, throne = SovereignStation.THRONE;
         EntityNorse m = mother = EntityNorse.of(world, NorseBoxes.AYESHA, "mother");
@@ -315,6 +327,8 @@ final class Sovereign {
         world.spawnEntity(m);
         EntityAdamWarlock w = warlock = new EntityAdamWarlock(world);
         w.script(true);
+        // He brought it home in his brow, and wears it there until it is taken off him.
+        w.wearStone(s.warlockHasStone());
         Vec3d warlockAt = new Vec3d(dais.getX() - 3.5D, dais.getY(), dais.getZ() + 0.5D);
         w.setPosition(warlockAt.x, warlockAt.y, warlockAt.z);
         world.spawnEntity(w);
@@ -325,7 +339,8 @@ final class Sovereign {
         c.setKind(EntityOrderChaos.Kind.CHAOS);
         EntityMagus g = magus = new EntityMagus(world);
         Vec3d mirror = new Vec3d(SovereignStation.SANCTUM_X - 4D, SovereignStation.FLOOR + 3.5D, -9.5D);
-        Talk t = new Talk(player).at(m, 64D);
+        // Everyone in the Sanctum is there for it.
+        Talk t = new Talk(player).at(m, 64D).reach(SovereignStation.SANCTUM_R * 2D);
         t.abandoned(() -> abandon(world));
         t.direction("Under the great dome, two voices. One of them is his.")
                 .pause(20)
@@ -408,14 +423,39 @@ final class Sovereign {
                 .line(MOTHER, m, "My son. My finished son. Look at you.")
                 .run(() -> g.watch(m))
                 .line(MAGUS, g, "I have no mother. I have a church.")
-                .run(() -> playing.add(motherDies(player, world, g, m, w, s)))
+                .run(() -> playing.add(motherDies(lead(t, player), world, g, m, w, s)))
                 .pause(EntityMagus.CRUSH_CLOSE + 26)
                 .direction("She hits the floor of her own Sanctum and does not move again. The gold goes out of her skin like the light going out of a window.")
                 .pause(20)
                 .line(WARLOCK, w, "...Mother?")
                 .pause(25)
-                .run(() -> begin(player, world));
+                .run(() -> begin(lead(t, player), world));
         story.talk(player, t);
+        drawSanctum(t, world);
+    }
+
+    /** Whoever leads a conversation now, or whom it was begun with if nobody does. */
+    private static EntityPlayerMP lead(Talk t, EntityPlayerMP player) {
+        EntityPlayerMP now = t.leadNow();
+        return now != null ? now : player;
+    }
+
+    /** Everyone standing in the Sanctum, alive. */
+    private static List<EntityPlayerMP> inSanctum(WorldServer world) {
+        List<EntityPlayerMP> out = new ArrayList<>();
+        for (EntityPlayer p : world.playerEntities) {
+            if (p instanceof EntityPlayerMP && p.isEntityAlive() && !p.isSpectator() && SovereignStation.hallAt(p.posX, p.posY, p.posZ) == 6) {
+                out.add((EntityPlayerMP) p);
+            }
+        }
+        return out;
+    }
+
+    /** Pulls everyone in the Sanctum into the scene, whatever else they were doing. */
+    private void drawSanctum(Talk t, WorldServer world) {
+        for (EntityPlayerMP p : inSanctum(world)) {
+            story.draw(t, p);
+        }
     }
 
     /**
@@ -502,15 +542,12 @@ final class Sovereign {
     /** Whoever is still there to see the end of it: the one it was played for, or anyone else in the Sanctum. */
     @Nullable
     private EntityPlayerMP witness(WorldServer world) {
-        if (fighting != null && fighting.isEntityAlive() && fighting.world == world && !fighting.hasDisconnected()) {
+        if (fighting != null && fighting.isEntityAlive() && fighting.world == world && !fighting.hasDisconnected()
+                && SovereignStation.hallAt(fighting.posX, fighting.posY, fighting.posZ) == 6) {
             return fighting;
         }
-        for (EntityPlayer p : world.playerEntities) {
-            if (p instanceof EntityPlayerMP && p.isEntityAlive() && SovereignStation.hallAt(p.posX, p.posY, p.posZ) == 6) {
-                return (EntityPlayerMP) p;
-            }
-        }
-        return null;
+        List<EntityPlayerMP> here = inSanctum(world);
+        return here.isEmpty() ? null : here.get(0);
     }
 
     /**
@@ -535,6 +572,8 @@ final class Sovereign {
             w.puppet(false);
             w.dismiss();
             warlock = null;
+            // And whoever came this far, wherever they are, knows it.
+            resolve(null, null);
             return;
         }
         // Held up at the end of his arm, every tick, until he lets go.
@@ -558,7 +597,7 @@ final class Sovereign {
         });
         playing.add(hold);
         // Held to Warlock, not to him: he leaves before it is over.
-        Talk t = new Talk(player).at(w, 96D);
+        Talk t = new Talk(player).at(w, 96D).reach(SovereignStation.SANCTUM_R * 2D);
         t.abandoned(() -> {
             hold.stop();
             magusTakes(s);
@@ -571,7 +610,7 @@ final class Sovereign {
                 warlock.setDead();
                 warlock = null;
             }
-            resolve(player);
+            resolve(lead(t, player), t);
         });
         t.pause(14)
                 .line(MAGUS, g, "Enough.")
@@ -579,7 +618,7 @@ final class Sovereign {
                 .line(MAGUS, g, "This was always going to be mine.")
                 .run(() -> {
                     g.perform(EntityMagus.Pose.TAKE);
-                    Vec3d chest = w.chest();
+                    Vec3d chest = w.brow();
                     EternityNetwork.sendToDimension(new MsgTribunalFx(MsgTribunalFx.CHAMPION_STONE, chest.x, chest.y, chest.z, 0, 0, 0,
                             g.getEntityId(), 24), dim);
                     EternityNetwork.sendToDimension(new MsgTribunalFx(MsgTribunalFx.MAGUS_GRASP, chest.x, chest.y, chest.z, w.getEntityId(), 0, 0,
@@ -590,6 +629,7 @@ final class Sovereign {
                 .pause(34)
                 .run(() -> {
                     magusTakes(s);
+                    w.wearStone(false);
                     g.crown(true);
                     Vec3d brow = g.brow();
                     EternityNetwork.sendToDimension(new MsgTribunalFx(MsgTribunalFx.MAGUS_IMPACT, brow.x, brow.y, brow.z, 0, 1, 0, -1, 1), dim);
@@ -601,7 +641,7 @@ final class Sovereign {
                     hold.stop();
                     playing.add(drop(world, w));
                     g.rest(EntityMagus.Pose.FLOAT).perform(EntityMagus.Pose.FLOAT);
-                    g.watch(player);
+                    g.watch(lead(t, player));
                     g.hoverTo(g.getPositionVector().subtract(0D, 1.1D, 0D), 0.05D);
                 })
                 .pause(16)
@@ -623,8 +663,9 @@ final class Sovereign {
                 .pause(20)
                 .direction("Through the hole in the roof, the Earth turns. The station is very quiet.")
                 .pause(20)
-                .run(() -> aftermath(player, world));
+                .run(() -> aftermath(lead(t, player), world));
         story.talk(player, t);
+        drawSanctum(t, world);
     }
 
     /** Let go of, he drops like something thrown away, and lies where he lands. */
@@ -686,7 +727,7 @@ final class Sovereign {
         EntityAdamWarlock w = warlock;
         EntityNorse m = mother;
         if (w == null || m == null) {
-            resolve(player);
+            resolve(player, null);
             return;
         }
         // Down on his knees on her near side, facing her.
@@ -698,13 +739,14 @@ final class Sovereign {
         Vec3d gone = kneel.add(0D, EntityAdamWarlock.ASCENT_HEIGHT, 0D);
         w.puppet(false);
         w.spent();
-        Talk t = new Talk(player).at(player, 1000D);
+        // Held to her, who stays where she lies (he goes up and out of it, and is gone), and to everyone in the Sanctum.
+        Talk t = new Talk(player).at(m, 1000D).reach(SovereignStation.SANCTUM_R * 2D);
         t.abandoned(() -> {
             if (warlock != null) {
                 warlock.setDead();
                 warlock = null;
             }
-            resolve(player);
+            resolve(lead(t, player), t);
         });
         t.run(() -> w.direct(EntityAdamWarlock.State.STAND, kneel, her, 0.07D))
                 .direction("Warlock gets up. It takes him a long time.")
@@ -716,13 +758,14 @@ final class Sovereign {
                     w.place(kneel, her.add(0D, 0.3D, 0D));
                     w.perform(EntityAdamWarlock.State.KNEEL);
                     playing.add(ascent(world, w, m, kneel, gone));
-                    story.scene(player, ASCENT_SCENE, kneel, her);
+                    story.scene(lead(t, player), ASCENT_SCENE, kneel, her);
                 })
-                .until(() -> story.sceneDone(player, ASCENT_SCENE), EntityAdamWarlock.ASCENT_LENGTH + 80)
+                .until(() -> story.sceneDone(lead(t, player), ASCENT_SCENE), EntityAdamWarlock.ASCENT_LENGTH + 80)
                 .pause(20)
                 .direction("Where the Sanctum was, there is mostly sky. Somewhere out in it, he is still going.")
-                .run(() -> resolve(player));
+                .run(() -> resolve(lead(t, player), t));
         story.talk(player, t);
+        drawSanctum(t, world);
     }
 
     /** The cutscene that follows Warlock up, as the client knows it. */
@@ -866,24 +909,57 @@ final class Sovereign {
     }
 
     /** What the Sanctum leaves them with: Warlock their ally from here on, the Magus known, and the way on. */
-    private void resolve(EntityPlayerMP player) {
-        alliance(player);
-        if (!story.data().player(player.getUniqueID()).seen("champion_debt")) {
+    private void resolve(@Nullable EntityPlayerMP player, @Nullable Talk t) {
+        if (player != null && !story.data().player(player.getUniqueID()).seen("champion_debt")) {
             story.mark(player, "champion_debt");
         }
+        alliance(player, t);
     }
 
-    /** Everyone who was there is Warlock's ally now, and knows what the Magus is. */
-    private void alliance(EntityPlayerMP player) {
-        WorldServer world = player.getServerWorld();
-        for (EntityPlayer o : world.playerEntities) {
-            if (o instanceof EntityPlayerMP && SovereignStation.hallAt(o.posX, o.posY, o.posZ) == 6 || o == player) {
-                StoryData.Player sp = story.data().player(o.getUniqueID());
-                sp.warlock = StoryData.Stance.ALLY;
-                sp.beats.add("magus_risen");
+    /**
+     * Everyone who was there is Warlock's ally now, and knows what the Magus is: whoever it was
+     * played for, whoever was in the scene or the Sanctum, whoever came aboard or was shown the
+     * way here, and everyone questing with any of them, wherever they are.
+     */
+    private void alliance(@Nullable EntityPlayerMP player, @Nullable Talk t) {
+        StoryData data = story.data();
+        Set<UUID> there = new LinkedHashSet<>();
+        if (player != null) {
+            there.add(player.getUniqueID());
+        }
+        if (t != null) {
+            for (EntityPlayerMP p : t.present()) {
+                there.add(p.getUniqueID());
             }
         }
-        story.data().markDirty();
+        WorldServer world = world();
+        if (world != null) {
+            for (EntityPlayer o : world.playerEntities) {
+                if (o instanceof EntityPlayerMP && SovereignStation.hallAt(o.posX, o.posY, o.posZ) == 6) {
+                    there.add(o.getUniqueID());
+                }
+            }
+        }
+        MinecraftServer server = net.minecraftforge.fml.common.FMLCommonHandler.instance().getMinecraftServerInstance();
+        if (server != null) {
+            for (EntityPlayerMP o : server.getPlayerList().getPlayers()) {
+                StoryData.Player op = data.player(o.getUniqueID());
+                if (op.seen("dir_station") || op.seen("sov_arrived")) {
+                    there.add(o.getUniqueID());
+                }
+            }
+        }
+        Set<UUID> allies = new LinkedHashSet<>();
+        for (UUID id : there) {
+            allies.addAll(data.fellows(id));
+        }
+        for (UUID id : allies) {
+            StoryData.Player sp = data.player(id);
+            sp.warlock = StoryData.Stance.ALLY;
+            sp.beats.add("magus_risen");
+            sp.beats.add("champion_debt");
+        }
+        data.markDirty();
         story.sendStateToAll();
     }
 
@@ -909,6 +985,15 @@ final class Sovereign {
             mother = null;
             chaos = null;
             magus = null;
+        } else if (s.station == SovereignData.Station.CONFRONTED && s.motherDead && duel == null && magus != null && warlock != null) {
+            // She is dead already, and nothing puts that back: it goes on, for whoever is still there, or for nobody.
+            EntityPlayerMP p = witness(world);
+            if (p != null) {
+                begin(p, world);
+            } else {
+                ending = true;
+                end(null, world);
+            }
         }
     }
 
@@ -942,7 +1027,8 @@ final class Sovereign {
         }
         story.mark(player, "sov_arrived");
         SovereignData s = SovereignData.get();
-        if (s.station == SovereignData.Station.UNSEEN) {
+        if (s.station == SovereignData.Station.UNSEEN && !story.data().seen(Arena.EMPOWERED)) {
+            // (Not while he is still out on Tamarata with it, fighting for it.)
             s.station = SovereignData.Station.ABANDONED;
             s.markDirty();
         }
@@ -979,7 +1065,7 @@ final class Sovereign {
         } else if ("vats".equals(record)) {
             t.direction("Behind you, in the dark at the edge of the room, something knocks once on glass.");
         }
-        t.run(() -> story.mark(player, "sov_" + record));
+        t.run(() -> story.mark(lead(t, player), "sov_" + record));
         story.talk(player, t);
         return true;
     }
@@ -1013,7 +1099,7 @@ final class Sovereign {
                 })
                 .pause(25)
                 .run(() -> frost(world, pos, true))
-                .run(() -> story.mark(player, "sov_" + pod));
+                .run(() -> story.mark(lead(t, player), "sov_" + pod));
         t.abandoned(() -> {
             frost(world, pos, true);
             if (sleeper != null) {
@@ -1154,7 +1240,12 @@ final class Sovereign {
             if (!door.blocks.contains(pos)) {
                 continue;
             }
-            if (!ready(door.name, story.data().player(player.getUniqueID()))) {
+            // Lit for anyone aboard is lit for everyone: whoever touches it, it opens.
+            boolean anyone = ready(door.name, story.data().player(player.getUniqueID()));
+            for (EntityPlayer p : player.getServerWorld().playerEntities) {
+                anyone |= ready(door.name, story.data().player(p.getUniqueID()));
+            }
+            if (!anyone) {
                 StoryDirector.line(player, player, Speakers.DIRECTION, -1, "It doesn't move. Nothing in the station is ready to let you further in.");
                 return;
             }
@@ -1250,6 +1341,8 @@ final class Sovereign {
         world.spawnEntity(m);
         EntityAdamWarlock w = warlock = new EntityAdamWarlock(world);
         w.script(true);
+        // He brought it home in his brow, and wears it there until it is taken off him.
+        w.wearStone(s.warlockHasStone());
         Vec3d warlockAt = new Vec3d(dais.getX() - 3.5D, dais.getY(), dais.getZ() + 0.5D);
         w.setPosition(warlockAt.x, warlockAt.y, warlockAt.z);
         world.spawnEntity(w);
@@ -1265,13 +1358,13 @@ final class Sovereign {
             Talk t = new Talk(player).at(m, 64D);
             t.pause(20)
                     .line(MAGUS, g, "I have no mother. I have a church.")
-                    .run(() -> playing.add(motherDies(player, world, g, m, w, s)))
+                    .run(() -> playing.add(motherDies(lead(t, player), world, g, m, w, s)))
                     .pause(EntityMagus.CRUSH_CLOSE + 26)
                     .direction("She hits the floor of her own Sanctum and does not move again. The gold goes out of her skin like the light going out of a window.")
                     .pause(20)
                     .line(WARLOCK, w, "...Mother?")
                     .pause(25)
-                    .run(() -> begin(player, world));
+                    .run(() -> begin(lead(t, player), world));
             story.talk(player, t);
             return;
         }
@@ -1331,6 +1424,7 @@ final class Sovereign {
                 }
                 s.markDirty();
                 p.beats.removeIf(b -> b.startsWith("sov_") || "magus_risen".equals(b));
+                story.data().beats.remove("sov_spawn_cleared");
                 p.beats.add("death_revealed");
                 p.beats.add("warlock_took");
                 p.beats.add("dir_station");

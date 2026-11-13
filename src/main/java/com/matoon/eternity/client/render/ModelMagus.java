@@ -137,6 +137,22 @@ public class ModelMagus extends ModelBase {
         GlStateManager.translate(0F, 7.2F * scale, 0F);
     }
 
+    /** Moves the matrix to the middle of the front of his chest, in model space. */
+    public void toChest(float scale) {
+        root.postRender(scale);
+        abdomen.postRender(scale);
+        chest.postRender(scale);
+    }
+
+    /** Moves the matrix to an elbow, with the forearm hanging from it along +y, in model space. */
+    public void toElbow(boolean right, float scale) {
+        root.postRender(scale);
+        abdomen.postRender(scale);
+        chest.postRender(scale);
+        (right ? rArm : lArm).postRender(scale);
+        (right ? rFore : lFore).postRender(scale);
+    }
+
     // ------------------------------------------------------------------ posing
 
     @Override
@@ -299,6 +315,27 @@ public class ModelMagus extends ModelBase {
                 break;
             case CARRY:
                 carry(p, age);
+                break;
+            case CRADLE:
+                cradle(p, age);
+                break;
+            case SLOT:
+                slot(p, t, age);
+                break;
+            case DON:
+                don(p, t, age);
+                break;
+            case POWER:
+                power(p, t, age);
+                break;
+            case SNAP:
+                snap(p, t, age);
+                break;
+            case STRUGGLE:
+                struggle(p, age);
+                break;
+            case SPENT:
+                spent(p, t, age);
                 break;
         }
     }
@@ -732,6 +769,224 @@ public class ModelMagus extends ModelBase {
         p[LL_X] = 0.42F;
         p[L_KNEE] = 0.55F;
         p[LOOK] = 0.15F;
+    }
+
+    // ------------------------------------------------------------------ the gauntlet
+
+    /** On his feet, landed: the legs under him, a little apart. */
+    private static void planted(float[] p) {
+        p[RL_X] = 0F;
+        p[R_KNEE] = 0.04F;
+        p[LL_X] = 0F;
+        p[L_KNEE] = 0.04F;
+        p[RL_Z] = 0.1F;
+        p[LL_Z] = -0.1F;
+        p[DROP] = 0F;
+    }
+
+    /**
+     * Flying with it held to him: both forearms folded across his chest round it, shoulders
+     * hunched over it, chin down to look at it, leaning into his flight with his legs trailing.
+     */
+    private static void cradle(float[] p, float age) {
+        float breath = MathHelper.sin(age * 0.09F);
+        p[LEAN] = 0.32F;
+        p[WAIST_X] = 0.1F;
+        p[CHEST_X] = 0.16F + breath * 0.02F;
+        p[DROP] = breath * 0.3F;
+        p[RA_X] = -0.62F;
+        p[RA_Y] = -0.62F;
+        p[RA_Z] = 0.08F;
+        p[R_ELBOW] = -1.75F;
+        p[LA_X] = -0.5F;
+        p[LA_Y] = 0.7F;
+        p[LA_Z] = -0.08F;
+        p[L_ELBOW] = -1.6F;
+        p[HEAD_X] = 0.38F;
+        p[RL_X] = 0.32F;
+        p[R_KNEE] = 0.45F;
+        p[LL_X] = 0.46F;
+        p[L_KNEE] = 0.62F;
+        p[LOOK] = 0.25F;
+    }
+
+    /**
+     * Landed, the gauntlet out in front of him on his right palm, the stone held up in his left;
+     * the left hand brought down over the gauntlet, opening, as the stone is drawn out of it and
+     * into its socket; then the hand back, and a look at what he has.
+     */
+    private static void slot(float[] p, float t, float age) {
+        stand(p, age);
+        planted(p);
+        p[RA_X] = -1.05F;
+        p[RA_Y] = -0.3F;
+        p[RA_Z] = 0F;
+        p[R_ELBOW] = -0.95F;
+        float up = outCubic(clamp(t / 10F)) * (1F - smooth((t - EntityMagus.SLOT_GO + 4F) / 8F));
+        float over = smooth((t - EntityMagus.SLOT_GO + 6F) / 8F) * (1F - smooth((t - EntityMagus.SLOT_IN - 2F) / 10F));
+        p[LA_X] = 0.04F;
+        p[LA_Z] = -0.16F;
+        p[L_ELBOW] = -0.18F;
+        set(p, LA_X, -2.15F, up);
+        set(p, LA_Y, 0.2F, up);
+        set(p, L_ELBOW, -1.3F, up);
+        set(p, LA_X, -1.3F, over);
+        set(p, LA_Y, 0.62F, over);
+        set(p, L_ELBOW, -0.75F, over);
+        // As it goes in, the hand opens and draws back a little: the pull is the stone's, not his.
+        float pull = smooth((t - EntityMagus.SLOT_GO) / 6F) * (1F - smooth((t - EntityMagus.SLOT_IN) / 6F));
+        p[LA_X] += 0.18F * pull;
+        p[CHEST_X] = 0.12F;
+        p[HEAD_X] = 0.42F - 0.25F * up;
+        p[LOOK] = 0.2F;
+    }
+
+    /** The gauntlet held out in his left hand; the right hand driven into it; then the fist, raised and turned. */
+    private static void don(float[] p, float t, float age) {
+        stand(p, age);
+        planted(p);
+        float hold = smooth(t / 6F) * (1F - smooth((t - EntityMagus.DON_IN - 4F) / 8F));
+        p[LA_X] = 0.04F;
+        p[LA_Z] = -0.16F;
+        p[L_ELBOW] = -0.18F;
+        set(p, LA_X, -1.2F, hold);
+        set(p, LA_Y, 0.45F, hold);
+        set(p, L_ELBOW, -0.7F, hold);
+        float back = smooth(t / 8F) * (1F - smooth((t - 8F) / 6F));
+        float drive = outBack(clamp((t - 10F) / (EntityMagus.DON_IN - 10F)));
+        float raise = smooth((t - EntityMagus.DON_IN - 4F) / 10F);
+        p[RA_X] = 0.1F;
+        p[RA_Z] = 0.16F;
+        p[R_ELBOW] = -0.2F;
+        set(p, RA_X, -0.35F, back);
+        set(p, R_ELBOW, -1.4F, back);
+        set(p, RA_X, -1.15F, drive);
+        set(p, RA_Y, -0.45F, drive);
+        set(p, R_ELBOW, -0.55F, drive);
+        set(p, RA_X, -1.55F, raise);
+        set(p, RA_Y, -0.2F, raise);
+        set(p, R_ELBOW, -1.65F, raise);
+        p[CHEST_X] = 0.1F * (1F - raise);
+        p[HEAD_X] = 0.35F - 0.3F * raise;
+        p[LOOK] = 0.2F;
+    }
+
+    /**
+     * Everything in it coming up through him: the fist before his chest, the left hand clamped
+     * on the wrist to hold it there, his shoulders hunched over it and his legs braced; shaking,
+     * more and more, the head coming up at the end to look at whoever is still in front of him.
+     */
+    private static void power(float[] p, float t, float age) {
+        stand(p, age);
+        planted(p);
+        float k = clamp(t / EntityMagus.POWER_TICKS);
+        float in = smooth(t / 12F);
+        float shake = (0.015F + 0.05F * k * k) * in;
+        float tremor = MathHelper.sin(age * 3.1F) * shake, tremor2 = MathHelper.sin(age * 2.3F + 1F) * shake;
+        set(p, RA_X, -1.28F + tremor, in);
+        set(p, RA_Y, -0.58F, in);
+        set(p, RA_Z, 0.05F, in);
+        set(p, R_ELBOW, -1.35F + tremor2, in);
+        set(p, LA_X, -1.05F + tremor2, in);
+        set(p, LA_Y, 0.78F, in);
+        set(p, LA_Z, -0.05F, in);
+        set(p, L_ELBOW, -1.25F, in);
+        p[CHEST_X] = 0.14F * in + tremor * 0.5F;
+        p[WAIST_X] = 0.06F * in;
+        p[RL_Z] = 0.2F;
+        p[LL_Z] = -0.2F;
+        p[R_KNEE] = 0.18F * in;
+        p[L_KNEE] = 0.18F * in;
+        p[RL_X] = -0.12F * in;
+        p[LL_X] = -0.12F * in;
+        // As it reaches his shoulder he throws his head back with it, his back arched and his chest open to the
+        // sky; and holds it there, shaking, until near the end, when the head comes down to look at whoever is left.
+        float surge = outCubic(clamp((t - 105F) / 22F)) * (1F - smooth((t - 330F) / 36F));
+        float jolt = t > 105F && t < 135F ? MathHelper.sin((t - 105F) * 0.9F) * 0.06F * (1F - (t - 105F) / 30F) : 0F;
+        p[HEAD_X] = (0.38F * (1F - surge) - 0.85F * surge + jolt) * in;
+        p[HEAD_Z] = 0.08F * surge * MathHelper.sin(age * 0.4F);
+        p[CHEST_X] += -0.42F * surge + jolt;
+        p[WAIST_X] += -0.12F * surge;
+        p[LEAN] -= 0.08F * surge;
+        // The fist pulled in tighter, up under the chin, as it fills him.
+        p[RA_X] -= 0.25F * surge;
+        p[R_ELBOW] -= 0.25F * surge;
+        p[LA_X] -= 0.2F * surge;
+        float lookDown = smooth((t - 330F) / 36F);
+        p[HEAD_X] += 0.05F * lookDown;
+        p[LOOK] = 0.1F + 0.75F * lookDown;
+    }
+
+    /** The arm goes up, high, the hand open; the fingers; and the arm stays there. */
+    private static void snap(float[] p, float t, float age) {
+        stand(p, age);
+        planted(p);
+        float up = outCubic(clamp(t / 14F));
+        float jolt = t > EntityMagus.SNAP_AT ? (float) Math.exp(-(t - EntityMagus.SNAP_AT) * 0.5F) : 0F;
+        p[LA_X] = 0.06F;
+        p[LA_Z] = -0.22F;
+        p[L_ELBOW] = -0.2F;
+        set(p, RA_X, -2.85F + 0.12F * jolt, up);
+        set(p, RA_Y, -0.1F, up);
+        set(p, RA_Z, 0.12F, up);
+        set(p, R_ELBOW, -0.35F - 0.25F * jolt, up);
+        p[CHEST_X] = -0.12F * up;
+        p[HEAD_X] = -0.32F * up;
+        p[LOOK] = 0.3F;
+    }
+
+    /**
+     * After the snap: the arm that made it comes down and hangs, burnt and shaking, a little out from him, the other
+     * hand half raised toward it and not touching it; bent over it, shoulders heaving, the head down. After a while the
+     * head comes up, slowly, to whatever he is looking at, and nothing else of him moves.
+     */
+    private static void spent(float[] p, float t, float age) {
+        stand(p, age);
+        planted(p);
+        float in = smooth(t / 14F);
+        float breath = MathHelper.sin(age * 0.16F);
+        float shake = MathHelper.sin(age * 3.7F) * 0.025F + MathHelper.sin(age * 5.9F + 1F) * 0.015F;
+        set(p, RA_X, -0.22F + shake, in);
+        set(p, RA_Y, 0.05F, in);
+        set(p, RA_Z, 0.2F + shake * 0.5F, in);
+        set(p, R_ELBOW, -0.35F + shake, in);
+        set(p, LA_X, -0.6F, in);
+        set(p, LA_Y, 0.45F, in);
+        set(p, LA_Z, 0.1F, in);
+        set(p, L_ELBOW, -0.95F, in);
+        // The head comes up when he is asked what he did, and stays on whoever asked.
+        float lift = smooth((t - 60F) / 40F);
+        p[CHEST_X] = (0.32F + breath * 0.04F) * in * (1F - 0.5F * lift);
+        p[WAIST_X] = 0.1F * in;
+        p[CHEST_Y] = 0.12F * in;
+        p[HEAD_X] = 0.45F * in * (1F - lift);
+        p[HEAD_Z] = 0.05F * in;
+        p[DROP] = (0.6F + breath * 0.25F) * in;
+        p[R_KNEE] = 0.3F * in;
+        p[L_KNEE] = 0.22F * in;
+        p[RL_X] = -0.18F * in;
+        p[LL_X] = -0.1F * in;
+        p[LOOK] = 0.85F * lift;
+    }
+
+    /** Both hands on it, leaning back against the pull, shaking with it. */
+    private static void struggle(float[] p, float age) {
+        stand(p, age);
+        planted(p);
+        float shake = MathHelper.sin(age * 2.6F) * 0.05F, shake2 = MathHelper.sin(age * 3.3F + 2F) * 0.04F;
+        p[RA_X] = -1.3F + shake;
+        p[RA_Y] = -0.32F;
+        p[R_ELBOW] = -0.45F + shake2;
+        p[LA_X] = -1.3F - shake;
+        p[LA_Y] = 0.32F;
+        p[L_ELBOW] = -0.45F - shake2;
+        p[LEAN] = -0.18F + shake2 * 0.5F;
+        p[CHEST_X] = 0.1F;
+        p[RL_X] = -0.35F;
+        p[R_KNEE] = 0.3F;
+        p[LL_X] = 0.3F;
+        p[HEAD_X] = 0.15F;
+        p[LOOK] = 0.6F;
     }
 
     /** Standing asleep: the head bowed, the arms straight down, breathing slowly. */

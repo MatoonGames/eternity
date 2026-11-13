@@ -19,6 +19,7 @@ import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.init.MobEffects;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.SoundCategory;
@@ -191,6 +192,10 @@ public final class Director {
         tickSingularities();
         CosmicPowers.INSTANCE.tick();
         tickDoors(d.clock);
+        Scars scars = Scars.get();
+        if (scars.mending) {
+            tickHealing(server, scars);
+        }
 
         if (finale != null) {
             finale.tick(server);
@@ -231,6 +236,26 @@ public final class Director {
     }
 
     private void tickAlive(EternityData d, List<EntityPlayerMP> players) {
+        if (com.matoon.eternity.story.StoryDirector.eternityWaits()) {
+            // The Magus's last fight, and a while after it: Eternity keeps away until it is settled. No omens, no
+            // rifts, no coming for anyone; and if he was already about, he goes.
+            if (body != null && !body.isDying()) {
+                vanish();
+            }
+            long after = d.clock + 600L;
+            if (d.nextRiftAt >= 0 && d.nextRiftAt < after) {
+                d.nextRiftAt = after;
+            }
+            for (Mark mark : d.marks.values()) {
+                if (mark.encounterAt >= 0 && mark.encounterAt < after) {
+                    mark.encounterAt = after;
+                }
+            }
+            if (d.phase == Phase.HUNTING) {
+                d.huntUntil = Math.max(d.huntUntil, d.clock + 20L);
+            }
+            return;
+        }
         if (d.clock % 40 == 0) {
             for (EntityPlayerMP player : players) {
                 scanStones(player, d);
@@ -729,7 +754,9 @@ public final class Director {
             return;
         }
         boolean huntingThem = d.phase == Phase.HUNTING && player.getUniqueID().equals(d.target);
-        if (held == InfinityStones.ALL && mark.encounterAt < 0 && !huntingThem
+        // Whoever broke the stones (or was there) is still owed him: he keeps coming back for them, stones or none.
+        boolean owed = held == InfinityStones.ALL || com.matoon.eternity.story.StoryDirector.stonesBroken() && InfinityStones.count(mark.everMask) >= 6;
+        if (owed && mark.encounterAt < 0 && !huntingThem
                 && (mark.lastEncounter < 0 || d.clock - mark.lastEncounter > EternityConfig.roaming.repeatEncounterMinutes * (long) TICKS_PER_MINUTE)) {
             mark.encounterAt = d.clock + delay;
             d.markDirty();
@@ -741,6 +768,11 @@ public final class Director {
         for (EntityPlayerMP player : players) {
             Mark mark = d.marks.get(player.getUniqueID());
             if (mark == null || mark.encounterAt < 0 || d.clock < mark.encounterAt) {
+                continue;
+            }
+            if (SovereignData.get().fight == SovereignData.Fight.FIGHTING) {
+                // Six on one hand in the middle of the Magus's last fight: Eternity waits until it is settled.
+                mark.encounterAt = d.clock + 20L * 30L;
                 continue;
             }
             if (d.phase == Phase.HUNTING && player.getUniqueID().equals(d.target)) {
@@ -766,10 +798,13 @@ public final class Director {
         }
         EntityPlayerMP target = player(d.target);
         if (target == null) {
-            endHunt(false);
+            if (!retarget(d)) {
+                endHunt(false);
+            }
             return;
         }
-        if (InfinityStones.scan(target) == InfinityStones.ALL) {
+        // With the stones broken there will never be six again to bring him back: he does not leave until it is done.
+        if (InfinityStones.scan(target) == InfinityStones.ALL || com.matoon.eternity.story.StoryDirector.stonesBroken()) {
             d.huntUntil = Math.max(d.huntUntil, d.clock + TICKS_PER_MINUTE);
         }
         if (d.clock > d.huntUntil) {
@@ -786,6 +821,23 @@ public final class Director {
         } else {
             followAt = -1;
         }
+    }
+
+    /** He comes for someone, {@code delay} ticks from now, whatever they hold (the story calls him in). */
+    public void summon(EntityPlayerMP player, int delay) {
+        EternityData d = data();
+        if (d.phase != Phase.ROAMING && d.phase != Phase.HUNTING) {
+            return;
+        }
+        Mark mark = d.mark(player.getUniqueID());
+        mark.encounterAt = d.clock + delay;
+        d.markDirty();
+        EternityNetwork.send(new MsgOmen(6, delay), player);
+    }
+
+    /** Whether he has come, and is here, hunting. */
+    public boolean arrived() {
+        return data().phase == Phase.HUNTING && body != null && !body.isDying();
     }
 
     /** Someone caught his eye or struck him. */
@@ -946,11 +998,13 @@ public final class Director {
                 TribunalDirector.INSTANCE.schedule(containedBy);
                 containedBy = null;
             }
+            com.matoon.eternity.story.StoryDirector.INSTANCE.eternityFell(true);
         }
     }
 
     /** Nobody held him together. Unless the config forbids it, this is the end of the world. */
     void beginUnmaking() {
+        com.matoon.eternity.story.StoryDirector.INSTANCE.eternityFell(false);
         EternityData d = data();
         if (body != null) {
             body.setDead();
@@ -987,6 +1041,45 @@ public final class Director {
             }
         }
         EternityNetwork.sendToAll(new MsgFinale(MsgFinale.END, 0, 0, 0, 0));
+    }
+
+    /**
+     * Operator escape hatch, all the way: reality heals as with {@link #restoreReality}, and then
+     * every block the end of the world turned or tore away is put back, a few thousand a tick,
+     * wherever nobody has built over it since. The sky clears. Returns how many blocks it will mend.
+     */
+    public int recoverWorld(MinecraftServer server) {
+        EternityData d = data();
+        if (d.phase == Phase.UNMAKING || d.phase == Phase.VOID) {
+            restoreReality(server);
+        }
+        WorldServer overworld = DimensionManager.getWorld(0);
+        overworld.getWorldInfo().setRaining(false);
+        overworld.getWorldInfo().setThundering(false);
+        overworld.getWorldInfo().setCleanWeatherTime(6000);
+        for (EntityPlayerMP player : server.getPlayerList().getPlayers()) {
+            player.removePotionEffect(MobEffects.LEVITATION);
+        }
+        Scars scars = Scars.get();
+        scars.mending = !scars.isEmpty();
+        scars.markDirty();
+        return scars.size();
+    }
+
+    private void tickHealing(MinecraftServer server, Scars scars) {
+        if (!scars.heal(server, Unmaking.UNMADE)) {
+            return;
+        }
+        scars.mending = false;
+        // Whoever was standing in a hole is standing in the ground now: up onto it.
+        for (EntityPlayerMP player : server.getPlayerList().getPlayers()) {
+            BlockPos at = new BlockPos(player);
+            if (!player.isSpectator() && (player.world.getBlockState(at).getMaterial().blocksMovement()
+                    || player.world.getBlockState(at.up()).getMaterial().blocksMovement())) {
+                player.fallDistance = 0F;
+                player.setPositionAndUpdate(player.posX, Terrain.safeY(player.world, player.posX, player.posY, player.posZ), player.posZ);
+            }
+        }
     }
 
     /** Skips straight into the unmaking, at the given progress. For testing. */
@@ -1079,7 +1172,38 @@ public final class Director {
             if (mark != null) {
                 mark.lastEncounter = d.clock;
             }
-            endHunt(false);
+            if (!retarget(d)) {
+                endHunt(false);
+            }
         }
+    }
+
+    /**
+     * The one he was hunting is out of it (fallen, or gone): if anyone who was in it with them is still standing near
+     * him, he turns on them for what is left of the hunt. False if there is nobody, and the hunt is over.
+     */
+    private boolean retarget(EternityData d) {
+        MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
+        if (server == null || body == null || body.isDead || body.isDying()) {
+            return false;
+        }
+        UUID was = d.target;
+        com.matoon.eternity.story.StoryData story = com.matoon.eternity.story.StoryData.get();
+        double range = 96D * Math.sqrt(body.getScale());
+        EntityPlayerMP next = null;
+        for (EntityPlayerMP o : server.getPlayerList().getPlayers()) {
+            if (o.getUniqueID().equals(was) || !o.isEntityAlive() || o.isSpectator() || o.world != body.world || o.getDistance(body) >= range) {
+                continue;
+            }
+            boolean with = participants.contains(o.getUniqueID()) || was != null && story.fellows(was, o.getUniqueID());
+            if (with && (next == null || o.getDistance(body) < next.getDistance(body))) {
+                next = o;
+            }
+        }
+        if (next == null) {
+            return false;
+        }
+        startHunt(next, Math.max(d.huntUntil - d.clock, 20L * 30L));
+        return true;
     }
 }

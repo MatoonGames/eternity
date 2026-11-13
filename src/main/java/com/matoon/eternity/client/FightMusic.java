@@ -115,6 +115,9 @@ public final class FightMusic {
         if (TitleCard.INSTANCE.wantsMusic()) {
             // Warlock's going, and the title: nothing else plays over it.
             want = EternitySounds.MUSIC_UPRISING;
+        } else if (OdinClient.INSTANCE.wantsMusic() != null) {
+            // The sky opening for Odin, his fight, and the quiet after he has gone.
+            want = OdinClient.INSTANCE.wantsMusic();
         } else if (EternityClient.INSTANCE.inVoid()) {
             want = EternitySounds.MUSIC_VOID;
             volume = 0.7F;

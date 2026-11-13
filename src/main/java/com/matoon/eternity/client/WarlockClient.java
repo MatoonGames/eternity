@@ -3,6 +3,7 @@ package com.matoon.eternity.client;
 import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.client.render.FxRenderer;
 import com.matoon.eternity.client.render.GlSnapshot;
+import com.matoon.eternity.client.render.MagusFx;
 import com.matoon.eternity.client.render.WarlockFx;
 import com.matoon.eternity.client.sound.EntityLoopSound;
 import com.matoon.eternity.client.sound.SoundFx;
@@ -225,7 +226,17 @@ public final class WarlockClient {
         switch (m.type) {
             case MsgTribunalFx.MAGUS_IMPACT: {
                 float weight = m.time == 0 ? 0.6F : m.time == 1 ? 1F : 1.6F;
-                effects.add(new com.matoon.eternity.client.render.MagusFx.Impact(at, to, m.time, seed));
+                effects.add(new MagusFx.Impact(at, to, m.time, seed));
+                if (m.id == mc.player.getEntityId()) {
+                    // Struck yourself: the view jolts, a cold flash, and on a heavy blow the world streaks past.
+                    shake = Math.max(shake, 3.5F * weight);
+                    tint(Math.max(flash, 0.35F * weight));
+                    if (m.time > 0) {
+                        rush = Math.max(rush, 0.8F);
+                        fovKick = Math.max(fovKick, 0.2F);
+                    }
+                    break;
+                }
                 shake = Math.max(shake, 2.2F * weight * closeness(dist, 30D));
                 tint(Math.max(flash, 0.22F * weight * closeness(dist, 16D)));
                 if (m.time > 0) {
@@ -234,16 +245,67 @@ public final class WarlockClient {
                 break;
             }
             case MsgTribunalFx.MAGUS_GRASP:
-                effects.add(new com.matoon.eternity.client.render.MagusFx.Grasp(m.id, (int) m.a, m.time));
+                effects.add(new MagusFx.Grasp(m.id, (int) m.a, m.time));
                 break;
             case MsgTribunalFx.MAGUS_SOUL:
-                effects.add(new com.matoon.eternity.client.render.MagusFx.Soul(at, m.time, seed));
+                effects.add(new MagusFx.Soul(at, m.time, seed));
                 break;
             case MsgTribunalFx.MAGUS_BREACH:
-                effects.add(new com.matoon.eternity.client.render.MagusFx.Breach(at, m.a, m.time, seed, m.b > 0.5D));
+                effects.add(new MagusFx.Breach(at, m.a, m.time, seed, m.b > 0.5D));
                 shake = Math.max(shake, 6F * closeness(dist, 60D));
                 tint(Math.max(flash, 0.6F * closeness(dist, 40D)));
                 rush = Math.max(rush, 0.6F * closeness(dist, 30D));
+                break;
+            case MsgTribunalFx.MAGUS_SHARD: {
+                MagusFx.Shard same = null;
+                for (FxRenderer.Fx fx : effects) {
+                    if (fx instanceof MagusFx.Shard && ((MagusFx.Shard) fx).id == m.id) {
+                        same = (MagusFx.Shard) fx;
+                    }
+                }
+                if (same != null) {
+                    same.set(at, to);
+                } else {
+                    effects.add(new MagusFx.Shard(at, to, m.id, m.time));
+                }
+                break;
+            }
+            case MsgTribunalFx.MAGUS_SHATTER:
+                for (FxRenderer.Fx fx : effects) {
+                    if (fx instanceof MagusFx.Shard && ((MagusFx.Shard) fx).id == m.id) {
+                        ((MagusFx.Shard) fx).gone = true;
+                    }
+                }
+                effects.add(new MagusFx.Impact(at, Vec3d.ZERO, 0, seed));
+                shake = Math.max(shake, 0.8F * closeness(dist, 14D));
+                break;
+            case MsgTribunalFx.MAGUS_GATHER:
+                effects.add(new MagusFx.Gather(at, m.id, m.a, m.b, m.c, m.time, seed));
+                break;
+            case MsgTribunalFx.MAGUS_ORB:
+                effects.add(new MagusFx.Orb(at, to, m.id, m.time, seed));
+                break;
+            case MsgTribunalFx.MAGUS_NOVA:
+                for (FxRenderer.Fx fx : effects) {
+                    if (fx instanceof MagusFx.Orb && ((MagusFx.Orb) fx).id == m.id) {
+                        ((MagusFx.Orb) fx).gone = true;
+                    }
+                }
+                effects.add(new MagusFx.Nova(at, m.a, seed));
+                shake = Math.max(shake, 3F * closeness(dist, 36D));
+                tint(Math.max(flash, 0.4F * closeness(dist, 14D)));
+                fovKick = Math.max(fovKick, 0.1F * closeness(dist, 16D));
+                dust(at.subtract(0D, 1D, 0D), m.a * 0.7D, 30);
+                break;
+            case MsgTribunalFx.MAGUS_MARK:
+                effects.add(new MagusFx.Mark(at, m.a, m.time));
+                break;
+            case MsgTribunalFx.MAGUS_SLAM:
+                effects.add(new MagusFx.Slam(at, m.a, seed));
+                shake = Math.max(shake, 4.5F * closeness(dist, 44D));
+                tint(Math.max(flash, 0.45F * closeness(dist, 16D)));
+                rush = Math.max(rush, 0.5F * closeness(dist, 12D));
+                dust(at, m.a * 1.1D, 110);
                 break;
             default:
                 break;

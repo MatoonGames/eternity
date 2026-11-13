@@ -1,12 +1,10 @@
 package com.matoon.eternity.client;
 
-import com.matoon.eternity.Eternity;
 import java.util.ArrayList;
 import com.matoon.eternity.client.render.RenderOrderChaos;
 import com.matoon.eternity.client.render.RenderInBetweener;
-import com.matoon.eternity.ability.MastersAbilities;
-import com.matoon.eternity.ability.EternityAbilities;
-import com.matoon.eternity.ability.TribunalAbilities;
+import com.matoon.eternity.api.EternityAPI;
+import com.matoon.eternity.api.RegulatorBeing;
 import com.matoon.eternity.client.render.Cosmic;
 import com.matoon.eternity.client.render.ModelTribunal;
 import com.matoon.eternity.client.render.OrbRenderer;
@@ -71,46 +69,17 @@ public final class RegulatorTooltip {
         draw(stack, event.getX(), event.getY(), event.getScreenWidth(), event.getScreenHeight());
     }
 
-    /** One being the Regulator can hold: how it is named in the tooltip, and the powers it grants. */
-    private static final class Being {
-        final String id, nameKey, headerKey;
-        final int nameColour, headerColour, powerColour;
-        final String[] powers;
-
-        Being(String id, String nameKey, int nameColour, String headerKey, int headerColour, int powerColour, String[] powers) {
-            this.id = id;
-            this.nameKey = nameKey;
-            this.nameColour = nameColour;
-            this.headerKey = headerKey;
-            this.headerColour = headerColour;
-            this.powerColour = powerColour;
-            this.powers = powers;
-        }
-
-        int height() {
-            return 11 + powers.length * 10 + 4;
-        }
+    /** How tall a being's list of powers stands, heading and all. */
+    private static int height(RegulatorBeing being) {
+        return 11 + being.powers.size() * 10 + 4;
     }
-
-    /** Every being it can hold, in the order they are shown. */
-    private static final Being[] BEINGS = {
-            new Being(ItemAstralRegulator.ETERNITY, "entity.eternity.eternity.name", 0xC48AFF, "tooltip.eternity.powers", 0xD49A1C, 0xE6D9FF,
-                    EternityAbilities.ETERNITY_POWERS),
-            new Being(ItemAstralRegulator.TRIBUNAL, "entity.eternity.living_tribunal.name", 0xF0C24A, "tooltip.eternity.judgements", 0xF0C24A,
-                    0xFFF0C8, TribunalAbilities.POWERS),
-            new Being(ItemAstralRegulator.ORDER, "entity.eternity.master_order.name", 0xFFC640, "tooltip.eternity.laws", 0xFFC640, 0xFFEEB8,
-                    MastersAbilities.ORDER_POWERS),
-            new Being(ItemAstralRegulator.CHAOS, "entity.eternity.lord_chaos.name", 0x7CC8F0, "tooltip.eternity.whims", 0x7CC8F0, 0xD6F0FF,
-                    MastersAbilities.CHAOS_POWERS),
-            new Being(ItemAstralRegulator.INBETWEENER, "entity.eternity.inbetweener.name", 0xE8E8EC, "tooltip.eternity.paradoxes", 0xB8B8C0,
-                    0xF4F4F6, MastersAbilities.INBETWEENER_POWERS)};
 
     private void draw(ItemStack stack, int mouseX, int mouseY, int screenW, int screenH) {
         Minecraft mc = Minecraft.getMinecraft();
         List<String> ids = ItemAstralRegulator.absorbed(stack);
-        List<Being> held = new ArrayList<>();
-        for (Being being : BEINGS) {
-            if (ids.contains(being.id)) {
+        List<RegulatorBeing> held = new ArrayList<>();
+        for (RegulatorBeing being : EternityAPI.beings()) {
+            if (being.listed && ids.contains(being.id)) {
                 held.add(being);
             }
         }
@@ -122,9 +91,9 @@ public final class RegulatorTooltip {
         int columnA = 0, columnB = 0;
         for (int i = 0; i < held.size(); i++) {
             if (twoColumns && i >= 2) {
-                columnB += held.get(i).height();
+                columnB += height(held.get(i));
             } else {
-                columnA += held.get(i).height();
+                columnA += height(held.get(i));
             }
         }
         // The left column holds the names, then the first beings' powers; the right, the rest of them.
@@ -157,22 +126,22 @@ public final class RegulatorTooltip {
         font.drawStringWithShadow(TextFormatting.LIGHT_PURPLE + stack.getDisplayName(), tx, y + 9, 0xFFFFFF);
         font.drawStringWithShadow(I18n.translateToLocal("tooltip.eternity.absorbed"), tx, y + 23, 0x8A6AAB);
         int row = y + 33;
-        for (Being being : held) {
+        for (RegulatorBeing being : held) {
             font.drawStringWithShadow(TextFormatting.BOLD + I18n.translateToLocal(being.nameKey), tx + 4, row, being.nameColour);
             row += 9;
         }
         row += 5;
         int bx = x + PANEL_W - 4, by = y + 23;
         for (int i = 0; i < held.size(); i++) {
-            Being being = held.get(i);
+            RegulatorBeing being = held.get(i);
             boolean right = twoColumns && i >= 2;
             int px = right ? bx : tx;
             int py = right ? by : row;
             font.drawStringWithShadow(I18n.translateToLocal(being.headerKey), px, py, being.headerColour);
             py += 11;
-            for (String power : being.powers) {
-                icon(mc, power, px + 2, py);
-                font.drawStringWithShadow(I18n.translateToLocal(Eternity.MODID + ".abilities." + power + ".name"), px + 13, py + 1, being.powerColour);
+            for (RegulatorBeing.Power power : being.powers) {
+                icon(mc, power.icon, px + 2, py);
+                font.drawStringWithShadow(I18n.translateToLocal(power.nameKey), px + 13, py + 1, being.powerColour);
                 py += 10;
             }
             py += 4;
@@ -301,7 +270,7 @@ public final class RegulatorTooltip {
     }
 
     /** The round window into the crystal, with everything it holds turning slowly together inside. */
-    private void lens(Minecraft mc, int cx, int cy, float time, List<Being> held, boolean golden) {
+    private void lens(Minecraft mc, int cx, int cy, float time, List<RegulatorBeing> held, boolean golden) {
         ScaledResolution res = new ScaledResolution(mc);
         int scale = res.getScaleFactor();
         GL11.glEnable(GL11.GL_SCISSOR_TEST);
@@ -332,7 +301,7 @@ public final class RegulatorTooltip {
                 double a = time * 0.012D + i * Math.PI * 2D / n;
                 GlStateManager.translate(Math.cos(a) * 0.38D, 0D, Math.sin(a) * 0.38D);
             }
-            figure(held.get(i).id, shrink, time);
+            figure(held.get(i), shrink, time);
             GlStateManager.popMatrix();
         }
 
@@ -352,7 +321,8 @@ public final class RegulatorTooltip {
     }
 
     /** One being, upright and turning, at its own size inside the crystal. */
-    private static void figure(String id, float shrink, float time) {
+    private static void figure(RegulatorBeing being, float shrink, float time) {
+        String id = being.id;
         if (ItemAstralRegulator.ETERNITY.equals(id)) {
             float s = 0.15F * shrink;
             GlStateManager.scale(s, s, s);
@@ -377,14 +347,16 @@ public final class RegulatorTooltip {
             GlStateManager.rotate(time * 0.7F, 0F, 1F, 0F);
             GlStateManager.scale(s, -s, -s);
             RenderInBetweener.drawStanding(time);
+        } else if (being.figure() != null) {
+            being.figure().draw(shrink, time);
         }
     }
 
-    private void icon(Minecraft mc, String power, int x, int y) {
+    private void icon(Minecraft mc, ResourceLocation icon, int x, int y) {
         GlStateManager.enableTexture2D();
         GlStateManager.enableBlend();
         GlStateManager.color(1F, 1F, 1F, 1F);
-        mc.getTextureManager().bindTexture(new ResourceLocation(Eternity.MODID, "textures/abilities/" + power + ".png"));
+        mc.getTextureManager().bindTexture(icon);
         Gui.drawModalRectWithCustomSizedTexture(x, y, 0F, 0F, 9, 9, 9, 9);
     }
 

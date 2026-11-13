@@ -6,6 +6,7 @@ import anvil.infinity.helpers.GauntelHelper;
 import anvil.infinity.registry.Effects;
 import anvil.infinity.snap.SnapHelper;
 import anvil.infinity.snap.SnapResult;
+import com.matoon.eternity.api.event.SnapEvent;
 import com.matoon.eternity.world.Teleport;
 import lucraft.mods.lucraftcore.infinity.items.ItemInfinityGauntlet;
 import net.minecraft.block.Block;
@@ -38,6 +39,7 @@ import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.common.DimensionManager;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
@@ -143,10 +145,17 @@ public final class SnapPowers {
         if (entity.world.isRemote || server == null || !GauntelHelper.hasFullGauntlet(entity)) {
             return false;
         }
+        // In the Magus's last fight, the snap that ends it is for him alone.
+        if (com.matoon.eternity.story.StoryDirector.INSTANCE.magusFightSnap(entity)) {
+            return true;
+        }
         // Read before the snap: destroying the stones swaps the gauntlet for an empty one.
         EnumHand hand = entity.getHeldItemMainhand().getItem() instanceof ItemInfinityGauntlet ? EnumHand.MAIN_HAND : EnumHand.OFF_HAND;
         EnumHandSide side = hand == EnumHand.MAIN_HAND ? entity.getPrimaryHand() : entity.getPrimaryHand().opposite();
         SnapResult mode = mode(entity);
+        if (MinecraftForge.EVENT_BUS.post(new SnapEvent.Pre(entity, mode))) {
+            return false;
+        }
         boolean done;
         switch (mode) {
             case BRINGBACK:
@@ -178,6 +187,9 @@ public final class SnapPowers {
         if (entity instanceof EntityPlayerMP) {
             InfinityPatches.snapped((EntityPlayerMP) entity, side, SnapScars.cost(mode), mode == SnapResult.RECREATE);
         }
+        // Death and Warlock, if they were waiting to see which way it went.
+        com.matoon.eternity.story.StoryDirector.INSTANCE.snapped(entity, mode == SnapResult.DESTROYSTONES, mode == SnapResult.KILLHALF);
+        MinecraftForge.EVENT_BUS.post(new SnapEvent.Post(entity, mode));
         return done;
     }
 
@@ -507,7 +519,7 @@ public final class SnapPowers {
     // ------------------------------------------------------------------ how it looks and sounds
 
     /** Ash blowing off them as they go. */
-    private static void crumble(WorldServer world, Entity entity) {
+    public static void crumble(WorldServer world, Entity entity) {
         double x = entity.posX, y = entity.posY + entity.height * 0.5D, z = entity.posZ;
         double w = entity.width * 0.5D, h = entity.height * 0.5D;
         world.spawnParticle(EnumParticleTypes.FALLING_DUST, x, y, z, 40 + (int) (entity.height * 25), w, h, w, 0.02D,

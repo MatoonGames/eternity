@@ -110,6 +110,9 @@ public final class ChampionDirector {
     private UUID trader;
     private int tradeTicks = -1;
     private boolean tradeForReal;
+    /** How long the stone has waited for whoever brought the ship, and how long it will before it goes to someone else. */
+    private int tradeWait;
+    private static final int TRADE_PATIENCE = 600;
     private Vec3d rocketAt;
     private double rocketSpeed;
     private int tick;
@@ -314,6 +317,22 @@ public final class ChampionDirector {
             // Once he has leapt for Planet Breaker he is committed, whoever is still watching.
             boolean committed = champion.getState() == EntityChampion.State.BREAKER || champion.getState() == EntityChampion.State.IMPACT;
             EntityPlayer duel = champion.getDuel() == null ? null : world.getPlayerEntityByUUID(champion.getDuel());
+            if (!committed && (duel == null || !duel.isEntityAlive())) {
+                // Down, or gone; but a friend of theirs is standing right there, and the fight goes on with them, as hot as it was.
+                EntityPlayerMP next = null;
+                for (EntityPlayerMP player : near) {
+                    if (player != duel && horizontal(player, champion) < SIGHT_RANGE
+                            && (next == null || horizontal(player, champion) < horizontal(next, champion))) {
+                        next = player;
+                    }
+                }
+                if (next != null) {
+                    float rage = champion.getRage();
+                    beginDuel(champion, next);
+                    champion.setRage(Math.max(rage, champion.getRage()));
+                    return;
+                }
+            }
             if (!committed && (duel == null || !duel.isEntityAlive() || horizontal(duel, champion) > DUEL_RANGE)) {
                 endDuel();
             }
@@ -622,6 +641,7 @@ public final class ChampionDirector {
         }
         trader = player.getUniqueID();
         tradeTicks = 0;
+        tradeWait = 0;
         tradeForReal = real;
         rocketSpeed = 0D;
         body = champion;
@@ -649,6 +669,20 @@ public final class ChampionDirector {
                 EntityChampion.speak(world, champion, "Here. It burned hot whenever I was angry. Maybe it likes you better.", 128D);
                 Vec3d brow = champion.brow();
                 fx(world, MsgTribunalFx.CHAMPION_STONE, brow.x, brow.y, brow.z, 0, 0, 0, player.getEntityId(), 24);
+            }
+            if (tradeTicks == 36 && champion.wearsStone() && tradeForReal && (player == null || !player.isEntityAlive()) && ++tradeWait > TRADE_PATIENCE) {
+                // They have been gone too long: whoever is standing nearest gets it in their place.
+                EntityPlayerMP instead = null;
+                for (EntityPlayer other : world.playerEntities) {
+                    if (other instanceof EntityPlayerMP && other.isEntityAlive() && !other.isSpectator() && other.getDistance(champion) < 64D
+                            && (instead == null || other.getDistance(champion) < instead.getDistance(champion))) {
+                        instead = (EntityPlayerMP) other;
+                    }
+                }
+                if (instead != null) {
+                    trader = instead.getUniqueID();
+                    player = instead;
+                }
             }
             if (tradeTicks == 36 && champion.wearsStone() && tradeForReal && (player == null || !player.isEntityAlive())) {
                 // Whoever brought the ship is not here to take the stone: it stays where it is until they are.

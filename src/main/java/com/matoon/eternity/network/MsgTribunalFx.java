@@ -173,6 +173,55 @@ public class MsgTribunalFx implements IMessage {
     public static final byte MAGUS_SOUL = 72;
     /** The roof coming off over (x,y,z), a across, over time ticks. */
     public static final byte MAGUS_BREACH = 73;
+    /**
+     * One of his shards of thought at (x,y,z): hung there, aimed along (a,b,c) (tiny), or loosed along it (its velocity,
+     * per tick). id = the shard; sent again, the same shard is loosed. time = how long it lasts.
+     */
+    public static final byte MAGUS_SHARD = 74;
+    /** Shard id breaking at (x,y,z): a = how big. */
+    public static final byte MAGUS_SHATTER = 75;
+    /** What he holds, gathering at entity id: a = how wide, b = how high off his feet, c = how far in front; time ticks. */
+    public static final byte MAGUS_GATHER = 76;
+    /** A sphere of the Power Stone's light thrown from (x,y,z) along (a,b,c) per tick; id = the sphere, time = how long. */
+    public static final byte MAGUS_ORB = 77;
+    /** Sphere id bursting at (x,y,z), a across. */
+    public static final byte MAGUS_NOVA = 78;
+    /** Where he will come down, marked on the ground at (x,y,z), a across, for time ticks. */
+    public static final byte MAGUS_MARK = 79;
+    /** He has come down: the ground at (x,y,z) breaking open, a across. */
+    public static final byte MAGUS_SLAM = 80;
+
+    // Odin, and the Bifrost. Everything from ODIN_BIFROST on is his (see client/OdinClient).
+    /** The Bifrost: a column of it from the sky down to (x,y,z), a across; b 1 coming down, -1 going back up; time ticks. */
+    public static final byte ODIN_BIFROST = 81;
+    /** The Bifrost's seal burned into the ground at (x,y,z), a across, for time ticks. */
+    public static final byte ODIN_SEAL = 82;
+    /** Things go dark round him: a = how dark (0 to 1), b = over how many ticks, c = the music (0 none, 1 Prisms, 2 his). */
+    public static final byte ODIN_DARK = 83;
+    /** Gungnir in flight at (x,y,z), moving (a,b,c) a tick: sent every tick it flies. id = the throw; time 1 going back to his hand. */
+    public static final byte ODIN_SPEAR = 84;
+    /** Gungnir striking at (x,y,z): a = how big. id = the throw. */
+    public static final byte ODIN_SPEAR_HIT = 85;
+    /** The Odinforce let go into the ground at (x,y,z): a ring of it out to a across, over time ticks. */
+    public static final byte ODIN_RING = 86;
+    /** Where the Bifrost will strike, marked at (x,y,z), a across, striking after time ticks. */
+    public static final byte ODIN_MARK = 87;
+    /** A narrow strike of the Bifrost down onto (x,y,z), a across. */
+    public static final byte ODIN_STRIKE = 88;
+    /** One of his ravens at (x,y,z), flying (a,b,c) a tick: sent every tick. id = the raven; time 1 when it strikes. */
+    public static final byte ODIN_RAVEN = 89;
+    /** Sleipnir's hooves coming down at (x,y,z): the ground breaking, a across. */
+    public static final byte ODIN_STOMP = 90;
+    /** The Odinforce gathering at Gungnir's blade, on entity id, for time ticks. */
+    public static final byte ODIN_GATHER = 91;
+    /** A flare: blinding white at (x,y,z) and a streak of light across it, a big. */
+    public static final byte ODIN_FLARE = 92;
+    /** The sky opening above (x,y,z): a vortex of cloud and light b blocks up, a across, over time ticks. */
+    public static final byte ODIN_VORTEX = 93;
+    /** A thread of gold from entity (int) a, or from (x,y,z) if a is -1, to entity id: drawn to his hand, over time ticks. */
+    public static final byte ODIN_PULL = 94;
+    /** Entity id coming apart into dust and embers, over time ticks. */
+    public static final byte ODIN_DUST = 95;
 
     public byte type;
     public double x, y, z;

@@ -41,6 +41,8 @@ public class GrandmasterData extends WorldSavedData {
     public Warlock warlock = Warlock.ABSENT;
     /** Whatever the player put on the table, and whether he has won it. */
     public final List<ItemStack> pot = new ArrayList<>();
+    /** Who laid each of the pot's stakes down, in step with it (null where nobody knows): it goes back to them. */
+    public final List<java.util.UUID> potOwners = new ArrayList<>();
     public boolean potLost;
     public boolean staked;
     /** How many more blows the board can take, and how cracked each square is (3 = gone). */
@@ -60,6 +62,8 @@ public class GrandmasterData extends WorldSavedData {
      * stones, and Warlock stood with them. He plays the raiders until the Grandmaster cheats.
      */
     public boolean magus;
+    /** On the Magus's road: cheats made in front of him, his and the house's, since the game began. Enough, and the board breaks. */
+    public int rivalry;
 
     public GrandmasterData() {
         super(NAME);
@@ -97,11 +101,13 @@ public class GrandmasterData extends WorldSavedData {
         int w = nbt.getInteger("warlock");
         warlock = w >= 0 && w < Warlock.values().length ? Warlock.values()[w] : Warlock.ABSENT;
         pot.clear();
+        potOwners.clear();
         NBTTagList items = nbt.getTagList("pot", Constants.NBT.TAG_COMPOUND);
         for (int i = 0; i < items.tagCount(); i++) {
             ItemStack stack = new ItemStack(items.getCompoundTagAt(i));
             if (!stack.isEmpty()) {
                 pot.add(stack);
+                potOwners.add(items.getCompoundTagAt(i).hasUniqueId("staker") ? items.getCompoundTagAt(i).getUniqueId("staker") : null);
             }
         }
         potLost = nbt.getBoolean("potLost");
@@ -116,6 +122,7 @@ public class GrandmasterData extends WorldSavedData {
         finished = nbt.getBoolean("finished");
         warlockRefused = nbt.getBoolean("warlockRefused");
         magus = nbt.getBoolean("magus");
+        rivalry = nbt.getInteger("rivalry");
     }
 
     @Override
@@ -133,8 +140,13 @@ public class GrandmasterData extends WorldSavedData {
         nbt.setInteger("cheats", cheats);
         nbt.setInteger("warlock", warlock.ordinal());
         NBTTagList items = new NBTTagList();
-        for (ItemStack stack : pot) {
-            items.appendTag(stack.writeToNBT(new NBTTagCompound()));
+        for (int i = 0; i < pot.size(); i++) {
+            NBTTagCompound item = pot.get(i).writeToNBT(new NBTTagCompound());
+            java.util.UUID owner = i < potOwners.size() ? potOwners.get(i) : null;
+            if (owner != null) {
+                item.setUniqueId("staker", owner);
+            }
+            items.appendTag(item);
         }
         nbt.setTag("pot", items);
         nbt.setBoolean("potLost", potLost);
@@ -148,6 +160,7 @@ public class GrandmasterData extends WorldSavedData {
         nbt.setBoolean("finished", finished);
         nbt.setBoolean("warlockRefused", warlockRefused);
         nbt.setBoolean("magus", magus);
+        nbt.setInteger("rivalry", rivalry);
         return nbt;
     }
 }

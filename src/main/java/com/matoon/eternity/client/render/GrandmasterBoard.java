@@ -70,6 +70,9 @@ public final class GrandmasterBoard {
     public String player = "";
     public int[] anim;
     public long animStart;
+    /** A second piece in flight at the same time, under another hand (the house answering the Magus). */
+    public int[] anim2;
+    public long anim2Start;
     public int gmId = -1;
     public final List<ItemStack> pot = new ArrayList<>();
     public boolean potLost;
@@ -77,6 +80,29 @@ public final class GrandmasterBoard {
     public boolean alone;
     /** Client: the square under the crosshair, or -1. */
     public int hovered = -1;
+
+    /** One of a fellowship choosing at the board: whose, the piece in their hand, where it could go, and their move (or -1). */
+    public static final class Vote {
+        public final java.util.UUID id;
+        public final String name;
+        public final int piece, move;
+        public final int[] targets;
+        public final float[] colour;
+
+        Vote(java.util.UUID id, String name, int piece, int[] targets, int move, float[] colour) {
+            this.id = id;
+            this.name = name;
+            this.piece = piece;
+            this.targets = targets;
+            this.move = move;
+            this.colour = colour;
+        }
+    }
+
+    /** Each of the fellowship choosing together, in order; empty when one plays alone. */
+    public final List<Vote> votes = new ArrayList<>();
+    /** A colour for each of them, as they stand in order: the fellowship's green first. */
+    private static final float[][] VOTE_COLOURS = {{0.56F, 0.84F, 0.66F}, {0.5F, 0.78F, 0.94F}, {0.94F, 0.69F, 0.38F}, {0.91F, 0.54F, 0.78F}};
 
     // How the stone moves between where it was and where it is.
     private int stoneFrom = -1;
@@ -126,6 +152,8 @@ public final class GrandmasterBoard {
         player = tag.getString("player");
         anim = tag.hasKey("anim") ? tag.getIntArray("anim") : null;
         animStart = tag.getLong("animStart");
+        anim2 = tag.hasKey("anim2") ? tag.getIntArray("anim2") : null;
+        anim2Start = tag.getLong("anim2Start");
         gmId = tag.getInteger("gm");
         pot.clear();
         NBTTagList items = tag.getTagList("pot", Constants.NBT.TAG_COMPOUND);
@@ -134,6 +162,19 @@ public final class GrandmasterBoard {
         }
         potLost = tag.getBoolean("potLost");
         alone = tag.getBoolean("alone");
+        votes.clear();
+        NBTTagList vs = tag.getTagList("votes", Constants.NBT.TAG_COMPOUND);
+        for (int i = 0; i < vs.tagCount(); i++) {
+            NBTTagCompound v = vs.getCompoundTagAt(i);
+            Vote vote = new Vote(v.getUniqueId("id"), v.getString("n"), v.getInteger("p"), v.getIntArray("t"), v.getInteger("m"),
+                    VOTE_COLOURS[i % VOTE_COLOURS.length]);
+            votes.add(vote);
+            if (mc.player != null && vote.id.equals(mc.player.getUniqueID())) {
+                // Choosing together: the piece in your own hand is yours to see, as if you played alone.
+                selected = vote.piece;
+                targets = vote.piece >= 0 ? vote.targets : new int[0];
+            }
+        }
     }
 
     private boolean movedInto(int square) {
@@ -394,7 +435,15 @@ public final class GrandmasterBoard {
     }
 
     public boolean isMine() {
-        return mc.player != null && mc.player.getUniqueID().toString().equals(player);
+        if (mc.player == null) {
+            return false;
+        }
+        for (Vote v : votes) {
+            if (v.id.equals(mc.player.getUniqueID())) {
+                return true;
+            }
+        }
+        return mc.player.getUniqueID().toString().equals(player);
     }
 
     private long time() {
@@ -407,6 +456,10 @@ public final class GrandmasterBoard {
         if (anim != null && anim[0] == square) {
             float f = MathHelper.clamp((time() - animStart + pt) / Math.max(1F, anim[3]), 0F, 1F);
             return arc(anim[0], anim[1], f, anim[2]);
+        }
+        if (anim2 != null && anim2[0] == square) {
+            float f = MathHelper.clamp((time() - anim2Start + pt) / Math.max(1F, anim2[3]), 0F, 1F);
+            return arc(anim2[0], anim2[1], f, anim2[2]);
         }
         if (square == selected) {
             float t = tick + pt;
@@ -539,6 +592,7 @@ public final class GrandmasterBoard {
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240F, 240F);
         if (built) {
             markers(camera, pt);
+            voteMarkers(camera, pt);
             cracks(camera);
             if (stone >= 0) {
                 stone(camera, pt);
@@ -550,6 +604,10 @@ public final class GrandmasterBoard {
         cardEffects(camera, pt);
         GlStateManager.popMatrix();
         before.restore();
+        if (built && yourMove) {
+            voteNames(camera);
+            before.restore();
+        }
     }
 
     private void effectsOnly(Vec3d camera, float pt) {
@@ -639,12 +697,20 @@ public final class GrandmasterBoard {
             if (anim != null && anim[0] == -1 && anim[1] == sq) {
                 rise = MathHelper.clamp((time() - animStart + pt) / Math.max(1F, anim[3]), 0F, 1F);
             }
+            if (anim2 != null && anim2[0] == -1 && anim2[1] == sq) {
+                rise = MathHelper.clamp((time() - anim2Start + pt) / Math.max(1F, anim2[3]), 0F, 1F);
+            }
             drawPiece(kind, at.subtract(camera), facing(sq, kind), rise, sq == selected || sq == hovered && yourMove && Kingstable.isDefender(kind));
         }
         // A piece he is bringing into being from nothing.
-        if (anim != null && anim[0] == -1 && cells[anim[1]] == Kingstable.EMPTY) {
-            float rise = MathHelper.clamp((time() - animStart + pt) / Math.max(1F, anim[3]), 0F, 1F);
-            drawPiece(Kingstable.RAIDER, centre(anim[1]).subtract(camera), facing(anim[1], Kingstable.RAIDER), rise, true);
+        for (int k = 0; k < 2; k++) {
+            int[] a = k == 0 ? anim : anim2;
+            if (a != null && a[0] == -1 && cells[a[1]] == Kingstable.EMPTY) {
+                float rise = MathHelper.clamp((time() - (k == 0 ? animStart : anim2Start) + pt) / Math.max(1F, a[3]), 0F, 1F);
+                // What it will be: a raider, unless the house is making one of his own.
+                byte piece = a.length > 4 && a[4] > 0 ? (byte) a[4] : Kingstable.RAIDER;
+                drawPiece(piece, centre(a[1]).subtract(camera), facing(a[1], piece), rise, true);
+            }
         }
         RenderHelper.disableStandardItemLighting();
         GlStateManager.disableRescaleNormal();
@@ -755,6 +821,79 @@ public final class GrandmasterBoard {
         }
     }
 
+    /**
+     * What each of a fellowship has chosen, in their own colour: the others' pieces in hand ringed
+     * small, and every chosen move as a path of light from the piece to its square, rings stacked
+     * on the square, one for each of them who chose it.
+     */
+    private void voteMarkers(Vec3d camera, float pt) {
+        if (votes.isEmpty()) {
+            return;
+        }
+        float t = tick + pt;
+        java.util.Map<Integer, Integer> stacked = new java.util.HashMap<>();
+        for (Vote v : votes) {
+            boolean mine = mc.player != null && v.id.equals(mc.player.getUniqueID());
+            if (!mine && v.piece >= 0) {
+                Vec3d c = centre(v.piece).add(0D, 0.06D, 0D).subtract(camera);
+                WarlockFx.ring(c, new Vec3d(0D, 1D, 0D), 1.05D, 0.07D, v.colour, 0.55F + 0.15F * MathHelper.sin(t * 0.3F));
+            }
+            if (v.move >= 0) {
+                int from = v.move / Kingstable.CELLS, to = v.move % Kingstable.CELLS;
+                int n = stacked.merge(v.move, 1, Integer::sum) - 1;
+                Vec3d a = centre(from).add(0D, 0.07D + n * 0.01D, 0D).subtract(camera);
+                Vec3d b = centre(to).add(0D, 0.07D + n * 0.01D, 0D).subtract(camera);
+                float pulse = 0.7F + 0.3F * MathHelper.sin(t * 0.2F + n);
+                WarlockFx.strip(a, b, 0.16D, v.colour, 0.45F * pulse);
+                WarlockFx.flat(b, 0.95D, v.colour, 0.22F * pulse);
+                WarlockFx.ring(b, new Vec3d(0D, 1D, 0D), 0.75D + 0.14D * n, 0.07D, v.colour, 0.85F);
+                WarlockFx.ring(a, new Vec3d(0D, 1D, 0D), 0.95D, 0.05D, v.colour, 0.5F);
+            }
+        }
+    }
+
+    /** Over each chosen square, the names of whoever chose it, in their colours; and over the board, how many have chosen. */
+    private void voteNames(Vec3d camera) {
+        if (votes.isEmpty() || mc.getRenderManager().options == null) {
+            return;
+        }
+        java.util.Map<Integer, List<Vote>> by = new java.util.LinkedHashMap<>();
+        int chosen = 0;
+        for (Vote v : votes) {
+            if (v.move >= 0) {
+                by.computeIfAbsent(v.move % Kingstable.CELLS, k -> new ArrayList<>()).add(v);
+                chosen++;
+            }
+        }
+        float yaw = mc.getRenderManager().playerViewY, pitch = mc.getRenderManager().playerViewX;
+        boolean front = mc.getRenderManager().options.thirdPersonView == 2;
+        for (java.util.Map.Entry<Integer, List<Vote>> e : by.entrySet()) {
+            Vec3d c = centre(e.getKey()).subtract(camera);
+            int line = 0;
+            for (Vote v : e.getValue()) {
+                int rgb = (int) (v.colour[0] * 255F) << 16 | (int) (v.colour[1] * 255F) << 8 | (int) (v.colour[2] * 255F);
+                net.minecraft.client.renderer.EntityRenderer.drawNameplate(mc.fontRenderer, "§" + nearestCode(rgb) + v.name,
+                        (float) c.x, (float) c.y + 1.1F + line * 0.28F, (float) c.z, 0, yaw, pitch, front, false);
+                line++;
+            }
+        }
+        Vec3d mid = centre(Kingstable.CELLS / 2).subtract(camera);
+        String count = chosen == 0 ? "Choose together: a piece, then its square" : chosen + " of " + votes.size() + " have chosen";
+        net.minecraft.client.renderer.EntityRenderer.drawNameplate(mc.fontRenderer, count, (float) mid.x, (float) mid.y + 3.4F, (float) mid.z,
+                0, yaw, pitch, front, false);
+    }
+
+    /** The chat colour nearest a voter's own, for their name over the board. */
+    private static char nearestCode(int rgb) {
+        int r = rgb >> 16 & 255, g = rgb >> 8 & 255, b = rgb & 255;
+        if (g > r && g > b) {
+            return 'a';
+        }
+        if (b > r && b >= g) {
+            return 'b';
+        }
+        return r > 200 && b > 150 ? 'd' : '6';
+    }
     /** Cracks in the struck squares, white-hot at their hearts; broken squares rimmed in light over the dark. */
     private void cracks(Vec3d camera) {
         for (int sq = 0; sq < Kingstable.CELLS; sq++) {

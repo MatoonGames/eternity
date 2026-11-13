@@ -103,7 +103,8 @@ final class Companion {
         }
         for (EntityPlayerMP player : server.getPlayerList().getPlayers()) {
             StoryData.Player p = d.player(player.getUniqueID());
-            if (p.seen("champion_helped") && !story.talking(player) && p.beats.add(TICKET)) {
+            // One ticket for those questing together, given once he has finished saying so to whoever was there.
+            if (p.seen("champion_helped") && !p.seen(TICKET) && !anyTalking(player) && p.beats.add(TICKET)) {
                 d.markDirty();
                 give(player);
             }
@@ -123,6 +124,16 @@ final class Companion {
                 summon(player);
             }
         }
+    }
+
+    /** Whether they, or anyone online questing with them, is in a conversation. */
+    private boolean anyTalking(EntityPlayerMP player) {
+        for (EntityPlayerMP p : story.fellowship(player)) {
+            if (story.talking(p)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Down beside them, hard enough to crack the ground. */

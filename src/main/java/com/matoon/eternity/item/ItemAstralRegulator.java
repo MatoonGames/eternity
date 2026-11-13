@@ -1,17 +1,11 @@
 package com.matoon.eternity.item;
 
 import com.matoon.eternity.Eternity;
-import com.matoon.eternity.ability.EternityAbilities;
-import com.matoon.eternity.ability.MastersAbilities;
-import com.matoon.eternity.ability.TribunalAbilities;
-import com.matoon.eternity.entity.EntityEternity;
-import com.matoon.eternity.entity.EntityInBetweener;
-import com.matoon.eternity.entity.EntityLivingTribunal;
-import com.matoon.eternity.entity.EntityOrderChaos;
-import com.matoon.eternity.world.Director;
-import com.matoon.eternity.world.InBetweenerDirector;
+import com.matoon.eternity.EternityTab;
+import com.matoon.eternity.api.EternityAPI;
+import com.matoon.eternity.api.RegulatorBeing;
+import com.matoon.eternity.api.event.RegulatorAbsorbEvent;
 import com.matoon.eternity.world.OrderAndChaos;
-import com.matoon.eternity.world.TribunalDirector;
 import lucraft.mods.lucraftcore.infinity.items.ItemIndestructible;
 import lucraft.mods.lucraftcore.superpowers.abilities.Ability;
 import lucraft.mods.lucraftcore.superpowers.abilities.supplier.IAbilityProvider;
@@ -33,6 +27,7 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.energy.CapabilityEnergy;
@@ -59,6 +54,8 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
     public static final String ORDER = Eternity.MODID + ":master_order";
     public static final String CHAOS = Eternity.MODID + ":lord_chaos";
     public static final String INBETWEENER = Eternity.MODID + ":inbetweener";
+    /** Death herself, turned on out of her skin by someone she thought was hers (see story.Betrayal). */
+    public static final String DEATH = Eternity.MODID + ":death";
 
     private static final String CHARGED = "Charged";
     private static final String ABSORBED = "Absorbed";
@@ -67,7 +64,7 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
         setRegistryName(Eternity.MODID, "astral_regulator");
         setTranslationKey(Eternity.MODID + ".astral_regulator");
         setMaxStackSize(1);
-        setCreativeTab(CreativeTabs.TOOLS);
+        setCreativeTab(EternityTab.INSTANCE);
         setEntitySize(0.5F, 0.5F);
     }
 
@@ -91,11 +88,18 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
         return ids;
     }
 
-    /** Adds a being to what the Regulator holds. */
+    /** Adds a being to what the Regulator holds, and tells anyone listening (api.event.RegulatorAbsorbEvent). */
     public static void absorb(ItemStack stack, String id) {
+        if (store(stack, id)) {
+            MinecraftForge.EVENT_BUS.post(new RegulatorAbsorbEvent(stack, id));
+        }
+    }
+
+    /** Adds a being to what the Regulator holds, quietly; true if it was not already there. */
+    public static boolean store(ItemStack stack, String id) {
         List<String> ids = absorbed(stack);
         if (ids.contains(id)) {
-            return;
+            return false;
         }
         NBTTagCompound tag = stack.hasTagCompound() ? stack.getTagCompound() : new NBTTagCompound();
         NBTTagList list = new NBTTagList();
@@ -106,6 +110,7 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
         tag.setBoolean(CHARGED, true);
         tag.setTag(ABSORBED, list);
         stack.setTagCompound(tag);
+        return true;
     }
 
     /**
@@ -171,9 +176,29 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
     public static ItemStack charged(List<String> already) {
         ItemStack stack = new ItemStack(EternityItems.ASTRAL_REGULATOR);
         for (String id : already) {
-            absorb(stack, id);
+            store(stack, id);
         }
-        absorb(stack, ETERNITY);
+        store(stack, ETERNITY);
+        return stack;
+    }
+
+    /** Eternity contained as he dies: a Regulator holding him on top of what it held, and the news of it. */
+    public static ItemStack contained(List<String> already) {
+        ItemStack stack = charged(already);
+        MinecraftForge.EVENT_BUS.post(new RegulatorAbsorbEvent(stack, ETERNITY));
+        return stack;
+    }
+
+    /**
+     * The fullest a Regulator can be: everyone it can drink in, in the order the story brings them. The
+     * In-Betweener and his masters in the Nexus, Eternity as he dies, the Tribunal who comes for whoever caged
+     * him, and Death last, who only comes once both are inside.
+     */
+    public static ItemStack fullest() {
+        ItemStack stack = new ItemStack(EternityItems.ASTRAL_REGULATOR);
+        for (String id : new String[]{INBETWEENER, ORDER, CHAOS, ETERNITY, TRIBUNAL, DEATH}) {
+            store(stack, id);
+        }
         return stack;
     }
 
@@ -182,6 +207,7 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
         if (isInCreativeTab(tab)) {
             items.add(new ItemStack(this));
             items.add(charged());
+            items.add(fullest());
         }
     }
 
@@ -196,25 +222,19 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
     @Override
     public Ability.AbilityMap addDefaultAbilities(EntityLivingBase entity, Ability.AbilityMap abilities, Ability.EnumAbilityContext context) {
         ItemStack stack = context == Ability.EnumAbilityContext.OFF_HAND ? entity.getHeldItemOffhand() : entity.getHeldItemMainhand();
-        if (stack.getItem() == this && isCharged(stack) && absorbed(stack).contains(ETERNITY)) {
-            EternityAbilities.grantEternity(entity, abilities);
-        }
-        if (stack.getItem() == this && isCharged(stack) && absorbed(stack).contains(TRIBUNAL)) {
-            TribunalAbilities.grant(entity, abilities);
-        }
         if (stack.getItem() == this && isCharged(stack)) {
-            List<String> held = absorbed(stack);
-            if (held.contains(ORDER)) {
-                MastersAbilities.grantOrder(entity, abilities);
-            }
-            if (held.contains(CHAOS)) {
-                MastersAbilities.grantChaos(entity, abilities);
-            }
-            if (held.contains(INBETWEENER)) {
-                MastersAbilities.grantInBetweener(entity, abilities);
-            }
+            grant(entity, abilities, absorbed(stack));
         }
         return abilities;
+    }
+
+    /** What the beings held lend, each framed in its colour on the bar: from a hand, or from the Destroyer Armor's chest. */
+    public static void grant(EntityLivingBase entity, Ability.AbilityMap abilities, List<String> held) {
+        for (RegulatorBeing being : EternityAPI.beings()) {
+            if (held.contains(being.id)) {
+                being.grant(entity, abilities);
+            }
+        }
     }
 
     // ------------------------------------------------------------------ containment
@@ -227,8 +247,7 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
 
     @Override
     public boolean itemInteractionForEntity(ItemStack stack, EntityPlayer player, EntityLivingBase target, EnumHand hand) {
-        return (target instanceof EntityEternity || target instanceof EntityLivingTribunal || target instanceof EntityOrderChaos
-                || target instanceof EntityInBetweener)
+        return EternityAPI.beings().stream().anyMatch(being -> being.is(target))
                 && release(player.world, player, stack, hand) == EnumActionResult.SUCCESS;
     }
 
@@ -240,9 +259,7 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
     private static EnumActionResult release(World world, EntityPlayer player, ItemStack stack, EnumHand hand) {
         if (world.isRemote) {
             List<String> held = absorbed(stack);
-            boolean any = !held.contains(ETERNITY)
-                    || !held.contains(TRIBUNAL) && EntityLivingTribunal.downedNear(player) || EntityOrderChaos.downedNear(player)
-                    || !held.contains(INBETWEENER) && EntityInBetweener.fallenNear(player) || EntityOrderChaos.standingBefore(player);
+            boolean any = EternityAPI.beings().stream().anyMatch(being -> being.near(player, held));
             return any ? EnumActionResult.SUCCESS : EnumActionResult.PASS;
         }
         return player instanceof EntityPlayerMP ? raise((EntityPlayerMP) player, stack, hand) : EnumActionResult.PASS;
@@ -253,21 +270,14 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
      * (see {@link #slotted}); it drinks in whichever being it can.
      */
     public static EnumActionResult raise(EntityPlayerMP mp, ItemStack stack, EnumHand hand) {
-        EntityPlayer player = mp;
         List<String> held = absorbed(stack);
-        // Eternity it takes by flying into his heart; it comes back holding him and everything it held before.
-        if (!held.contains(ETERNITY) && Director.INSTANCE.tryContain(mp, held)) {
-            if (!player.capabilities.isCreativeMode) {
-                stack.shrink(1);
+        for (RegulatorBeing being : EternityAPI.beings()) {
+            if (being.tryAbsorb(mp, stack, hand, held)) {
+                return EnumActionResult.SUCCESS;
             }
-            return EnumActionResult.SUCCESS;
         }
-        boolean took = !held.contains(TRIBUNAL) && TribunalDirector.INSTANCE.tryAbsorb(mp, hand)
-                || OrderAndChaos.INSTANCE.tryAbsorb(mp, hand)
-                || !held.contains(INBETWEENER) && InBetweenerDirector.INSTANCE.tryAbsorb(mp, hand)
-                // Raised at one of them still standing, it takes nothing, but they notice.
-                || OrderAndChaos.INSTANCE.regulatorRaised(mp);
-        return took ? EnumActionResult.SUCCESS : EnumActionResult.PASS;
+        // Raised at one of them still standing, it takes nothing, but they notice.
+        return OrderAndChaos.INSTANCE.regulatorRaised(mp) ? EnumActionResult.SUCCESS : EnumActionResult.PASS;
     }
 
     // ------------------------------------------------------------------ energy
@@ -279,20 +289,10 @@ public class ItemAstralRegulator extends ItemIndestructible implements IAbilityP
     public static int energyPerTick(ItemStack stack) {
         long rate = 10_000L;
         List<String> ids = absorbed(stack);
-        if (ids.contains(ETERNITY)) {
-            rate += 1_000_000L;
-        }
-        if (ids.contains(TRIBUNAL)) {
-            rate += 100_000_000L;
-        }
-        if (ids.contains(ORDER)) {
-            rate += 250_000_000L;
-        }
-        if (ids.contains(CHAOS)) {
-            rate += 250_000_000L;
-        }
-        if (ids.contains(INBETWEENER)) {
-            rate += 500_000_000L;
+        for (RegulatorBeing being : EternityAPI.beings()) {
+            if (ids.contains(being.id)) {
+                rate += being.energyPerTick;
+            }
         }
         return (int) Math.min(Integer.MAX_VALUE, rate);
     }

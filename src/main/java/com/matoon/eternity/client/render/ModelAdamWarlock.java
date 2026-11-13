@@ -153,16 +153,21 @@ public class ModelAdamWarlock extends ModelBase {
         float t = w.clientStateTicks + partial;
         float pitch = headPitch * 0.017453292F;
         java.util.Arrays.fill(pose, 0F);
-        animate(w, w.getState(), t, ageInTicks, pitch, pose);
+        // Lying on the ground, his face is nowhere a portrait can see it: there, he is drawn as if he hung in the air,
+        // and nothing of it is kept for the world's drawing of him.
+        boolean upright = RenderAdamWarlock.portrait && w.getState() == EntityAdamWarlock.State.DOWNED;
+        animate(w, upright ? EntityAdamWarlock.State.HOVER : w.getState(), t, ageInTicks, pitch, pose);
 
         // Out of whatever he was doing before, never straight into the new pose.
-        float blend = smooth(t / blendTicks(w.getState()));
+        float blend = upright ? 1F : smooth(t / blendTicks(w.getState()));
         if (blend < 1F) {
             for (int i = 0; i < N; i++) {
                 pose[i] = w.poseFrom[i] + (pose[i] - w.poseFrom[i]) * blend;
             }
         }
-        System.arraycopy(pose, 0, w.poseLast, 0, N);
+        if (!upright) {
+            System.arraycopy(pose, 0, w.poseLast, 0, N);
+        }
 
         float[] p = pose.clone();
         // Struck, he recoils, whatever he is in the middle of.

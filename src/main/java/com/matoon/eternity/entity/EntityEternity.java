@@ -55,6 +55,8 @@ public class EntityEternity extends EntityLiving {
     public static final float BASE_HEIGHT = 7.2F;
     /** His health. Whoever holds the Regulator he is caged in gains as much. */
     public static final double MAX_HEALTH = 1024D;
+    /** How much Warlock's blows count against him; and anyone's, at the least, once the stones are broken. */
+    private static final double WARLOCK_SCALE = 0.25D, BROKEN_SCALE = 0.3D;
 
     private static final DataParameter<Float> SCALE = EntityDataManager.createKey(EntityEternity.class, DataSerializers.FLOAT);
     private static final DataParameter<Byte> STATE = EntityDataManager.createKey(EntityEternity.class, DataSerializers.BYTE);
@@ -94,6 +96,8 @@ public class EntityEternity extends EntityLiving {
     private Attack channelling;
     private int channelLength;
     private boolean enraged;
+    @Nullable
+    private EntityLivingBase rival;
     private final List<Strike> strikes = new ArrayList<>();
 
     /** Client: ticks since the synced state last changed. */
@@ -231,6 +235,15 @@ public class EntityEternity extends EntityLiving {
 
     // ------------------------------------------------------------------ director hooks
 
+    /** Someone fighting him at the players' side (Warlock): between going at whoever he came for, he goes at them. */
+    public void rival(@Nullable EntityLivingBase rival) {
+        this.rival = rival;
+    }
+
+    private boolean rivalFair() {
+        return rival != null && rival.isEntityAlive() && rival.world == world && rival.getDistanceSq(this) < 128D * 128D;
+    }
+
     /** The Director chose a target for him. */
     public void onHuntStart() {
         if (getState() != State.DYING && getState() != State.DEPART && getState() != State.EMERGE) {
@@ -299,9 +312,14 @@ public class EntityEternity extends EntityLiving {
         if (starfallCooldown > 0) starfallCooldown--;
         if (shatterCooldown > 0) shatterCooldown--;
 
-        EntityPlayerMP target = director.targetIn(world);
-        if (target != null && (target.isDead || target.isSpectator())) {
-            target = null;
+        EntityPlayerMP hunted = director.targetIn(world);
+        if (hunted != null && (hunted.isDead || hunted.isSpectator())) {
+            hunted = null;
+        }
+        EntityLivingBase target = hunted;
+        if (hunted != null && rivalFair() && (ticksExisted / 200) % 3 == 1) {
+            // Someone else is standing in his way: now and then he turns on them instead.
+            target = rival;
         }
         dataManager.set(TARGET, target == null ? -1 : target.getEntityId());
 
@@ -409,7 +427,7 @@ public class EntityEternity extends EntityLiving {
         return health < 0.2F ? 0.5D : health < 0.5F ? 0.72D : 1D;
     }
 
-    private void hunt(EntityPlayerMP target, float health) {
+    private void hunt(EntityLivingBase target, float health) {
         double mul = phaseMultiplier(health);
         Vec3d eyes = target.getPositionEyes(1F);
         Vec3d me = new Vec3d(posX, posY, posZ);
@@ -473,7 +491,7 @@ public class EntityEternity extends EntityLiving {
         }
     }
 
-    private void channel(@Nullable EntityPlayerMP target, float health) {
+    private void channel(@Nullable EntityLivingBase target, float health) {
         double mul = phaseMultiplier(health);
         motionX *= 0.8;
         motionY *= 0.8;
@@ -632,7 +650,7 @@ public class EntityEternity extends EntityLiving {
         return nearY;
     }
 
-    private void gaze(EntityPlayerMP target) {
+    private void gaze(EntityLivingBase target) {
         if (stateTicks % 5 != 0) {
             return;
         }
@@ -650,7 +668,7 @@ public class EntityEternity extends EntityLiving {
         }
     }
 
-    private void blink(EntityPlayerMP target, double mul) {
+    private void blink(EntityLivingBase target, double mul) {
         Vec3d from = getPositionVector();
         Vec3d back = new Vec3d(target.getLookVec().x, 0, target.getLookVec().z);
         back = back.lengthSquared() < 1.0E-4 ? new Vec3d(0, 0, 1) : back.normalize();
@@ -693,7 +711,8 @@ public class EntityEternity extends EntityLiving {
     }
 
     private static boolean worthy(Entity entity) {
-        return InfinityStones.scan(EntityDestroyerArmor.soul(entity)) == InfinityStones.ALL;
+        // Once the stones are broken, nobody has them: he meets everyone as he would have met whoever had.
+        return com.matoon.eternity.story.StoryDirector.stonesBroken() || InfinityStones.scan(EntityDestroyerArmor.soul(entity)) == InfinityStones.ALL;
     }
 
     private void updateBossBar(float health) {
@@ -704,7 +723,7 @@ public class EntityEternity extends EntityLiving {
     }
 
     private void regenerate() {
-        if (isDying() || getHealth() >= getMaxHealth()) {
+        if (isDying() || getHealth() >= getMaxHealth() || com.matoon.eternity.story.StoryDirector.stonesBroken()) {
             return;
         }
         for (EntityPlayer player : world.playerEntities) {
@@ -731,6 +750,13 @@ public class EntityEternity extends EntityLiving {
         int stones = InfinityStones.countHeld(attacker);
         double[] table = EternityConfig.combat.stoneDamageScale;
         double scale = table.length == 0 ? 0D : table[Math.min(stones, table.length - 1)];
+        if (attacker instanceof EntityAdamWarlock) {
+            // Made to hold the stones, and not holding them: he feels Warlock a little, never much.
+            scale = WARLOCK_SCALE;
+        } else if (com.matoon.eternity.story.StoryDirector.stonesBroken()) {
+            // The stones are gone: there is nothing here for him to hide behind, or in.
+            scale = Math.max(scale, BROKEN_SCALE);
+        }
         if (attacker instanceof EntityPlayerMP) {
             Director.INSTANCE.provoke((EntityPlayerMP) attacker);
         }

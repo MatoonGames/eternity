@@ -57,7 +57,7 @@ import java.util.UUID;
 /** Operator tools for testing and running servers. Eternity himself never speaks in chat. */
 public class CommandEternity extends CommandBase {
 
-    private static final String[] SUBCOMMANDS = {"status", "summon", "travel", "hunt", "release", "omen", "stones", "relics", "wound", "slay", "doom", "restore", "reset", "comet", "tribunal", "nexus", "inbetweener", "warlock", "champion", "vault", "grandmaster", "story"};
+    private static final String[] SUBCOMMANDS = {"status", "summon", "travel", "hunt", "release", "omen", "stones", "relics", "wound", "slay", "doom", "restore", "recover", "reset", "comet", "tribunal", "nexus", "inbetweener", "warlock", "champion", "vault", "grandmaster", "story", "magusfight"};
 
     @Override
     public String getName() {
@@ -66,7 +66,7 @@ public class CommandEternity extends CommandBase {
 
     @Override
     public String getUsage(ICommandSender sender) {
-        return "/eternity <status|summon|travel <dim>|hunt [player]|release|omen <1-6> [player]|stones [player]|relics [release <kind>]|wound <percent>|slay|doom [0-1]|restore|reset|comet ...|tribunal ...|nexus [player]|inbetweener ...|warlock ...|champion ...|vault ...|grandmaster ...|story ...>";
+        return "/eternity <status|summon|travel <dim>|hunt [player]|release|omen <1-6> [player]|stones [player]|relics [release <kind>]|wound <percent>|slay|doom [0-1]|restore|recover|reset|comet ...|tribunal ...|nexus [player]|inbetweener ...|warlock ...|champion ...|vault ...|grandmaster ...|story ...>";
     }
 
     @Override
@@ -191,6 +191,12 @@ public class CommandEternity extends CommandBase {
                 reply(sender, "Reality holds.");
                 break;
             }
+            case "recover": {
+                int blocks = director.recoverWorld(server);
+                reply(sender, blocks > 0 ? "Reality holds, and the world comes back: " + blocks + " blocks to put back."
+                        : "Reality holds. The end of the world took nothing that needs putting back.");
+                break;
+            }
             case "comet":
                 comet(server, sender, args);
                 break;
@@ -215,6 +221,12 @@ public class CommandEternity extends CommandBase {
             case "story":
                 story(sender, args);
                 break;
+            case "magusfight": {
+                // The Magus's last fight, at once: /eternity magusfight [start|ambush|grab|power|snap|stop|...]
+                String[] rest = args.length > 1 ? java.util.Arrays.copyOfRange(args, 1, args.length) : new String[]{"start"};
+                reply(sender, com.matoon.eternity.story.StoryDirector.INSTANCE.command(getCommandSenderAsPlayer(sender), "magusfight", rest));
+                break;
+            }
             case "nexus": {
                 EntityPlayerMP player = args.length > 1 ? getPlayer(server, sender, args[1]) : getCommandSenderAsPlayer(sender);
                 NexusDirector.INSTANCE.enter(player);
@@ -657,6 +669,9 @@ public class CommandEternity extends CommandBase {
             case "cheat":
                 reply(sender, director.cheatNow());
                 break;
+            case "seize":
+                reply(sender, director.seizeNow(args.length > 2 && "lift".equals(args[2])));
+                break;
             case "rules":
                 reply(sender, director.rulesNow());
                 break;
@@ -718,7 +733,7 @@ public class CommandEternity extends CommandBase {
                 break;
             }
             default:
-                throw new WrongUsageException("/eternity grandmaster <status|begin [player]|magus [player]|end|forget|skip|cheat|move fx fy tx ty|strike x y [n]|showcase [player]|act <state> [ticks]>");
+                throw new WrongUsageException("/eternity grandmaster <status|begin [player]|magus [player]|end|forget|skip|cheat|seize [lift]|move fx fy tx ty|strike x y [n]|showcase [player]|act <state> [ticks]>");
         }
     }
 
@@ -937,6 +952,12 @@ public class CommandEternity extends CommandBase {
         if (args.length >= 2 && "story".equals(args[0])) {
             return storyCompletions(args);
         }
+        if (args.length == 2 && "magusfight".equals(args[0])) {
+            return getListOfStringsMatchingLastWord(args, MAGUS_FIGHT);
+        }
+        if (args.length == 3 && "magusfight".equals(args[0]) && "look".equals(args[1])) {
+            return getListOfStringsMatchingLastWord(args, MAGUS_LOOKS);
+        }
         if (args.length == 2 && "omen".equals(args[0])) {
             return getListOfStringsMatchingLastWord(args, "1", "2", "3", "4", "5", "6");
         }
@@ -951,7 +972,7 @@ public class CommandEternity extends CommandBase {
             return getListOfStringsMatchingLastWord(args, "hint");
         }
         if (args.length == 2 && "grandmaster".equals(args[0])) {
-            return getListOfStringsMatchingLastWord(args, "status", "begin", "magus", "end", "forget", "skip", "rules", "cheat", "move", "strike", "showcase", "act");
+            return getListOfStringsMatchingLastWord(args, "status", "begin", "magus", "end", "forget", "skip", "rules", "cheat", "seize", "move", "strike", "showcase", "act");
         }
         if (args.length == 3 && "grandmaster".equals(args[0]) && "act".equals(args[1])) {
             return getListOfStringsMatchingLastWord(args, java.util.Arrays.stream(EntityGrandmaster.State.values()).map(s -> s.name().toLowerCase()).toArray(String[]::new));
@@ -994,7 +1015,7 @@ public class CommandEternity extends CommandBase {
      * then Oath, VaultStory, Presence, the arena, Glass, Garden and Sovereign. Kept here, so one added
      * there needs adding here too.
      */
-    private static final String[] STORY = {"status", "reset", "journal", "hush", "answer", "phantoms", "pose", "companion", "stance",
+    private static final String[] STORY = {"status", "magusfight", "reset", "journal", "hush", "answer", "phantoms", "pose", "forms", "tear", "visit", "devotion", "companion", "stance",
             // Ch.1, the Oath
             "begin", "leak", "home", "ragna", "village", "goto", "dress", "words", "open", "inner", "lift", "fall", "reopen", "vision",
             // Ch.2, the Vault
@@ -1006,7 +1027,13 @@ public class CommandEternity extends CommandBase {
             // Ch.4, the Nexus
             "rift", "glass",
             // Ch.5, the Garden
-            "garden", "near", "outside", "roots", "price", "bloom"};
+            "garden", "near", "outside", "roots", "price", "bloom",
+            // The finale
+            "reckoning", "aftermath"};
+
+    /** The Magus's last fight, for testing: /eternity magusfight <...> or /eternity story magusfight <...>. */
+    private static final String[] MAGUS_FIGHT = {"start", "give", "ambush", "grab", "land", "power", "look", "reach", "snap", "stop", "status"};
+    private static final String[] MAGUS_LOOKS = {"worn", "cradle", "slot", "power", "snap"};
 
     private static List<String> storyCompletions(String[] args) {
         if (args.length == 2) {
@@ -1016,7 +1043,7 @@ public class CommandEternity extends CommandBase {
         if (args.length == 3) {
             switch (action) {
                 case "pose":
-                    return getListOfStringsMatchingLastWord(args, "stranger", "death", "ragna", "hrafn", "draugr", "gardener", "ayesha", "magus", "spawn");
+                    return getListOfStringsMatchingLastWord(args, "stranger", "death", "ragna", "hrafn", "draugr", "gardener", "ayesha", "magus", "spawn", "temptress", "unveiled");
                 case "companion":
                     return getListOfStringsMatchingLastWord(args, "ticket", "call", "dismiss");
                 case "stance":
@@ -1025,18 +1052,24 @@ public class CommandEternity extends CommandBase {
                     return getListOfStringsMatchingLastWord(args, "1", "2", "3", "4");
                 case "phantoms":
                     return getListOfStringsMatchingLastWord(args, "0", "1", "2", "3");
+                case "devotion":
+                    return getListOfStringsMatchingLastWord(args, "0", "2", "4", "6", "8", "10", "13", "16", "20", "25");
+                case "visit":
+                    return getListOfStringsMatchingLastWord(args, "fury");
                 case "leak":
                     return getListOfStringsMatchingLastWord(args, "0", "1", "2", "3", "4", "5");
                 case "goto":
                     return getListOfStringsMatchingLastWord(args, "mound", "ragna", "step", "graves", "hall", "door", "ward");
                 case "death":
-                    return getListOfStringsMatchingLastWord(args, "champion", "regulator", "garden", "waiting");
+                    return getListOfStringsMatchingLastWord(args, "champion", "glass", "regulator", "garden", "waiting");
                 case "glass":
                     return getListOfStringsMatchingLastWord(args, "betrayed");
                 case "garden":
                     return getListOfStringsMatchingLastWord(args, "here", "reset", "near", "outside", "hedge", "bound", "spared");
                 case "sovereign":
                     return getListOfStringsMatchingLastWord(args, "status", "visit", "stage", "open", "duel", "ascent", "look", "seen", "poses", "yaws");
+                case "magusfight":
+                    return getListOfStringsMatchingLastWord(args, MAGUS_FIGHT);
                 default:
                     return Collections.emptyList();
             }
@@ -1052,6 +1085,9 @@ public class CommandEternity extends CommandBase {
         }
         if (args.length == 4 && "sovereign".equals(action) && "open".equals(args[2])) {
             return getListOfStringsMatchingLastWord(args, "atrium", "cocoons", "vats", "archive", "gallery", "sanctum");
+        }
+        if (args.length == 4 && "magusfight".equals(action) && "look".equals(args[2])) {
+            return getListOfStringsMatchingLastWord(args, MAGUS_LOOKS);
         }
         if (args.length == 4 && "sovereign".equals(action) && "duel".equals(args[2])) {
             return getListOfStringsMatchingLastWord(args, "death");

@@ -177,9 +177,15 @@ class CradlePage extends DestroyerPage {
         for (String id : ItemAstralRegulator.absorbed(stack)) {
             names.add(id.equals(ItemAstralRegulator.ETERNITY) ? "Eternity" : id.equals(ItemAstralRegulator.TRIBUNAL) ? "the Living Tribunal"
                     : id.equals(ItemAstralRegulator.ORDER) ? "Master Order" : id.equals(ItemAstralRegulator.CHAOS) ? "Lord Chaos"
-                    : id.equals(ItemAstralRegulator.INBETWEENER) ? "the In-Betweener" : id);
+                    : id.equals(ItemAstralRegulator.INBETWEENER) ? "the In-Betweener" : id.equals(ItemAstralRegulator.DEATH) ? "Death" : addonName(id));
         }
         return names.isEmpty() ? "nothing yet" : String.join(", ", names);
+    }
+
+    /** An addon's being, by the name its tooltip gives it. */
+    private static String addonName(String id) {
+        com.matoon.eternity.api.RegulatorBeing being = com.matoon.eternity.api.EternityAPI.being(id);
+        return being == null ? id : net.minecraft.client.resources.I18n.format(being.nameKey);
     }
 
     /** The names of the Lucraft powers a stone lends, as it would in a gauntlet; any stone of its kind, if none is set. */

@@ -6,6 +6,7 @@ import com.matoon.eternity.compat.Tickrate;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.network.MsgFinale;
 import com.matoon.eternity.network.MsgRift;
+import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.effect.EntityLightningBolt;
 import net.minecraft.entity.item.EntityFallingBlock;
@@ -18,14 +19,18 @@ import net.minecraft.potion.PotionEffect;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.GameType;
+import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.DimensionManager;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -60,6 +65,9 @@ final class Unmaking {
             Blocks.STAINED_GLASS.getDefaultState().withProperty(BlockStainedGlass.COLOR, EnumDyeColor.PURPLE),
             Blocks.STAINED_GLASS.getDefaultState().withProperty(BlockStainedGlass.COLOR, EnumDyeColor.MAGENTA),
     };
+
+    /** What the unmaking turns the land into: a block still one of these was never rebuilt. */
+    static final Set<IBlockState> UNMADE = new HashSet<>(Arrays.asList(CORRUPTION));
 
     Unmaking(Director director) {
         this.director = director;
@@ -101,7 +109,7 @@ final class Unmaking {
                 EternityNetwork.sendToAll(new MsgFinale(MsgFinale.OBLIVION, 0, 0, 0, 0, p));
             }
             breakTheSky(players, p, d.clock, true);
-            if (EternityConfig.apocalypse.oblivionErasesTerrain) {
+            if (EternityConfig.destroyBlocks && EternityConfig.apocalypse.oblivionErasesTerrain) {
                 erase(players, p);
             }
             return;
@@ -168,10 +176,11 @@ final class Unmaking {
 
     private void corrupt(EntityPlayerMP player, float p, long clock) {
         WorldServer world = player.getServerWorld();
-        boolean terrain = EternityConfig.apocalypse.corruptTerrain;
+        boolean terrain = EternityConfig.destroyBlocks && EternityConfig.apocalypse.corruptTerrain;
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
         if (terrain) {
+            Scars scars = Scars.get();
             // The land around you turns into things it was never meant to be.
             int count = (int) (4 + p * 60);
             for (int i = 0; i < count; i++) {
@@ -184,6 +193,7 @@ final class Unmaking {
                 if (!state.getMaterial().blocksMovement() || state.getBlockHardness(world, pos) < 0F) {
                     continue;
                 }
+                scars.remember(world, pos);
                 world.setBlockState(pos, rand.nextFloat() < 0.25F ? Blocks.AIR.getDefaultState() : CORRUPTION[rand.nextInt(CORRUPTION.length)], 2);
             }
             // Pieces of the world drift up into the sky.
@@ -200,6 +210,7 @@ final class Unmaking {
                         block.fallTime = 1;
                         block.setNoGravity(true);
                         block.motionY = 0.05D + rand.nextDouble() * 0.15D;
+                        scars.remember(world, pos);
                         world.setBlockToAir(pos);
                         world.spawnEntity(block);
                     }
@@ -215,8 +226,10 @@ final class Unmaking {
                 for (int dx = -r; dx <= r; dx++) {
                     for (int dy = -r; dy <= r; dy++) {
                         for (int dz = -r; dz <= r; dz++) {
-                            if (dx * dx + dy * dy + dz * dz <= r * r) {
-                                Terrain.erase(world, centre.add(dx, dy, dz));
+                            BlockPos at = centre.add(dx, dy, dz);
+                            if (dx * dx + dy * dy + dz * dz <= r * r && erasable(world, at)) {
+                                scars.remember(world, at);
+                                Terrain.erase(world, at);
                             }
                         }
                     }
@@ -237,6 +250,15 @@ final class Unmaking {
                 world.addWeatherEffect(new EntityLightningBolt(world, column.getX(), world.getHeight(column).getY(), column.getZ(), true));
             }
         }
+    }
+
+    /** Whether {@link Terrain#erase} would take this block. */
+    private static boolean erasable(World world, BlockPos pos) {
+        if (!world.isBlockLoaded(pos)) {
+            return false;
+        }
+        IBlockState state = world.getBlockState(pos);
+        return state.getMaterial() != Material.AIR && state.getBlockHardness(world, pos) >= 0F;
     }
 
     /** Time lurches: it drags, races, then snaps back. */
@@ -291,6 +313,7 @@ final class Unmaking {
 
     /** The world dissolves outward from every player into nothing. */
     private void erase(List<EntityPlayerMP> players, float p) {
+        Scars scars = Scars.get();
         int[] sphere = Terrain.sphere();
         double radius = Math.min(Terrain.MAX_RADIUS, 3D + (Terrain.MAX_RADIUS - 3D) * p);
         double r2 = radius * radius;
@@ -310,7 +333,9 @@ final class Unmaking {
                 }
                 index++;
                 pos.setPos(centre.getX() + x, centre.getY() + y, centre.getZ() + z);
-                if (pos.getY() >= 0 && pos.getY() < 256 && Terrain.eraseAbsolutely(world, pos)) {
+                if (pos.getY() >= 0 && pos.getY() < 256 && world.isBlockLoaded(pos) && !world.isAirBlock(pos)) {
+                    scars.remember(world, pos);
+                    Terrain.eraseAbsolutely(world, pos);
                     left--;
                 }
             }

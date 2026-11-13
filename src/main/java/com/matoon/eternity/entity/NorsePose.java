@@ -78,7 +78,11 @@ public enum NorsePose {
     /** Reaching, closing the hand on something, drawing it back to the chest. */
     TAKE,
     /** Taken hold of by something she cannot see, lifted off her feet: arching, clawing at her own throat, the mouth open. */
-    SEIZED;
+    SEIZED,
+    /** Death tearing the pretty one off herself, frantic, piece by piece, and glad to be out of it (see {@link SkinTear}). */
+    TEAR,
+    /** Her lid flipped: crouched, rigid, the claws out, the jaw wide, the head jerking from side to side faster than a head can. */
+    FURY;
 
     /** How long each timed pose lasts, in ticks; the model times its frames to the same numbers. */
     public int ticks() {
@@ -101,6 +105,8 @@ public enum NorsePose {
                 return 26;
             case TAKE:
                 return 40;
+            case TEAR:
+                return SkinTear.TICKS;
             default:
                 return -1;
         }

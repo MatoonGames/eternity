@@ -47,10 +47,15 @@ public final class StoryDirector {
     final Oath oath = new Oath(this);
     final VaultStory vault = new VaultStory(this);
     final Presence presence = new Presence(this);
+    final Obsession obsession = new Obsession(this);
+    final Betrayal betrayal = new Betrayal(this);
+    final Reckoning reckoning = new Reckoning(this);
+    final Aftermath aftermath = new Aftermath(this);
     final Arena arena = new Arena(this);
     final Glass glass = new Glass(this);
     final Garden garden = new Garden(this);
     final Sovereign sovereign = new Sovereign(this);
+    final MagusFight magusFight = new MagusFight(this);
     final Companion companion = new Companion(this);
 
     /** Everyone in a conversation, by player: those standing together share one. */
@@ -58,6 +63,12 @@ public final class StoryDirector {
     /** Whoever an operator has put in front of them to look at. */
     @Nullable
     private Entity posed;
+    /** /eternity story forms: Death showing every shape she has, one after another, and when she began. */
+    private EntityNorse forms;
+    private long formsAt;
+    /** When, in the parade of her shapes, she tears the pretty one off; and when she shows the skull after. */
+    private static final int FORMS_TEAR = 900, FORMS_SKULL = FORMS_TEAR + com.matoon.eternity.entity.SkinTear.TICKS + 100;
+    private static final int FORM_TICKS = 100;
     /** Answers an operator has given ahead of the question, for the next conversation each player starts. */
     private final Map<UUID, java.util.ArrayDeque<Integer>> presets = new HashMap<>();
 
@@ -82,16 +93,23 @@ public final class StoryDirector {
         }
         talks.clear();
         scenesDone.clear();
+        sceneTalks.clear();
         data = null;
         oath.reset();
         vault.reset();
         presence.reset();
+        obsession.reset();
+        betrayal.reset();
+        reckoning.reset();
+        aftermath.reset();
         arena.reset();
         glass.reset();
         garden.reset();
         sovereign.reset();
+        magusFight.reset();
         companion.reset();
         journals.clear();
+        Fellowship.reset();
     }
 
     StoryData data() {
@@ -103,6 +121,36 @@ public final class StoryDirector {
 
     public static boolean enabled() {
         return EternityConfig.story.enabled;
+    }
+
+
+    /**
+     * Something big is playing out: the Grandmaster's game, the Magus's last fight (and what follows it), the
+     * Champion's duel, the reckoning over six stones, Eternity hunting or dying, or the Tribunal. Death keeps out of
+     * it: no visits, no whispers, no standing over what dies; and nothing she asked for runs out while it lasts.
+     */
+    boolean setPiece() {
+        com.matoon.eternity.world.EternityData.Phase eternity = com.matoon.eternity.world.Director.INSTANCE.data().phase;
+        return com.matoon.eternity.world.GrandmasterData.get().active()
+                || magusFight.underway()
+                || com.matoon.eternity.world.ChampionData.get().phase == com.matoon.eternity.world.ChampionData.Phase.DUEL
+                || reckoning.busy()
+                || eternity == com.matoon.eternity.world.EternityData.Phase.HUNTING || eternity == com.matoon.eternity.world.EternityData.Phase.DYING
+                || com.matoon.eternity.world.TribunalDirector.INSTANCE.isJudging();
+    }
+    /**
+     * Whether Eternity keeps away: while the Magus's last fight is on, and for a minute after it is won, so that its
+     * end (his dust, whatever is said over it) is not trodden on by what comes next. Lost, it never comes at all: the
+     * Magus has all six (or Odin has, if it was his), and there is nothing left here for it to come for. And while
+     * Death and Warlock are putting it to whoever has six, and the little while they are given to choose (see {@link Reckoning}).
+     */
+    public static boolean eternityWaits() {
+        com.matoon.eternity.world.SovereignData s = com.matoon.eternity.world.SovereignData.get();
+        return s.fight == com.matoon.eternity.world.SovereignData.Fight.FIGHTING
+                || s.fight == com.matoon.eternity.world.SovereignData.Fight.LOST
+                || s.fight == com.matoon.eternity.world.SovereignData.Fight.TAKEN
+                || s.fight == com.matoon.eternity.world.SovereignData.Fight.WON && now() - s.fightSettled < 20L * 60L
+                || enabled() && INSTANCE.reckoning.holds();
     }
 
     static long now() {
@@ -146,18 +194,61 @@ public final class StoryDirector {
         oath.tick(server);
         vault.tick(server);
         presence.tick(server);
+        obsession.tick(server);
+        betrayal.tick(server);
+        reckoning.tick(server);
+        aftermath.tick(server);
         arena.tick(server);
         glass.tick(server);
         garden.tick(server);
         sovereign.tick(server);
+        magusFight.tick(server);
+        magusFight.tickAfter();
         companion.tick(server);
+        tickForms();
         if (ticks % 40 == 0) {
+            data().settleStances();
             // Whoever's journal has moved on since their client last heard is told.
             for (EntityPlayerMP p : server.getPlayerList().getPlayers()) {
                 String was = journals.get(p.getUniqueID());
-                if (was == null || !was.equals(Journal.of(this, p).toString())) {
+                NBTTagCompound journal = Journal.of(this, p);
+                if (was == null || !was.equals(journal.toString())) {
                     sendState(p);
                 }
+                if (enabled() && !journal.getString("chapter").isEmpty()) {
+                    // The story has found them: if others are here, would they go on together?
+                    Fellowship.offer(server, p);
+                }
+            }
+        }
+    }
+
+    /** Every five seconds the next shape, and after the last she goes up in smoke. */
+    private void tickForms() {
+        EntityNorse d = forms;
+        if (d == null) {
+            return;
+        }
+        long held = ticks - formsAt;
+        if (d.isDead) {
+            forms = null;
+        } else if (held >= FORMS_SKULL + FORM_TICKS) {
+            ((net.minecraft.world.WorldServer) d.world).spawnParticle(net.minecraft.util.EnumParticleTypes.SMOKE_LARGE,
+                    d.posX, d.posY + 1D, d.posZ, 60, 0.3D, 0.9D, 0.3D, 0.02D);
+            d.world.playSound(null, d.posX, d.posY + 1D, d.posZ, net.minecraft.init.SoundEvents.ENTITY_ILLAGER_MIRROR_MOVE,
+                    net.minecraft.util.SoundCategory.NEUTRAL, 1.2F, 0.5F);
+            d.setDead();
+            forms = null;
+        } else if (held == FORMS_SKULL) {
+            d.shapeshift(com.matoon.eternity.client.render.NorseBoxes.DEATH);
+        } else if (held == FORMS_TEAR) {
+            d.tear();
+        } else if (held < FORMS_TEAR && held % FORM_TICKS == 0) {
+            // The woman in mourning; then the pretty one, worse each time, as if you were further gone each time.
+            int step = (int) (held / FORM_TICKS);
+            if (step > 0) {
+                d.setRot(step - 1);
+                d.shapeshift(com.matoon.eternity.client.render.NorseBoxes.TEMPTRESS);
             }
         }
     }
@@ -201,9 +292,69 @@ public final class StoryDirector {
             return;
         }
         for (EntityPlayerMP p : server.getPlayerList().getPlayers()) {
-            if (p.dimension == c.dimension && !p.isSpectator() && !talks.containsKey(p.getUniqueID()) && p.getDistance(c) < Talk.JOIN) {
+            if (p.dimension == c.dimension && !p.isSpectator() && !talks.containsKey(p.getUniqueID()) && p.getDistance(c) < t.reach) {
                 talks.put(p.getUniqueID(), t);
                 t.join(p);
+            }
+        }
+    }
+
+    /**
+     * Brings someone into a conversation wherever they are, out of any other they were in: for the
+     * story's turns that everyone questing together should be there for. They still drop out if
+     * they stray further from it than it allows.
+     */
+    void draw(Talk talk, EntityPlayerMP player) {
+        Talk was = talks.get(player.getUniqueID());
+        if (was == talk) {
+            return;
+        }
+        if (was != null) {
+            if (was.members.size() > 1) {
+                was.leave(player.getUniqueID());
+            } else {
+                was.abandon(player);
+            }
+        }
+        talks.put(player.getUniqueID(), talk);
+        talk.join(player);
+    }
+
+    /** Draws in everyone questing with someone who is in the same dimension as them. */
+    void drawFellows(Talk talk, EntityPlayerMP player) {
+        for (EntityPlayerMP p : fellowship(player)) {
+            if (p != player && p.dimension == player.dimension && !p.isSpectator()) {
+                draw(talk, p);
+            }
+        }
+    }
+
+    /** Everyone questing with someone who is online, them first. */
+    List<EntityPlayerMP> fellowship(EntityPlayerMP player) {
+        List<EntityPlayerMP> out = new ArrayList<>();
+        for (UUID id : data().fellows(player.getUniqueID())) {
+            EntityPlayerMP p = id.equals(player.getUniqueID()) ? player : player(id);
+            if (p != null) {
+                out.add(p);
+            }
+        }
+        return out;
+    }
+
+    /** Players who have just been through something in the story together: from now on they quest together. */
+    void together(List<EntityPlayerMP> players) {
+        if (players.size() < 2 || !EternityConfig.story.fellowships) {
+            return;
+        }
+        StoryData d = data();
+        EntityPlayerMP first = players.get(0);
+        for (EntityPlayerMP p : players) {
+            if (p != first && d.bond(first.getUniqueID(), p.getUniqueID())) {
+                for (EntityPlayerMP each : fellowship(first)) {
+                    each.sendMessage(Fellowship.joined(p, first, each));
+                    sendState(each);
+                }
+                Fellowship.refresh(first.getServer());
             }
         }
     }
@@ -231,6 +382,20 @@ public final class StoryDirector {
         return talks.containsKey(player.getUniqueID());
     }
 
+    /** Ends whatever conversation someone is in, for everyone in it, without doing anything it would have done. */
+    void cut(EntityPlayerMP player) {
+        Talk was = talks.get(player.getUniqueID());
+        if (was != null) {
+            cut(was);
+        }
+    }
+
+    /** Ends a conversation for everyone in it, without doing anything it would have done. */
+    void cut(Talk t) {
+        t.stop(null);
+        talks.values().removeIf(v -> v == t);
+    }
+
     /** Ends whatever conversation someone is in, as if they had walked away. */
     public void hush(EntityPlayerMP player) {
         Talk was = talks.get(player.getUniqueID());
@@ -247,13 +412,20 @@ public final class StoryDirector {
 
     /** As {@link #line}; said in the thick of a fight, it leaves everyone's view where it is. */
     static void line(EntityPlayerMP to, Entity at, byte who, int entity, String text, boolean inAction) {
+        line(java.util.Collections.singletonList(to), at, who, entity, text, inAction);
+    }
+
+    /** As {@link #line}, to everyone in a conversation however far they are from whoever is speaking, and anyone in earshot. */
+    static void line(List<EntityPlayerMP> to, Entity at, byte who, int entity, String text, boolean inAction) {
         MsgStory msg = MsgStory.line(who, entity, text);
         if (inAction) {
             msg.tag.setBoolean("a", true);
         }
-        EternityNetwork.send(msg, to);
-        for (EntityPlayer other : to.world.playerEntities) {
-            if (other != to && other instanceof EntityPlayerMP && other.getDistance(at) < Talk.EARSHOT) {
+        for (EntityPlayerMP p : to) {
+            EternityNetwork.send(msg, p);
+        }
+        for (EntityPlayer other : at.world.playerEntities) {
+            if (!to.contains(other) && other instanceof EntityPlayerMP && other.getDistance(at) < Talk.EARSHOT) {
                 EternityNetwork.send(msg, (EntityPlayerMP) other);
             }
         }
@@ -294,6 +466,8 @@ public final class StoryDirector {
             if (t != null) {
                 t.skip(player);
             }
+        } else if (type == MsgStoryAct.STRUGGLE) {
+            magusFight.press(player);
         } else if (type == MsgStoryAct.SCENE_DONE) {
             scenesDone.computeIfAbsent(player.getUniqueID(), k -> new HashSet<>()).add(id);
         }
@@ -304,19 +478,50 @@ public final class StoryDirector {
      * was played for has seen it through is {@link #sceneDone}.
      */
     void scene(EntityPlayerMP player, int scene, Vec3d a, Vec3d b) {
-        Set<Integer> done = scenesDone.get(player.getUniqueID());
-        if (done != null) {
-            done.remove(scene);
+        MsgStory msg = MsgStory.fx(MsgStory.CUTSCENE, a, b, scene);
+        Talk t = talks.get(player.getUniqueID());
+        if (t != null) {
+            // Whoever is drawn into the conversation while it plays sees it too.
+            t.playing(msg);
+            sceneTalks.put(scene, t);
+        } else {
+            sceneTalks.remove(scene);
         }
         for (EntityPlayerMP p : party(player)) {
-            EternityNetwork.send(MsgStory.fx(MsgStory.CUTSCENE, a, b, scene), p);
+            Set<Integer> done = scenesDone.get(p.getUniqueID());
+            if (done != null) {
+                done.remove(scene);
+            }
+            EternityNetwork.send(msg, p);
         }
     }
 
+    /**
+     * Whether a scene has been seen through: by whoever it was played for, or by anyone in the conversation it was
+     * played in (they may have dropped out of it, and someone else be leading it now).
+     */
     boolean sceneDone(EntityPlayerMP player, int scene) {
-        Set<Integer> done = scenesDone.get(player.getUniqueID());
+        if (sawScene(player.getUniqueID(), scene)) {
+            return true;
+        }
+        Talk t = sceneTalks.get(scene);
+        if (t != null) {
+            for (UUID id : t.members) {
+                if (sawScene(id, scene)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean sawScene(UUID player, int scene) {
+        Set<Integer> done = scenesDone.get(player);
         return done != null && done.contains(scene);
     }
+
+    /** Which conversation each scene was last played in. */
+    private final Map<Integer, Talk> sceneTalks = new HashMap<>();
 
     // ------------------------------------------------------------------ the world, handed on
 
@@ -329,6 +534,10 @@ public final class StoryDirector {
 
     /** Someone lays a hand on one of the story's people. */
     public void interact(EntityPlayerMP player, EntityNorse npc) {
+        if (betrayal.raised(player, npc)) {
+            // The Regulator, turned on her: whatever she was in the middle of saying.
+            return;
+        }
         if (talking(player)) {
             return;
         }
@@ -337,7 +546,7 @@ public final class StoryDirector {
             sovereign.readPod(player, new net.minecraft.util.math.BlockPos(npc.posX, npc.posY, npc.posZ));
             return;
         }
-        if (!oath.interact(player, npc) && !vault.interact(player, npc) && !arena.interact(player, npc) && !garden.interact(player, npc)) {
+        if (!aftermath.interact(player, npc) && !oath.interact(player, npc) && !vault.interact(player, npc) && !arena.interact(player, npc) && !garden.interact(player, npc)) {
             presence.interact(player, npc);
         }
     }
@@ -395,11 +604,18 @@ public final class StoryDirector {
         if (dead.world.isRemote) {
             return;
         }
+        if (dead instanceof EntityPlayerMP && magusFight.spare((EntityPlayerMP) dead)) {
+            // Felled with Odin in the Magus's last fight: not dead. He has what he came for.
+            event.setCanceled(true);
+            return;
+        }
         vault.died(dead, event.getSource());
         presence.died(dead, event.getSource());
+        obsession.killed(dead, event.getSource());
         if (dead instanceof EntityPlayerMP) {
             garden.died((EntityPlayerMP) dead);
             arena.fell((EntityPlayerMP) dead);
+            magusFight.died((EntityPlayerMP) dead);
         }
     }
 
@@ -416,6 +632,7 @@ public final class StoryDirector {
         if (event.player instanceof EntityPlayerMP) {
             garden.respawned((EntityPlayerMP) event.player);
             arena.respawned((EntityPlayerMP) event.player);
+            magusFight.respawned((EntityPlayerMP) event.player);
             sendState((EntityPlayerMP) event.player);
         }
     }
@@ -475,9 +692,27 @@ public final class StoryDirector {
     /** Something with the Aether in it is now and then taken by the world's creatures for one of their own. */
     @SubscribeEvent
     public void onTarget(LivingSetAttackTargetEvent event) {
+        if (event.getTarget() instanceof EntityPlayerMP && event.getEntityLiving() instanceof net.minecraft.entity.EntityLiving
+                && !event.getEntityLiving().world.isRemote && obsession.spares(event.getEntityLiving(), (EntityPlayerMP) event.getTarget())) {
+            // One of the dead, turning on someone she has claimed: it thinks better of it.
+            net.minecraft.entity.EntityLiving undead = (net.minecraft.entity.EntityLiving) event.getEntityLiving();
+            undead.setAttackTarget(null);
+            undead.setRevengeTarget(null);
+            return;
+        }
         if (event.getTarget() instanceof EntityPlayerMP && !event.getEntityLiving().world.isRemote
                 && event.getEntityLiving() instanceof net.minecraft.entity.EntityLiving && !(event.getEntityLiving() instanceof EntityDraugr)) {
             vault.targeted((net.minecraft.entity.EntityLiving) event.getEntityLiving(), (EntityPlayerMP) event.getTarget());
+        }
+    }
+
+    /** Whatever the dead were already throwing at someone she has claimed doesn't land. */
+    @SubscribeEvent
+    public void onAttacked(net.minecraftforge.event.entity.living.LivingAttackEvent event) {
+        Entity from = event.getSource().getTrueSource();
+        if (event.getEntityLiving() instanceof EntityPlayerMP && from instanceof EntityLivingBase && !from.world.isRemote
+                && obsession.spares((EntityLivingBase) from, (EntityPlayerMP) event.getEntityLiving())) {
+            event.setCanceled(true);
         }
     }
 
@@ -485,6 +720,7 @@ public final class StoryDirector {
     public void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.player instanceof EntityPlayerMP) {
             inherit((EntityPlayerMP) event.player);
+            vault.caughtUp((EntityPlayerMP) event.player);
             sendState((EntityPlayerMP) event.player);
         }
     }
@@ -540,6 +776,8 @@ public final class StoryDirector {
         if (event.player instanceof EntityPlayerMP) {
             if (event.toDim == com.matoon.eternity.world.OdinsVault.dimension()) {
                 vault.entered((EntityPlayerMP) event.player);
+            } else if (event.fromDim == com.matoon.eternity.world.OdinsVault.dimension()) {
+                vault.caughtUp((EntityPlayerMP) event.player);
             }
             sendState((EntityPlayerMP) event.player);
         }
@@ -668,6 +906,54 @@ public final class StoryDirector {
     }
 
     /** Whom the Magus's stones are claimed under, as if he were a player: no copy of them will ever count. */
+    /** The end of the Grandmaster's game on the Magus's road: true if his last fight begins right there, with these two. */
+    public boolean magusAfterGame(EntityPlayerMP player, @Nullable com.matoon.eternity.entity.EntityMagus magus,
+                                  @Nullable com.matoon.eternity.entity.EntityAdamWarlock warlock) {
+        return enabled() && magusFight.afterGame(player, magus, warlock);
+    }
+
+    /** The gauntlet raised in front of him during the game: true if he took it, and the fight is on. */
+    public boolean magusSnatch(EntityPlayerMP player, com.matoon.eternity.entity.EntityMagus magus,
+                               @Nullable com.matoon.eternity.entity.EntityAdamWarlock warlock) {
+        return enabled() && magusFight.snatch(player, magus, warlock);
+    }
+
+    /** Whether the gauntlet in someone's hand would be taken from them if they raised it now. */
+    public static boolean gauntletRaised(EntityPlayerMP player) {
+        return MagusFight.raised(player);
+    }
+
+    /** A snap: if it is theirs, in the Magus's last fight, with all six, it is only for him. True if it was. */
+    public boolean magusFightSnap(net.minecraft.entity.EntityLivingBase entity) {
+        return magusFight.snap(entity);
+    }
+
+    /** The stones were broken, with Eternity coming: there is nothing left for him to hide behind (see {@link Reckoning}). */
+    public static boolean stonesBroken() {
+        return enabled() && INSTANCE.data().seen(Reckoning.BROKE);
+    }
+
+    /** Someone snapped: Death and Warlock, if they were waiting to see which way, answer it. */
+    public void snapped(net.minecraft.entity.EntityLivingBase entity, boolean broke, boolean culled) {
+        if (enabled()) {
+            reckoning.snapped(entity, broke, culled);
+        }
+    }
+
+    /** Home from the Living Tribunal: stripped of everything, let go with all of it, or with him in the Regulator (see {@link Aftermath}). */
+    public void judged(EntityPlayerMP player, boolean stripped, boolean absorbed, boolean acquitted) {
+        if (enabled()) {
+            aftermath.judged(player, stripped, absorbed, acquitted);
+        }
+    }
+
+    /** Eternity is dead, caged or not: Warlock, if he was at their side, goes. */
+    public void eternityFell(boolean contained) {
+        if (enabled()) {
+            reckoning.eternityFell(contained);
+        }
+    }
+
     public static UUID magusId() {
         return Sovereign.MAGUS_ID;
     }
@@ -713,7 +999,7 @@ public final class StoryDirector {
         s.append(". Lines read ").append(Integer.bitCount(d.linesFound)).append("/5, spoken ").append(d.spoken)
                 .append(", doors ").append(d.outerOpen ? "open" : "shut").append('/').append(d.innerOpen ? "open" : "shut")
                 .append(", ward ").append(d.wardLit ? "lit" : "out");
-        s.append(". The vault: Aether ").append(d.aetherTaken ? "taken" : "in its column").append(", flame ")
+        s.append(". The vault: Aether ").append(d.aetherTaken ? "taken" : "in its lantern").append(", flame ")
                 .append(d.flameSpent ? "spent" : "burning").append('.');
         for (Map.Entry<UUID, StoryData.Player> e : d.players().entrySet()) {
             EntityPlayerMP p = player(e.getKey());
@@ -745,7 +1031,7 @@ public final class StoryDirector {
                 com.matoon.eternity.entity.NorsePose pose = args.length > 1 ? com.matoon.eternity.entity.NorsePose.valueOf(args[1].toUpperCase())
                         : com.matoon.eternity.entity.NorsePose.STAND;
                 net.minecraft.util.math.Vec3d at = player.getPositionVector().add(player.getLookVec().scale(3D).subtract(0D, player.getLookVec().y * 3D, 0D));
-                String[] looks = {"stranger", "death", "ragna", "hrafn", "draugr", "gardener", "ayesha", "magus", "spawn"};
+                String[] looks = {"stranger", "death", "ragna", "hrafn", "draugr", "gardener", "ayesha", "magus", "spawn", "temptress", "unveiled"};
                 int i = java.util.Arrays.asList(looks).indexOf(look);
                 if (i == 4) {
                     EntityDraugr g = new EntityDraugr(player.world);
@@ -773,11 +1059,45 @@ public final class StoryDirector {
                 }
                 return "Posed.";
             }
+            case "forms":
+            case "tear": {
+                // Death in front of you, changing into each of her shapes in turn (rotting, then out of it), then gone;
+                // or, for "tear", already at the worst, and about to take it off.
+                boolean tear = "tear".equals(action);
+                if (forms != null) {
+                    forms.setDead();
+                }
+                Vec3d at = player.getPositionVector().add(player.getLookVec().scale(3D).subtract(0D, player.getLookVec().y * 3D, 0D));
+                EntityNorse d = EntityNorse.of(player.world, tear ? com.matoon.eternity.client.render.NorseBoxes.TEMPTRESS
+                        : com.matoon.eternity.client.render.NorseBoxes.STRANGER, "posed");
+                if (tear) {
+                    d.setRot(4);
+                }
+                d.setLocationAndAngles(at.x, at.y, at.z, player.rotationYaw + 180F, 0F);
+                d.face(player.getPositionVector());
+                player.world.spawnEntity(d);
+                d.watch(player);
+                forms = d;
+                formsAt = tear ? ticks - FORMS_TEAR + 30 : ticks;
+                return tear ? "Death, at the worst of it, about to take it off." : "Death: in mourning, then the pretty one rotting by stages, "
+                        + FORM_TICKS / 20 + " seconds apiece; then out of it, and the skull.";
+            }
+            case "reckoning":
+                // Warlock and Death come to have it out over your hand, now, six stones or not.
+                return reckoning.force(player);
+            case "aftermath":
+                // Home from the Tribunal after the cull: "aftermath" stripped of everything, "aftermath powerful" with him in the Regulator, "aftermath acquitted" let go.
+                return aftermath.force(player, args.length > 0 ? args[0] : "");
+            case "visit":
+                // She comes now, unasked, as she does once someone is far enough gone; "visit fury" and she is angry.
+                return obsession.force(player, args.length > 0 && "fury".equalsIgnoreCase(args[0]));
             case "hush":
                 hush(player);
                 return "Conversation ended.";
             case "companion":
                 return companion.command(player, args);
+            case "magusfight":
+                return magusFight.command(player, args);
             case "journal":
                 return Journal.of(this, player).toString() + " beats=" + data().player(player.getUniqueID()).beats;
             case "phantoms":
@@ -823,6 +1143,18 @@ public final class StoryDirector {
     private String arenaCommand(EntityPlayerMP player, String action, String[] args) {
         StoryData.Player p = data().player(player.getUniqueID());
         switch (action) {
+            case "devotion":
+                // devotion <n>: how far they have fallen for Death; unveiled forgets that she has shown herself.
+                p.devotion = args.length > 0 ? Integer.parseInt(args[0]) : 0;
+                p.beats.remove(Devotion.UNVEILED);
+                if (p.devotion > 0) {
+                    // She can only want someone who knows what she is.
+                    p.beats.add("death_revealed");
+                }
+                p.nextVisit = -1;
+                data().markDirty();
+                return "Devotion " + p.devotion + " (rot " + Devotion.rot(p.devotion) + (p.devotion >= Obsession.UNHINGED ? ", unhinged" : "")
+                        + "); she has not shown herself.";
             case "stance":
                 p.warlock = StoryData.Stance.valueOf(args.length > 0 ? args[0].toUpperCase() : "RIVAL");
                 p.beats.add("death_revealed");
@@ -838,7 +1170,7 @@ public final class StoryDirector {
                 arena.clear();
                 com.matoon.eternity.world.ChampionDirector.INSTANCE.restore();
                 String[] beats = {"arena_called", "first_loss", "warlock_lost_champion", "warlock_in_arena", "warlock_took", "dir_station",
-                        "champion_helped", "champion_debt"};
+                        "champion_helped", "champion_debt", Arena.EMPOWERED, Arena.DISARMED};
                 for (StoryData.Player o : data().players().values()) {
                     o.beats.removeAll(java.util.Arrays.asList(beats));
                 }
@@ -846,8 +1178,9 @@ public final class StoryDirector {
                 data().markDirty();
                 com.matoon.eternity.world.SovereignData s = com.matoon.eternity.world.SovereignData.get();
                 String sovereign = "";
-                if (s.station == com.matoon.eternity.world.SovereignData.Station.ABANDONED) {
-                    // He only got as far as taking it home: he never took it.
+                if (s.station == com.matoon.eternity.world.SovereignData.Station.ABANDONED
+                        || s.station == com.matoon.eternity.world.SovereignData.Station.UNSEEN && s.warlockHasStone()) {
+                    // He only got as far as taking it home (or out of the old man's brow): he never took it.
                     s.station = com.matoon.eternity.world.SovereignData.Station.UNSEEN;
                     s.stone = net.minecraft.item.ItemStack.EMPTY;
                     s.takenFrom = "";

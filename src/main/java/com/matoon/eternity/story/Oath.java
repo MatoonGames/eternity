@@ -273,17 +273,25 @@ final class Oath {
                 && rand.nextInt(3) == 0 && world.isBlockLoaded(home)) {
             d.taken += Leaks.takeFromHome(world, p, home, rand);
         } else if (toVillage > 40D) {
-            double a = rand.nextDouble() * Math.PI * 2D;
-            double r = 24D + rand.nextDouble() * 40D;
-            BlockPos at = new BlockPos(p.posX + Math.cos(a) * r, p.posY, p.posZ + Math.sin(a) * r);
-            if (world.isBlockLoaded(at)) {
+            int radius = 2 + Math.min(3, d.leaks / 3) + (toVillage < 500D ? 1 : 0);
+            // Never down on anyone's head: somewhere else round them, a few times, or not this time at all.
+            for (int tries = 0; tries < 4; tries++) {
+                double a = rand.nextDouble() * Math.PI * 2D;
+                double r = 24D + rand.nextDouble() * 40D;
+                BlockPos at = new BlockPos(p.posX + Math.cos(a) * r, p.posY, p.posZ + Math.sin(a) * r);
+                if (!world.isBlockLoaded(at)) {
+                    break;
+                }
+                if (!Leaks.clear(world, at, radius + 3D)) {
+                    continue;
+                }
                 int kind = Leaks.kind(d.leaks, rand);
                 boolean eirik = kind == Leaks.STONE && !d.seen("eirik_landed");
                 if (eirik) {
                     d.see("eirik_landed");
                 }
-                int radius = 2 + Math.min(3, d.leaks / 3) + (toVillage < 500D ? 1 : 0);
                 Leaks.land(world, at, new Vec3d(d.village), kind, radius, rand, eirik);
+                break;
             }
         }
         d.leaks++;

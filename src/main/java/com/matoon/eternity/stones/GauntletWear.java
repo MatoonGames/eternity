@@ -33,7 +33,7 @@ public final class GauntletWear {
     }
 
     /** One snap's wear, or all of it at once. */
-    static void wear(ItemStack stack, boolean melt) {
+    public static void wear(ItemStack stack, boolean melt) {
         if (stack.isEmpty()) {
             return;
         }

@@ -1,10 +1,10 @@
 package com.matoon.eternity.item;
 
 import com.matoon.eternity.Eternity;
+import com.matoon.eternity.EternityTab;
 import com.matoon.eternity.client.RelicTrackerAngle;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.EnumRarity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -27,7 +27,7 @@ public class ItemRelicTracker extends Item {
         setRegistryName(Eternity.MODID, "relic_tracker");
         setTranslationKey(Eternity.MODID + ".relic_tracker");
         setMaxStackSize(1);
-        setCreativeTab(CreativeTabs.TOOLS);
+        setCreativeTab(EternityTab.INSTANCE);
     }
 
     @Override

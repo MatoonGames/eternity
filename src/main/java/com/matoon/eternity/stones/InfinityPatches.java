@@ -91,6 +91,13 @@ public class InfinityPatches {
     /** Until when someone just respawned is looked at every tick, for a gauntlet they came back holding to charge up. */
     private static final Map<UUID, Integer> RESPAWNED = new HashMap<>();
     private static final int ARRIVAL_GRACE = 40;
+    /**
+     * Until when someone whose hands just changed is looked at every tick. Lucraft builds a newly held gauntlet's
+     * powers a tick or so after the change, and until it has, no gauntlet is full; a full one taken into the hand
+     * (switched to, picked up, handed over) was looked at once, too soon, and its power-up never came.
+     */
+    private static final Map<UUID, Integer> CHANGED = new HashMap<>();
+    private static final int CHANGE_LOOK = 10;
 
     /** Each held gauntlet's identity and stones, per hand, to see stones set into one already held. */
     private static final Map<UUID, String[]> MAIN_HAND = new HashMap<>();
@@ -195,6 +202,7 @@ public class InfinityPatches {
         STRAIN_HITS.remove(id);
         ARRIVED.remove(id);
         RESPAWNED.remove(id);
+        CHANGED.remove(id);
         MAIN_HAND.remove(id);
         OFF_HAND.remove(id);
     }
@@ -206,6 +214,7 @@ public class InfinityPatches {
         STRAIN_HITS.clear();
         ARRIVED.clear();
         RESPAWNED.clear();
+        CHANGED.clear();
         MAIN_HAND.clear();
         OFF_HAND.clear();
         TimeStoneRates.reset();
@@ -310,10 +319,11 @@ public class InfinityPatches {
         EntityPlayerMP player = (EntityPlayerMP) event.getEntityLiving();
         cleanUp(player);
         // A swap between hands changes both slots one after the other; between them the gauntlet is in neither, which
-        // would end the power-up and free the snap for a tick. Look once both have changed.
+        // would end the power-up and free the snap for a tick. (A scheduled task runs at once on the server thread, so
+        // that never waited.) Looked at from the end of this tick on, once both have changed and Lucraft caught up.
         MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
         if (server != null) {
-            server.addScheduledTask(() -> updateFull(player));
+            CHANGED.put(player.getUniqueID(), server.getTickCounter() + CHANGE_LOOK);
         } else {
             updateFull(player);
         }
@@ -376,9 +386,13 @@ public class InfinityPatches {
                 TimeStoneCharge.tickPlayer(player);
             }
             cleanUp(player);
-            if (ARRIVED.containsKey(player.getUniqueID()) || RESPAWNED.containsKey(player.getUniqueID())) {
+            Integer changeEnd = CHANGED.get(player.getUniqueID());
+            if (ARRIVED.containsKey(player.getUniqueID()) || RESPAWNED.containsKey(player.getUniqueID()) || changeEnd != null) {
                 // Looked for every tick until Lucraft has caught up, so the gauntlet they came with is found in time.
                 updateFull(player);
+            }
+            if (changeEnd != null && (FULL.contains(player.getUniqueID()) || changeEnd - server.getTickCounter() < 0)) {
+                CHANGED.remove(player.getUniqueID());
             }
             // Stones change rarely, and comparing them is not free.
             if (player.ticksExisted % 5 == 0) {

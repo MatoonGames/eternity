@@ -1,0 +1,7 @@
+{
+  "parent": "block/cube_column",
+  "textures": {
+    "end": "eternity:blocks/vault_slate",
+    "side": "eternity:blocks/vault_pillar"
+  }
+}

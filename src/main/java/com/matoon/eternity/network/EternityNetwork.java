@@ -76,6 +76,9 @@ public final class EternityNetwork {
         CHANNEL.registerMessage(handler, MsgMindControlResistance.class, id++, Side.CLIENT);
         CHANNEL.registerMessage(handler, MsgMindControlResult.class, id++, Side.CLIENT);
         CHANNEL.registerMessage(new MsgMindControlAct.Handler(), MsgMindControlAct.class, id++, Side.SERVER);
+        CHANNEL.registerMessage(handler, MsgGauntletFight.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(handler, MsgFellowship.class, id++, Side.CLIENT);
+        CHANNEL.registerMessage(new MsgFellowshipAct.Handler(), MsgFellowshipAct.class, id++, Side.SERVER);
     }
 
     public static void sendToServer(IMessage message) {

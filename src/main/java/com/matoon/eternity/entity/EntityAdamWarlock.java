@@ -37,7 +37,6 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -129,6 +128,8 @@ public class EntityAdamWarlock extends EntityLiving {
 
     private static final DataParameter<Byte> STATE = EntityDataManager.createKey(EntityAdamWarlock.class, DataSerializers.BYTE);
     private static final DataParameter<Boolean> EVOLVED = EntityDataManager.createKey(EntityAdamWarlock.class, DataSerializers.BOOLEAN);
+    /** The Power Stone is in his brow. */
+    private static final DataParameter<Boolean> STONE = EntityDataManager.createKey(EntityAdamWarlock.class, DataSerializers.BOOLEAN);
     private static final DataParameter<Float> COCOON = EntityDataManager.createKey(EntityAdamWarlock.class, DataSerializers.FLOAT);
     private static final DataParameter<net.minecraft.util.math.Rotations> FACING = EntityDataManager.createKey(EntityAdamWarlock.class, DataSerializers.ROTATIONS);
     /** Where he is, for the client (see syncSpot): three floats, not Rotations, which wraps every value to within 360. */
@@ -170,6 +171,23 @@ public class EntityAdamWarlock extends EntityLiving {
     private Entity beatenBy;
     /** Pulls his punches: nothing he does harms anyone. */
     private boolean calm;
+    /** Fighting with the Power Stone in him: harder, faster, and very hard to hurt. */
+    private boolean empowered;
+    /**
+     * At the Magus's side of it, with them: their blows do not touch him, the Magus's do, and if the Magus beats him
+     * he is not driven off. He falls, and lies there, and is left to whoever is directing him.
+     */
+    private boolean mortal;
+    private boolean fallen;
+    /** Who can hurt him while mortal (the Magus, unless told otherwise), and the most of him one blow of theirs can take. */
+    private Class<? extends Entity> slayer = EntityMagus.class;
+    private float slayerCap = 0.12F;
+    /** Standing with the players: he never goes at them, nor lands a blow on them, only on the foe. */
+    private boolean ally;
+    /** To the death: beaten, he falls (see {@link #fallen}) instead of leaving. */
+    private boolean deathMatch;
+    /** What is left of him, lying there (see {@link #lieDead}). */
+    private boolean corpse;
     /** Runs through every move in turn, harmlessly, for looking at him. */
     private boolean showcase;
     private int showIndex;
@@ -258,6 +276,7 @@ public class EntityAdamWarlock extends EntityLiving {
         super.entityInit();
         dataManager.register(STATE, (byte) State.ARRIVE.ordinal());
         dataManager.register(EVOLVED, false);
+        dataManager.register(STONE, false);
         dataManager.register(COCOON, 0F);
         dataManager.register(FACING, new net.minecraft.util.math.Rotations(0F, 0F, 0F));
         dataManager.register(SPOT_X, 0F);
@@ -299,6 +318,16 @@ public class EntityAdamWarlock extends EntityLiving {
         return dataManager.get(EVOLVED);
     }
 
+    /** Whether the Power Stone is in his brow, for everyone to see. */
+    public boolean wearsStone() {
+        return dataManager.get(STONE);
+    }
+
+    /** Whether he is fighting with it. */
+    public boolean isEmpowered() {
+        return empowered;
+    }
+
     /** How much of his cocoon still holds, 0 to 1; 0 when he is not in one. */
     public float getCocoon() {
         return dataManager.get(COCOON);
@@ -306,7 +335,7 @@ public class EntityAdamWarlock extends EntityLiving {
 
     /** How many bolts each volley fires; the model times his arms to it. */
     public int volleyBolts() {
-        return isEvolved() ? 7 : 5;
+        return wearsStone() ? 9 : isEvolved() ? 7 : 5;
     }
 
     public int volleyTicks() {
@@ -356,6 +385,28 @@ public class EntityAdamWarlock extends EntityLiving {
         dataManager.set(EVOLVED, true);
     }
 
+    /** The stone shown in his brow, or gone from it; nothing more. */
+    public void wearStone(boolean on) {
+        dataManager.set(STONE, on);
+        if (!on) {
+            empowered = false;
+        }
+    }
+
+    /**
+     * The Power Stone, set in his brow and fought with: whole again, evolved and past it, his
+     * blows heavier and quicker, and only the hardest of yours getting through. He has nothing
+     * to hide in a cocoon from now.
+     */
+    public void empower() {
+        wearStone(true);
+        evolve();
+        empowered = true;
+        cocoonUsed = true;
+        dataManager.set(COCOON, 0F);
+        setHealth(getMaxHealth());
+    }
+
     public void setCalm(boolean calm) {
         this.calm = calm;
         if (!calm) {
@@ -383,6 +434,59 @@ public class EntityAdamWarlock extends EntityLiving {
         setCalm(false);
         if (foe instanceof EntityChampion) {
             ((EntityChampion) foe).turnOn(this);
+        }
+    }
+
+    /** On their side against the Magus, and able to die at his hands (see {@link #fallen}). No cocoon to hide in. */
+    public void mortal(boolean on) {
+        mortal = on;
+        if (on) {
+            cocoonUsed = true;
+        }
+    }
+
+    /** Mortal to something else: only its blows reach him, up to {@code cap} of him a blow. */
+    public void mortalTo(Class<? extends Entity> who, float cap) {
+        mortal(true);
+        slayer = who;
+        slayerCap = cap;
+    }
+
+    /** On their side: the foe is all he fights, and nothing he does lands on them. */
+    public void ally(boolean on) {
+        ally = on;
+    }
+
+    /** This time, beaten, he does not get up and leave. */
+    public void toTheDeath() {
+        deathMatch = true;
+    }
+
+    /** Dead for good: he lies where he fell, the gold gone out of him, and stays there (saved with the world). */
+    public void lieDead() {
+        corpse = true;
+        fallen = true;
+        bolts.clear();
+        puppet(true);
+        spent();
+        wearStone(false);
+        perform(State.DOWNED);
+    }
+
+    public boolean isCorpse() {
+        return corpse;
+    }
+
+    /** Beaten by the Magus while mortal: he has fallen, and lies there under direction, waiting for what comes. */
+    public boolean fallen() {
+        return fallen;
+    }
+
+    /** His boss bar taken down and put up again, for someone: it goes to the bottom of their stack of them. */
+    public void rebar(EntityPlayerMP player) {
+        if (bossInfo.getPlayers().contains(player)) {
+            bossInfo.removePlayer(player);
+            bossInfo.addPlayer(player);
         }
     }
 
@@ -487,8 +591,9 @@ public class EntityAdamWarlock extends EntityLiving {
             bossInfo.setPercent(getHealth() / getMaxHealth());
             State state = getState();
             bossInfo.setName(new TextComponentString(state == State.COCOON ? "Adam Warlock (cocooned)"
-                    : state == State.RETREAT ? "Adam Warlock (beaten)" : isEvolved() ? "Adam Warlock (Evolved)" : "Adam Warlock"));
-            bossInfo.setColor(isEvolved() ? BossInfo.Color.RED : BossInfo.Color.YELLOW);
+                    : state == State.RETREAT ? "Adam Warlock (beaten)" : empowered ? "Adam Warlock (Power Stone)"
+                    : isEvolved() ? "Adam Warlock (Evolved)" : "Adam Warlock"));
+            bossInfo.setColor(empowered ? BossInfo.Color.PURPLE : isEvolved() ? BossInfo.Color.RED : BossInfo.Color.YELLOW);
         }
         if (hitStop > 0) {
             // The moment a blow lands, everything holds still for it.
@@ -496,7 +601,7 @@ public class EntityAdamWarlock extends EntityLiving {
             stateTicks--;
             return;
         }
-        if (target == null && getState() != State.RETREAT) {
+        if (target == null && getState() != State.RETREAT && !ally) {
             if (++lonely > 100) {
                 say("Hm. Gone already.");
                 dismiss();
@@ -564,6 +669,9 @@ public class EntityAdamWarlock extends EntityLiving {
             onFoe = false;
             alone = false;
         }
+        if (ally) {
+            return foeFair() ? foe : null;
+        }
         if (alone && foe != null) {
             return foe;
         }
@@ -574,6 +682,20 @@ public class EntityAdamWarlock extends EntityLiving {
             EntityPlayer player = world.getPlayerEntityByUUID(targetId);
             if (player instanceof EntityPlayerMP && isFair(player) && player.getDistanceSq(this) < 96D * 96D) {
                 return (EntityPlayerMP) player;
+            }
+            if (player != null && (player.isDead || player.getHealth() <= 0F) && getState() != State.RETREAT) {
+                // One of them is down, but a friend of theirs is still standing: he goes for them instead.
+                EntityPlayerMP next = null;
+                for (EntityPlayer other : world.playerEntities) {
+                    if (other != player && other instanceof EntityPlayerMP && isFair(other) && !other.isCreative()
+                            && other.getDistanceSq(this) < 96D * 96D && (next == null || other.getDistanceSq(this) < next.getDistanceSq(this))) {
+                        next = (EntityPlayerMP) other;
+                    }
+                }
+                if (next != null) {
+                    targetId = next.getUniqueID();
+                    return next;
+                }
             }
             if (player != null && (player.isDead || player.getHealth() <= 0F) && foeFair() && getState() != State.RETREAT) {
                 // They are down, and the old man is still standing. He won't leave that unfinished.
@@ -611,8 +733,10 @@ public class EntityAdamWarlock extends EntityLiving {
     }
 
     private boolean foeFair() {
-        return foe != null && foe.world == world && isFair(foe) && foe.getDistanceSq(this) < 64D * 64D
-                && !(foe instanceof EntityChampion && ((EntityChampion) foe).getState() == EntityChampion.State.DRIFT);
+        double range = foe instanceof EntityEternity ? 128D : 64D;
+        return foe != null && foe.world == world && isFair(foe) && foe.getDistanceSq(this) < range * range
+                && !(foe instanceof EntityChampion && ((EntityChampion) foe).getState() == EntityChampion.State.DRIFT)
+                && !(foe instanceof EntityEternity && ((EntityEternity) foe).isDying());
     }
 
     /** Everyone his blows can land on: the players, and whoever else he is fighting. */
@@ -663,7 +787,7 @@ public class EntityAdamWarlock extends EntityLiving {
 
     private void hover(int ticks) {
         setState(State.HOVER);
-        cooldown = Math.max(8, (int) (ticks * (isEvolved() ? 0.65F : 1F)));
+        cooldown = Math.max(empowered ? 5 : 8, (int) (ticks * (empowered ? 0.45F : isEvolved() ? 0.65F : 1F)));
     }
 
     /** Hanging in the air a little above and away from you, circling, sizing you up. */
@@ -672,7 +796,7 @@ public class EntityAdamWarlock extends EntityLiving {
             return;
         }
         face(target, 0.3F);
-        orbit += (isEvolved() ? 0.022D : 0.014D) * (Math.sin(ticksExisted * 0.013D) > -0.3D ? 1D : -1D);
+        orbit += (empowered ? 0.03D : isEvolved() ? 0.022D : 0.014D) * (Math.sin(ticksExisted * 0.013D) > -0.3D ? 1D : -1D);
         double radius = showcase ? 7D : 7.5D + 1.5D * Math.sin(ticksExisted * 0.03D);
         double x = target.posX + Math.cos(orbit) * radius, z = target.posZ + Math.sin(orbit) * radius;
         double y = Math.max(target.posY + 2.2D, floor(x, target.posY + 4D, z) + 2D);
@@ -710,7 +834,7 @@ public class EntityAdamWarlock extends EntityLiving {
         } else {
             double d = target.getDistance(this);
             int flyby = d > 10D ? 40 : 25, combo = d < 9D ? 40 : 10, volley = d > 8D ? 25 : 12, dive = 18;
-            int beam = isEvolved() ? 22 : 8;
+            int beam = empowered ? 30 : isEvolved() ? 22 : 8;
             int taunt = lastMove == Move.TAUNT || onFoe ? 0 : 6;
             do {
                 int roll = rand.nextInt(flyby + combo + volley + dive + beam + taunt);
@@ -730,7 +854,7 @@ public class EntityAdamWarlock extends EntityLiving {
                 say(TAUNTS[rand.nextInt(TAUNTS.length)]);
                 break;
             case FLYBY:
-                passes = isEvolved() ? 3 : 2;
+                passes = empowered ? 4 : isEvolved() ? 3 : 2;
                 launchAt = null;
                 setState(State.WINDUP);
                 break;
@@ -780,7 +904,7 @@ public class EntityAdamWarlock extends EntityLiving {
             hover(20);
             return;
         }
-        int ticks = passes < (isEvolved() ? 3 : 2) ? WINDUP_CHAINED : isEvolved() ? WINDUP_EVOLVED : WINDUP_TICKS;
+        int ticks = passes < (empowered ? 4 : isEvolved() ? 3 : 2) ? WINDUP_CHAINED : isEvolved() ? WINDUP_EVOLVED : WINDUP_TICKS;
         if (stateTicks == 1) {
             if (launchAt == null) {
                 // Out to one side of you, far enough to build up speed.
@@ -1029,9 +1153,11 @@ public class EntityAdamWarlock extends EntityLiving {
     }
 
     private void tickBolts() {
-        Iterator<Bolt> it = bolts.iterator();
-        while (it.hasNext()) {
-            Bolt bolt = it.next();
+        // Over a copy: a bolt that kills someone can end the fight, and his going clears the list under us.
+        for (Bolt bolt : new ArrayList<>(bolts)) {
+            if (!bolts.contains(bolt)) {
+                continue;
+            }
             bolt.age++;
             Vec3d next = bolt.pos.add(bolt.vel);
             boolean burst = bolt.age > 50;
@@ -1048,7 +1174,7 @@ public class EntityAdamWarlock extends EntityLiving {
             }
             bolt.pos = next;
             if (burst) {
-                it.remove();
+                bolts.remove(bolt);
                 fx(MsgTribunalFx.WARLOCK_BURST, next.x, next.y, next.z, 2.6D, 0, 0, bolt.id, 14);
                 world.playSound(null, next.x, next.y, next.z, SoundEvents.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 1.6F, 1.6F);
                 for (EntityLivingBase player : victims()) {
@@ -1488,15 +1614,17 @@ public class EntityAdamWarlock extends EntityLiving {
             ((EntityChampion) victim).struckBy(this, fraction);
             return;
         }
-        if (victim instanceof EntityMagus) {
-            victim.attackEntityFrom(EternityDamage.wielded("warlock", this), 1F);
+        if (victim instanceof EntityMagus || victim instanceof EntityEternity) {
+            // As a share of a hundred: the Magus scales it to his own health, Eternity to how little of it he feels.
+            victim.attackEntityFrom(EternityDamage.wielded("warlock", this), fraction * 100F);
             return;
         }
-        if (!(victim instanceof EntityPlayer)) {
+        if (!(victim instanceof EntityPlayer) || ally) {
             return;
         }
         EntityPlayer player = (EntityPlayer) victim;
-        float scale = (float) EternityConfig.warlock.damageScale * (isEvolved() ? 1.25F : 1F);
+        float scale = (float) EternityConfig.warlock.damageScale * (isEvolved() ? 1.25F : 1F)
+                * (empowered ? (float) EternityConfig.warlock.stoneDamage : 1F);
         EntityDestroyerArmor.strike(player, EternityDamage.warlock(this), fraction * scale);
     }
 
@@ -1510,7 +1638,7 @@ public class EntityAdamWarlock extends EntityLiving {
             }
             return;
         }
-        if (!(victim instanceof EntityPlayer) || ((EntityPlayer) victim).isSpectator()) {
+        if (!(victim instanceof EntityPlayer) || ((EntityPlayer) victim).isSpectator() || ally) {
             return;
         }
         EntityPlayer player = (EntityPlayer) victim;
@@ -1541,6 +1669,9 @@ public class EntityAdamWarlock extends EntityLiving {
         }
         State state = getState();
         Entity by = source.getTrueSource();
+        if (mortal) {
+            return magusStrikes(by, amount);
+        }
         if (!(by instanceof EntityPlayer || by instanceof EntityChampion) || state == State.ARRIVE || state == State.EMERGE || state == State.RETREAT) {
             return false;
         }
@@ -1550,6 +1681,11 @@ public class EntityAdamWarlock extends EntityLiving {
         }
         boolean open = state == State.SLAM || state == State.STAGGER;
         float cap = (float) (getMaxHealth() * EternityConfig.warlock.maxHitFraction) * (open ? 1.5F : 1F);
+        if (empowered) {
+            // The stone takes most of every blow: only the hardest get through, and none gets far.
+            cap *= 0.5F;
+            amount /= (float) EternityConfig.warlock.stoneToughness;
+        }
         float dealt = Math.min(amount * (open ? 1.5F : 1F), cap);
         if (by instanceof EntityChampion) {
             // The old man wears him down, but he does not go down to him: only whoever he came for
@@ -1571,6 +1707,14 @@ public class EntityAdamWarlock extends EntityLiving {
         }
         world.setEntityState(this, (byte) 2);
         float left = getHealth() - dealt;
+        if (left <= 1F && deathMatch) {
+            setHealth(1F);
+            beatenBy = by;
+            fallen = true;
+            bolts.clear();
+            puppet(true);
+            return true;
+        }
         if (left <= 1F) {
             setHealth(1F);
             beatenBy = by instanceof EntityPlayer ? null : by;
@@ -1584,6 +1728,34 @@ public class EntityAdamWarlock extends EntityLiving {
         return true;
     }
 
+    /** Mortal: only the Magus can hurt him, as hard as he hits, up to a few blows' worth at once; and he can beat him. */
+    private boolean magusStrikes(@Nullable Entity by, float amount) {
+        State state = getState();
+        if (!slayer.isInstance(by) || fallen || state == State.ARRIVE || state == State.RETREAT) {
+            return false;
+        }
+        float dealt = Math.min(amount, getMaxHealth() * slayerCap);
+        if (!(dealt > 0F)) {
+            return false;
+        }
+        world.setEntityState(this, (byte) 2);
+        float left = getHealth() - dealt;
+        if (left <= 1F) {
+            setHealth(1F);
+            beatenBy = by;
+            fallen = true;
+            bolts.clear();
+            // Out of the fight, and under direction: whoever is directing him decides how this ends.
+            puppet(true);
+            return true;
+        }
+        setHealth(left);
+        if (dealt >= getMaxHealth() * 0.08F && rand.nextInt(3) == 0) {
+            say(HURT[rand.nextInt(HURT.length)]);
+        }
+        return true;
+    }
+
     @Override
     public void onKillCommand() {
         setDead();
@@ -1592,6 +1764,11 @@ public class EntityAdamWarlock extends EntityLiving {
     @Override
     public void onDeath(DamageSource cause) {
         setHealth(1F);
+        if (mortal || deathMatch) {
+            fallen = true;
+            puppet(true);
+            return;
+        }
         retreat(true);
     }
 
@@ -1633,6 +1810,11 @@ public class EntityAdamWarlock extends EntityLiving {
 
     public Vec3d chest() {
         return new Vec3d(posX, posY + 1.35D, posZ);
+    }
+
+    /** The gem in his brow, where a stone is set. */
+    public Vec3d brow() {
+        return new Vec3d(posX, posY + 1.87D, posZ).add(facing().scale(0.28D));
     }
 
     private static Vec3d chest(EntityLivingBase victim) {
@@ -1785,7 +1967,8 @@ public class EntityAdamWarlock extends EntityLiving {
                 base = 0.3F;
                 break;
         }
-        return isEvolved() ? Math.max(base, 0.65F) : base;
+        // The stone in him never lets the light go down far, and flares it higher than he could alone.
+        return wearsStone() ? Math.max(base * 1.15F, 1.05F) : isEvolved() ? Math.max(base, 0.65F) : base;
     }
 
     private void clientTick() {
@@ -1982,10 +2165,24 @@ public class EntityAdamWarlock extends EntityLiving {
         return null;
     }
 
-    /** Never written to chunks: for now he only comes when called. */
+    /** Never written to chunks, alive: he only comes when called. His body is, and stays where he fell. */
     @Override
     public boolean writeToNBTOptional(NBTTagCompound compound) {
-        return false;
+        return corpse && super.writeToNBTOptional(compound);
+    }
+
+    @Override
+    public void writeEntityToNBT(NBTTagCompound compound) {
+        super.writeEntityToNBT(compound);
+        compound.setBoolean("Corpse", corpse);
+    }
+
+    @Override
+    public void readEntityFromNBT(NBTTagCompound compound) {
+        super.readEntityFromNBT(compound);
+        if (compound.getBoolean("Corpse")) {
+            lieDead();
+        }
     }
 
     @Override

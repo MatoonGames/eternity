@@ -79,6 +79,8 @@ public final class TribunalDirector {
     private EntityLivingTribunal boss;
     /** Set while this class swings a player's weapon at him on their behalf. */
     private boolean striking;
+    /** The defendant drew him into the Regulator this time, rather than being sentenced. */
+    private boolean took;
 
     private TribunalDirector() {
     }
@@ -92,6 +94,7 @@ public final class TribunalDirector {
         moving = false;
         boss = null;
         striking = false;
+        took = false;
     }
 
     public TribunalData data() {
@@ -419,6 +422,10 @@ public final class TribunalDirector {
 
     private void release(EntityPlayerMP player) {
         vanishBoss();
+        boolean stripped = !took && (verdict == TribunalDialogue.VERDICT_STRIPPED || verdict == TribunalDialogue.VERDICT_DEFEATED);
+        boolean absorbed = took;
+        boolean acquitted = !took && verdict == TribunalDialogue.VERDICT_ACQUITTED;
+        took = false;
         TribunalData d = data();
         d.judging = false;
         d.target = null;
@@ -426,6 +433,7 @@ public final class TribunalDirector {
         setStage(Stage.NONE);
         moveTo(player, d.returnDim, d.returnX, d.returnY, d.returnZ);
         EternityNetwork.send(new MsgTribunal(MsgTribunal.RELEASE, 0), player);
+        com.matoon.eternity.story.StoryDirector.INSTANCE.judged(player, stripped, absorbed, acquitted);
     }
 
     /** When he speaks, the whole chamber shakes with it. */
@@ -533,6 +541,7 @@ public final class TribunalDirector {
         d.absorbed++;
         d.markDirty();
         boss = null;
+        took = true;
         MinecraftServer server = player.getServer();
         if (server != null) {
             TextComponentString notice = new TextComponentString(player.getName() + " has absorbed the Living Tribunal.");

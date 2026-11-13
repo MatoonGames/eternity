@@ -87,6 +87,7 @@ public final class SpeakerPanel {
     private static final Who TRIBUNAL = new Who("THE LIVING TRIBUNAL", "Judge of all that is", 0xE8D9A8, 0x10100C, 0x5A5236, "T", 1.9F);
     private static final Who EINHERJAR = new Who("EINHERJAR", "Odin's honoured dead", 0xC8D4E6, 0x0A0E16, 0x3E5270, "E", 1.7F);
     private static final Who ORDER = new Who("MASTER ORDER", "One of two", 0xF2C24A, 0x1A1404, 0x7A5A12, "O", 1.9F);
+    private static final Who ODIN = new Who("ODIN", "The Allfather", 0xF0D27A, 0x0C0A06, 0x7A2418, "O", 3.25F);
 
     private static Who who(byte speaker) {
         switch (speaker) {
@@ -124,6 +125,8 @@ public final class SpeakerPanel {
                 return EINHERJAR;
             case Speakers.TRIBUNAL:
                 return TRIBUNAL;
+            case Speakers.ODIN:
+                return ODIN;
             default:
                 return GRANDMASTER;
         }

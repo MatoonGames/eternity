@@ -62,6 +62,40 @@ public final class InfinityStones {
         return mask | of(player.inventory.getItemStack(), remote);
     }
 
+    /** A new stone of a kind (by ordinal), unclaimed; empty if that kind's mod is missing. */
+    public static ItemStack stack(int ordinal) {
+        if (ordinal < 0 || ordinal >= EnumInfinityStone.values().length) {
+            return ItemStack.EMPTY;
+        }
+        net.minecraft.item.Item item;
+        switch (EnumInfinityStone.values()[ordinal]) {
+            case SPACE:
+                item = lucraft.mods.heroesexpansion.items.HEItems.SPACE_STONE;
+                break;
+            case MIND:
+                item = anvil.infinity.items.Items.MIND_STONE;
+                break;
+            case REALITY:
+                item = anvil.infinity.items.Items.REALITY_STONE;
+                break;
+            case POWER:
+                item = anvil.infinity.items.Items.POWER_STONE;
+                break;
+            case TIME:
+                item = anvil.infinity.items.Items.TIME_STONE;
+                break;
+            default:
+                item = anvil.infinity.items.Items.SOUL_STONE;
+                break;
+        }
+        return item == null ? ItemStack.EMPTY : new ItemStack(item);
+    }
+
+    /** The stones a single stack holds: a loose stone, or a gauntlet's sockets. */
+    public static int maskOf(ItemStack stack) {
+        return of(stack, false);
+    }
+
     public static int countHeld(Entity entity) {
         return count(scan(entity));
     }

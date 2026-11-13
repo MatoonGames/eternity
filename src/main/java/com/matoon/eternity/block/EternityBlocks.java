@@ -35,6 +35,14 @@ public final class EternityBlocks {
     public static final BlockSovereignFixture.Pod POD = new BlockSovereignFixture.Pod();
     public static final BlockSovereignFixture.Console CONSOLE = new BlockSovereignFixture.Console();
 
+    /** Odin's Vault: its stone, its lights, the runes in its walls, its doors, braziers and steps. Nobody carries any of it. */
+    public static final BlockVaultStone VAULT_STONE = new BlockVaultStone();
+    public static final BlockVaultLight VAULT_LIGHT = new BlockVaultLight();
+    public static final BlockVaultRunes VAULT_RUNES = new BlockVaultRunes();
+    public static final BlockVaultGate VAULT_GATE = new BlockVaultGate();
+    public static final BlockVaultBrazier VAULT_BRAZIER = new BlockVaultBrazier();
+    public static final BlockVaultTread VAULT_TREAD = new BlockVaultTread();
+
     public static final ItemBlock RUNE_STONE_ITEM = new ItemBlock(RUNE_STONE);
     public static final ItemStrangeBloom STRANGE_BLOOM_ITEM = new ItemStrangeBloom(STRANGE_BLOOM);
 
@@ -50,6 +58,7 @@ public final class EternityBlocks {
         event.getRegistry().register(GARDEN_THORN);
         event.getRegistry().register(THORN_HUSK);
         event.getRegistry().registerAll(SOVEREIGN_HULL, SOVEREIGN_LIGHT, SOVEREIGN_GLASS, SOVEREIGN_DOOR, COCOON, COCOON_SEALED, VAT, POD, CONSOLE);
+        event.getRegistry().registerAll(VAULT_STONE, VAULT_LIGHT, VAULT_RUNES, VAULT_GATE, VAULT_BRAZIER, VAULT_TREAD);
         GameRegistry.registerTileEntity(TileRuneStone.class, RUNE_STONE.getRegistryName());
     }
 

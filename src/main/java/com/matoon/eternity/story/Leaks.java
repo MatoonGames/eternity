@@ -1,5 +1,6 @@
 package com.matoon.eternity.story;
 
+import com.matoon.eternity.EternityConfig;
 import com.matoon.eternity.block.BlockRuneStone;
 import com.matoon.eternity.network.EternityNetwork;
 import com.matoon.eternity.network.MsgStory;
@@ -67,6 +68,17 @@ final class Leaks {
                 int[] pool = {TURF, TURF, BOWL, SHIELD, DOOR, TURF};
                 return pool[rand.nextInt(pool.length)];
         }
+    }
+
+    /** Whether nobody is standing within so many blocks of a spot, across the ground: somewhere a piece can come down on no one. */
+    static boolean clear(World world, BlockPos at, double r) {
+        for (net.minecraft.entity.player.EntityPlayer p : world.playerEntities) {
+            double dx = p.posX - at.getX() - 0.5D, dz = p.posZ - at.getZ() - 0.5D;
+            if (!p.isSpectator() && dx * dx + dz * dz < r * r) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -236,7 +248,8 @@ final class Leaks {
         Vec3d c = new Vec3d(home).add(0.5D, 0D, 0.5D);
         double a = rand.nextDouble() * Math.PI * 2D;
         BlockPos middle = new BlockPos(c.x + Math.cos(a) * (3 + rand.nextInt(7)), home.getY(), c.z + Math.sin(a) * (3 + rand.nextInt(7)));
-        for (int i = 0; i < 10 + rand.nextInt(8); i++) {
+        // The ground stays as it is if the world may not be changed: only the living are taken.
+        for (int i = 0; EternityConfig.destroyBlocks && i < 10 + rand.nextInt(8); i++) {
             int x = middle.getX() + rand.nextInt(7) - 3, z = middle.getZ() + rand.nextInt(7) - 3;
             BlockPos top = Barrow.surface(world, x, z);
             BlockPos ground = top.down();

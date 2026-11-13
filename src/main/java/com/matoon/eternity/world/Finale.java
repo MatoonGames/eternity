@@ -170,7 +170,7 @@ final class Finale {
         }
         WorldServer world = server.getWorld(dimension);
         if (world != null) {
-            EntityItemIndestructible orb = new EntityItemIndestructible(world, at.x, at.y, at.z, ItemAstralRegulator.charged(held));
+            EntityItemIndestructible orb = new EntityItemIndestructible(world, at.x, at.y, at.z, ItemAstralRegulator.contained(held));
             orb.setEntitySize(0.5F, 0.5F);
             world.spawnEntity(orb);
             for (EntityPlayerMP player : world.getPlayers(EntityPlayerMP.class, p -> p != null && p.getDistance(x, y, z) < 200D)) {
